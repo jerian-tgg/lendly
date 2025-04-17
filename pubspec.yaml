@@ -1,10 +1,10 @@
 name: lendly
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.0
 
 environment:
-  sdk: ^3.7.0
+  sdk: ^3.7.2
 
 dependencies:
   firebase_core: ^3.13.0
