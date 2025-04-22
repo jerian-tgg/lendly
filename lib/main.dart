@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'login.dart';
+import 'features/auth/presentation/login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Make sure Flutter bindings are ready

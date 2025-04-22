@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:lendly/signup.dart';
+import 'package:lendly/features/auth/presentation/signup.dart';
+// import 'package:lendly/signup.dart';
 
 void main() {
   runApp(const LendlyApp());
