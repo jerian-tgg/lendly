@@ -12,7 +12,12 @@
           "package_name": "com.example.lendly"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "412265538580-6laf4qq9j73aqclliihvmqnpjfechttl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBtpGNARHCWih550xyvWgq2ZV2RJ8kaONc"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "412265538580-6laf4qq9j73aqclliihvmqnpjfechttl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

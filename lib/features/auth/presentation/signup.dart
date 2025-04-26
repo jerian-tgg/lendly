@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:intl/intl.dart';
+import 'package:lendly/features/auth/data/firebase_auth_service.dart';
+
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -14,9 +16,11 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
   final TextEditingController birthdateController = TextEditingController();
+  final FirebaseAuthService _authService = FirebaseAuthService();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool isLoading = false;
 
   void _togglePassword() {
     setState(() {
@@ -42,6 +46,54 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
+  void _signUp() async {
+    if (passwordController.text.trim() != confirmPasswordController.text.trim()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match')),
+      );
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      DateTime parsedBirthdate = DateFormat('yyyy-MM-dd').parse(birthdateController.text.trim());
+
+      await _authService.signUp(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+        birthdate: parsedBirthdate,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Verification email sent. Please verify your account.')),
+      );
+
+      // Navigate back to login or another page if needed
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  void _signUpWithGoogle() async {
+    try {
+      await _authService.signInWithGoogle();
+      // Navigate after successful Google sign-in
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,7 +112,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 40),
 
-               
+                // Email
                 TextField(
                   controller: emailController,
                   decoration: InputDecoration(
@@ -91,7 +143,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                     ),
                     hintText: 'Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     filled: true,
                     fillColor: Colors.grey[100],
                   ),
@@ -113,15 +167,17 @@ class _SignUpPageState extends State<SignUpPage> {
                             : const Icon(Icons.visibility, key: ValueKey('cpw_on')),
                       ),
                     ),
-                    hintText: 'ConfirmPassword',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    hintText: 'Confirm Password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     filled: true,
                     fillColor: Colors.grey[100],
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                
+                // Birthdate
                 TextField(
                   controller: birthdateController,
                   readOnly: true,
@@ -129,7 +185,9 @@ class _SignUpPageState extends State<SignUpPage> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.calendar_today),
                     hintText: 'Enter Birthdate',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     filled: true,
                     fillColor: Colors.grey[100],
                   ),
@@ -156,12 +214,11 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 10),
 
-               
+                // Create Account button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                    },
+                    onPressed: isLoading ? null : _signUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color.fromARGB(255, 144, 224, 243),
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -169,15 +226,37 @@ class _SignUpPageState extends State<SignUpPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: const Text(
+                    child: isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
                       'Create Account',
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Sign Up with Google button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _signUpWithGoogle,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Sign Up with Google',
                       style: TextStyle(fontSize: 16, color: Colors.white),
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
 
-                // Login Link
+                // Login link
                 Center(
                   child: RichText(
                     text: TextSpan(
