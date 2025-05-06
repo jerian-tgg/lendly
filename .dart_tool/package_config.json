@@ -33,19 +33,19 @@
     },
     {
       "name": "cloud_firestore",
-      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore-5.6.6",
+      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore-5.6.7",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
     {
       "name": "cloud_firestore_platform_interface",
-      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_platform_interface-6.6.6",
+      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_platform_interface-6.6.7",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
     {
       "name": "cloud_firestore_web",
-      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_web-4.4.6",
+      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_web-4.4.7",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -69,7 +69,7 @@
     },
     {
       "name": "firebase_auth",
-      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth-5.5.2",
+      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth-5.5.3",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
@@ -260,6 +260,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "nested",
+      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/nested-1.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "path",
       "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/path-1.9.1",
       "packageUri": "lib/",
@@ -270,6 +276,12 @@
       "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/plugin_platform_interface-2.1.8",
       "packageUri": "lib/",
       "languageVersion": "3.0"
+    },
+    {
+      "name": "provider",
+      "rootUri": "file:///C:/Users/palen/AppData/Local/Pub/Cache/hosted/pub.dev/provider-6.1.5",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
     },
     {
       "name": "sky_engine",
@@ -344,7 +356,7 @@
       "languageVersion": "3.7"
     }
   ],
-  "generated": "2025-04-26T16:45:58.096934Z",
+  "generated": "2025-05-05T14:44:38.854288Z",
   "generator": "pub",
   "generatorVersion": "3.7.2",
   "flutterRoot": "file:///C:/dev/flutter",
