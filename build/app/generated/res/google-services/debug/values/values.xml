@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="default_web_client_id" translatable="false">412265538580-6laf4qq9j73aqclliihvmqnpjfechttl.apps.googleusercontent.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">412265538580</string>
+    <string name="google_api_key" translatable="false">AIzaSyBtpGNARHCWih550xyvWgq2ZV2RJ8kaONc</string>
+    <string name="google_app_id" translatable="false">1:412265538580:android:02548bc9e7fffe46847301</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyBtpGNARHCWih550xyvWgq2ZV2RJ8kaONc</string>
+    <string name="google_storage_bucket" translatable="false">lendly-6ee08.firebasestorage.app</string>
+    <string name="project_id" translatable="false">lendly-6ee08</string>
+</resources>

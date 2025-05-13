@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:lendly/features/auth/presentation/auth_wrapper.dart';
+import 'package:lendly/features/items/presentation/home_screen.dart';
 import 'firebase_options.dart';
-import 'features/auth/presentation/login.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Make sure Flutter bindings are ready
-  await Firebase.initializeApp( options: DefaultFirebaseOptions.currentPlatform,);
-  runApp(MyApp()); // Then start the app
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -18,10 +21,10 @@ class MyApp extends StatelessWidget {
       title: 'Lendly',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: LoginPage(),
+      home: const AuthWrapper(),
       debugShowCheckedModeBanner: false,
-
     );
   }
 }

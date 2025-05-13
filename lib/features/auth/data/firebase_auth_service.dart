@@ -1,5 +1,3 @@
-// firebase_auth_service.dart
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -13,7 +11,9 @@ class FirebaseAuthService {
   Future<User?> signUp({
     required String email,
     required String password,
-    required DateTime birthdate, // changed type to DateTime
+    required DateTime birthdate,
+    required String firstName, // Added first name
+    required String lastName,  // Added last name
   }) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
@@ -23,19 +23,22 @@ class FirebaseAuthService {
       User? user = result.user;
 
       if (user != null) {
-        await user.sendEmailVerification(); // send verification email
+        // Send email verification
+        await user.sendEmailVerification();
 
+        // Add user details to Firestore
         await _firestore.collection('users').doc(user.uid).set({
-          'displayName': 'Jerian Josh',
+          'firstName': firstName,  // Save first name
+          'lastName': lastName,    // Save last name
           'email': user.email,
-          'photoURL': 'https://...', // you can update to dynamic later
+          'photoURL': 'https://...', // Placeholder, update later
           'isVerified': false,
           'joinedAt': FieldValue.serverTimestamp(),
           'location': {
             'lat': 10.123,
             'lng': 122.345,
           },
-          'birthdate': Timestamp.fromDate(birthdate), // now saved as TIMESTAMP
+          'birthdate': Timestamp.fromDate(birthdate), // Birthdate
         });
       }
 
@@ -85,7 +88,8 @@ class FirebaseAuthService {
         if (!doc.exists) {
           // If not, create user document
           await _firestore.collection('users').doc(user.uid).set({
-            'displayName': user.displayName ?? 'Jerian Josh',
+            'firstName': user.displayName?.split(' ').first ?? 'Jerian', // Handle first name
+            'lastName': user.displayName?.split(' ').last ?? 'Josh',    // Handle last name
             'email': user.email,
             'photoURL': user.photoURL ?? 'https://...',
             'isVerified': user.emailVerified,
