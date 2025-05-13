@@ -4,7 +4,7 @@
             "outputFile": "com.example.lendly.app-mergeDebugResources-33:/values-watch-v20/values-watch-v20.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\imgze\\.gradle\\caches\\8.10.2\\transforms\\3f009cc0cc89a8c0423bd2e6d62ba835\\transformed\\jetified-play-services-auth-21.0.0\\res\\values-watch-v20\\values.xml",
+                    "source": "C:\\Users\\palen\\.gradle\\caches\\8.10.2\\transforms\\3f009cc0cc89a8c0423bd2e6d62ba835\\transformed\\jetified-play-services-auth-21.0.0\\res\\values-watch-v20\\values.xml",
                     "from": {
                         "startLines": "4,5,6,7,8,9,10,11",
                         "startColumns": "0,0,0,0,0,0,0,0",
