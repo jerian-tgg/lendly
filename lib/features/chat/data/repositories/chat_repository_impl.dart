@@ -10,20 +10,26 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Stream<List<ChatMessage>> getMessages(String convoId) {
-    return remoteDataSource.getMessages(convoId);
+    return remoteDataSource.getMessages(convoId).map(
+          (List<ChatMessageModel> messageModels) =>
+          messageModels.map((ChatMessageModel model) => model.toEntity()).toList(),
+    );
   }
+
 
   @override
   Future<void> sendMessage(String convoId, ChatMessage message) {
     return remoteDataSource.sendMessage(
       convoId,
       ChatMessageModel(
-        id: message.id,
+        id: '',  // Add this line
         senderId: message.senderId,
         receiverId: message.receiverId,
         text: message.text,
         timestamp: message.timestamp,
+        seen: false,
       ),
     );
   }
+
 }

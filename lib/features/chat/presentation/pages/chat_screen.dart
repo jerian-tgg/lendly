@@ -30,12 +30,37 @@ class _ChatScreenState extends State<ChatScreen> {
   late final GetMessages _getMessages;
   late final SendMessage _sendMessage;
 
+  String receiverName = 'Loading...';
+
   @override
   void initState() {
     super.initState();
     _repository = ChatRepositoryImpl(FirebaseChatDataSource(_firestore));
     _getMessages = GetMessages(_repository);
     _sendMessage = SendMessage(_repository);
+    _loadReceiverName();
+  }
+
+  Future<void> _loadReceiverName() async {
+    final doc = await _firestore.collection('users').doc(widget.receiverId).get();
+    final data = doc.data();
+    setState(() {
+      receiverName = data?['username'] ?? 'User';
+    });
+  }
+
+  // Mark incoming messages as seen when viewed
+  void _markMessagesAsSeen(List<ChatMessage> messages, String userId) {
+    for (var message in messages) {
+      if (message.receiverId == userId && !message.seen) {
+        _firestore
+            .collection('conversations')
+            .doc(widget.convoId)
+            .collection('messages')
+            .doc(message.id)
+            .update({'seen': true});
+      }
+    }
   }
 
   @override
@@ -43,7 +68,18 @@ class _ChatScreenState extends State<ChatScreen> {
     final userId = _auth.currentUser?.uid ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: Text('Chat with ${widget.receiverId}')),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF90E0F3),
+        title: Text(
+          receiverName,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -54,8 +90,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final messages = snapshot.data!;
+                _markMessagesAsSeen(messages, userId); // Mark unseen incoming messages as seen
+
                 return ListView.builder(
                   reverse: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
@@ -68,36 +107,55 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Colors.grey.shade200)),
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Type a message...',
-                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () async {
-                    final text = _controller.text.trim();
-                    if (text.isEmpty) return;
+                const SizedBox(width: 8),
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF90E0F3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: () async {
+                      final text = _controller.text.trim();
+                      if (text.isEmpty) return;
 
-                    final message = ChatMessage(
-                      id: '',
-                      senderId: userId,
-                      receiverId: widget.receiverId,
-                      text: text,
-                      timestamp: DateTime.now(),
-                    );
+                      final message = ChatMessage(
+                        id: '',
+                        senderId: userId,
+                        receiverId: widget.receiverId,
+                        text: text,
+                        timestamp: DateTime.now(),
+                        seen: false,  // required now
+                      );
 
-                    await _sendMessage(widget.convoId, message);
-                    _controller.clear();
-                  },
+
+                      await _sendMessage(widget.convoId, message);
+                      _controller.clear();
+                    },
+                  ),
                 ),
               ],
             ),

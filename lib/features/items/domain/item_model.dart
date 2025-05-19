@@ -1,4 +1,3 @@
-// items/domain/item_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Item {
@@ -43,13 +42,19 @@ class Item {
       category: data['category'] ?? '',
       quantity: data['quantity'] ?? 1,
       price: (data['price'] ?? 0).toDouble(),
-      availableFrom: (data['availableFrom'] as Timestamp).toDate(),
-      availableTo: (data['availableTo'] as Timestamp).toDate(),
+      availableFrom: data['availableFrom'] != null
+          ? (data['availableFrom'] as Timestamp).toDate()
+          : DateTime.now(),
+      availableTo: data['availableTo'] != null
+          ? (data['availableTo'] as Timestamp).toDate()
+          : DateTime.now(),
       condition: data['condition'] ?? 'Like New',
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
       ownerId: data['ownerId'] ?? '',
       ownerName: data['ownerName'] ?? 'Anonymous',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
       isAvailable: data['isAvailable'] ?? false,
     );
   }
@@ -61,13 +66,13 @@ class Item {
       'category': category,
       'quantity': quantity,
       'price': price,
-      'availableFrom': availableFrom,
-      'availableTo': availableTo,
+      'availableFrom': Timestamp.fromDate(availableFrom),
+      'availableTo': Timestamp.fromDate(availableTo),
       'condition': condition,
       'imageUrls': imageUrls,
       'ownerId': ownerId,
       'ownerName': ownerName,
-      'createdAt': createdAt,
+      'createdAt': Timestamp.fromDate(createdAt),
       'isAvailable': isAvailable,
     };
   }

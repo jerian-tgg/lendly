@@ -1,29 +1,27 @@
-// items/presentation/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lendly/features/auth/presentation/login.dart';
 import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
 import 'package:lendly/features/items/presentation/widgets/item_card.dart';
-import 'package:lendly/features/items/data/item_repository.dart';
-import 'package:lendly/features/items/domain/item_model.dart';
-import 'package:lendly/features/items/presentation/profile_page.dart'; // Added import
+import 'package:lendly/features/items/presentation/profile_page.dart';
+import 'package:lendly/features/items/presentation/search_screen.dart';
+import 'package:lendly/features/items/presentation/borrowed_items_screen.dart';  // Import borrowed screen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final User? _currentUser = FirebaseAuth.instance.currentUser;
 
   final List<Widget> _screens = [
     const ItemListScreen(),
-    Container(color: Colors.white, child: const Center(child: Text('Search'))),
-    Container(color: Colors.white, child: const Center(child: Text('Borrowed'))),
-    UserProfilePage(), // Updated to actual profile page
+    const SearchScreen(),
+    BorrowedItemsScreen(), // Borrowed tab integrated here
+    UserProfilePage(),
   ];
 
   void _onItemTapped(int index) {
@@ -67,13 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: _selectedIndex == 0
           ? AppBar(
         backgroundColor: const Color(0xFF90E0F3),
-        title: const Text(
-          'Lendly',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text('Lendly', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
@@ -86,35 +78,16 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton(
         backgroundColor: const Color(0xFF90E0F3),
-        onPressed: () => showDialog(
-          context: context,
-          builder: (_) => const AddItemDialog(),
-        ),
+        onPressed: () => showDialog(context: context, builder: (_) => const AddItemDialog()),
         child: const Icon(Icons.add, color: Colors.white),
       )
           : null,
       bottomNavigationBar: BottomNavigationBar(
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart_outlined),
-            activeIcon: Icon(Icons.shopping_cart),
-            label: 'Borrowed',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outlined),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.search_outlined), activeIcon: Icon(Icons.search), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), activeIcon: Icon(Icons.shopping_cart), label: 'Borrowed'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outlined), activeIcon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: const Color(0xFF90E0F3),
@@ -125,44 +98,94 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class ItemListScreen extends StatelessWidget {
+class ItemListScreen extends StatefulWidget {
   const ItemListScreen({super.key});
 
   @override
+  State<ItemListScreen> createState() => _ItemListScreenState();
+}
+
+class _ItemListScreenState extends State<ItemListScreen> {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
+  Future<void> _deleteItem(String itemId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Item'),
+        content: const Text('Are you sure you want to delete this item?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      try {
+        await FirebaseFirestore.instance.collection('items').doc(itemId).delete();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item deleted')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete item: $e')));
+        }
+      }
+    }
+  }
+
+  void _editItem(String itemId, Map<String, dynamic> currentData) {
+    showDialog(
+      context: context,
+      builder: (_) => AddItemDialog(
+        itemId: itemId,
+        initialData: currentData,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final itemRepo = ItemRepository();
-
-    return StreamBuilder<List<Item>>(
-      stream: itemRepo.getAllItems(),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('items').orderBy('createdAt', descending: true).snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
+        if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final items = snapshot.data ?? [];
+        final docs = snapshot.data?.docs ?? [];
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: items.length,
+          itemCount: docs.length,
           itemBuilder: (context, index) {
-            final item = items[index];
+            final doc = docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            final isOwner = data['ownerId'] == userId;
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: ItemCard(
-                name: item.name,
-                price: 'P${item.price.toStringAsFixed(2)} / Day',
-                imagePath: item.imageUrls.isNotEmpty
-                    ? item.imageUrls.first
-                    : 'assets/images/placeholder.jpg',
-                isOwner: item.ownerId == FirebaseAuth.instance.currentUser?.uid,
-              ),
-            );
-          },
+                itemId: doc.id,
+                itemData: doc.data() as Map<String, dynamic>,  // pass the whole item data
+                name: doc['name'] ?? 'No Name',
+                price: '₱${doc['price']}',
+                imagePath: (doc['imageUrls'] as List).isNotEmpty ? doc['imageUrls'][0] : '',
+                isOwner: doc['ownerId'] == FirebaseAuth.instance.currentUser?.uid,
+                isAvailable: doc['isAvailable'] ?? true,
+                onEdit: () {
+                  // your edit handler here
+                },
+                onDelete: () {
+                  // your delete handler here
+                },
+              )
+
+            );          },
         );
+
       },
     );
   }

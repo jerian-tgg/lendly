@@ -1,10 +1,29 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.lendly.app-mergeDebugResources-33:/values-watch-v20/values-watch-v20.xml",
+            "outputFile": "com.example.lendly.app-mergeDebugResources-98:/values-watch-v20/values-watch-v20.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\palen\\.gradle\\caches\\8.10.2\\transforms\\3f009cc0cc89a8c0423bd2e6d62ba835\\transformed\\jetified-play-services-auth-21.0.0\\res\\values-watch-v20\\values.xml",
+                    "source": "C:\\Users\\imgze\\.gradle\\caches\\8.10.2\\transforms\\cdc1fd5a4f8cb18094ee01b408d70e6e\\transformed\\appcompat-1.6.1\\res\\values-watch-v20\\values-watch-v20.xml",
+                    "from": {
+                        "startLines": "2,5,8",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,214,385",
+                        "endLines": "4,7,10",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "209,380,553"
+                    },
+                    "to": {
+                        "startLines": "10,13,16",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "715,874,1045",
+                        "endLines": "12,15,18",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "869,1040,1213"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\imgze\\.gradle\\caches\\8.10.2\\transforms\\3f009cc0cc89a8c0423bd2e6d62ba835\\transformed\\jetified-play-services-auth-21.0.0\\res\\values-watch-v20\\values.xml",
                     "from": {
                         "startLines": "4,5,6,7,8,9,10,11",
                         "startColumns": "0,0,0,0,0,0,0,0",

@@ -1,0 +1,1 @@
+ C:\\Users\\imgze\\Documents\\GitHub\\lendly\\.dart_tool\\flutter_build\\17994c8286833b0070e469cfbdfcb8c4\\native_assets.json: 

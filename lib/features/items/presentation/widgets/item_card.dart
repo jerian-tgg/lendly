@@ -1,19 +1,29 @@
-// items/presentation/widgets/item_card.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lendly/features/items/presentation/item_detail_screen.dart';
 
 class ItemCard extends StatelessWidget {
+  final String itemId;
+  final Map<String, dynamic> itemData;  // NEW: full item data map
   final String name;
   final String price;
   final String imagePath;
   final bool isOwner;
+  final bool isAvailable;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const ItemCard({
     super.key,
+    required this.itemId,
+    required this.itemData,  // required now
     required this.name,
     required this.price,
     required this.imagePath,
     this.isOwner = false,
+    this.isAvailable = true,
+    this.onEdit,
+    this.onDelete,
   });
 
   void _showManageOptions(BuildContext context) {
@@ -28,7 +38,7 @@ class ItemCard extends StatelessWidget {
               title: const Text('Edit Item'),
               onTap: () {
                 Navigator.pop(context);
-                // Implement edit functionality
+                if (onEdit != null) onEdit!();
               },
             ),
             ListTile(
@@ -36,7 +46,7 @@ class ItemCard extends StatelessWidget {
               title: const Text('Delete Item', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
-                // Implement delete functionality
+                if (onDelete != null) onDelete!();
               },
             ),
           ],
@@ -46,6 +56,13 @@ class ItemCard extends StatelessWidget {
   }
 
   void _handleBorrow(BuildContext context) {
+    if (!isAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sorry, this item is currently unavailable.')),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -59,8 +76,11 @@ class ItemCard extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Item borrowed successfully!')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ItemDetailScreen(itemData: itemData, itemId: itemId),
+                ),
               );
             },
             child: const Text('Confirm'),
@@ -123,8 +143,7 @@ class ItemCard extends StatelessWidget {
                         final user = FirebaseAuth.instance.currentUser;
                         if (user == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Please login to borrow items')),
+                            const SnackBar(content: Text('Please login to borrow items')),
                           );
                           return;
                         }
@@ -138,7 +157,7 @@ class ItemCard extends StatelessWidget {
                         backgroundColor: const Color(0xFF90E0F3),
                       ),
                       child: Text(
-                        isOwner ? 'Manage' : 'Borrow Now',
+                        isOwner ? 'Manage' : (isAvailable ? 'Borrow Now' : 'Unavailable'),
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),

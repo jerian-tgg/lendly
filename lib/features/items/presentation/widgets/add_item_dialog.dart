@@ -1,4 +1,3 @@
-// items/presentation/widgets/add_item_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -7,7 +6,10 @@ import 'package:lendly/features/items/domain/item_model.dart';
 import 'package:lendly/features/items/data/item_repository.dart';
 
 class AddItemDialog extends StatefulWidget {
-  const AddItemDialog({super.key});
+  final String? itemId;
+  final Map<String, dynamic>? initialData;
+
+  const AddItemDialog({super.key, this.itemId, this.initialData});
 
   @override
   State<AddItemDialog> createState() => _AddItemDialogState();
@@ -15,15 +17,66 @@ class AddItemDialog extends StatefulWidget {
 
 class _AddItemDialogState extends State<AddItemDialog> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _descController = TextEditingController();
-  final TextEditingController _categoryController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController(text: '1');
+  late TextEditingController _nameController;
+  late TextEditingController _descController;
+  late TextEditingController _priceController;
+  late TextEditingController _quantityController;
   final ImagePicker _picker = ImagePicker();
   DateTimeRange? _availability;
   String _condition = 'Like New';
+  String _selectedCategory = 'Electronics';
   List<String> _imagePaths = [];
+
+  final List<String> _categories = [
+    'Electronics',
+    'Appliances',
+    'Tools',
+    'Books',
+    'Furniture',
+    'Clothing',
+    'Other',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _nameController = TextEditingController(text: widget.initialData?['name'] ?? '');
+    _descController = TextEditingController(text: widget.initialData?['description'] ?? '');
+    _priceController = TextEditingController(text: widget.initialData?['price']?.toString() ?? '');
+    _quantityController = TextEditingController(text: widget.initialData?['quantity']?.toString() ?? '1');
+    _condition = widget.initialData?['condition'] ?? 'Like New';
+    _selectedCategory = widget.initialData?['category'] ?? 'Electronics';
+
+    if (widget.initialData != null) {
+      final fromTimestamp = widget.initialData!['availableFrom'];
+      final toTimestamp = widget.initialData!['availableTo'];
+
+      if (fromTimestamp != null && toTimestamp != null) {
+        DateTime start = fromTimestamp is DateTime ? fromTimestamp : (fromTimestamp as dynamic).toDate();
+        DateTime end = toTimestamp is DateTime ? toTimestamp : (toTimestamp as dynamic).toDate();
+
+        _availability = DateTimeRange(
+          start: start,
+          end: end,
+        );
+      }
+
+      final images = widget.initialData!['imageUrls'];
+      if (images != null && images is List<dynamic>) {
+        _imagePaths = List<String>.from(images);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    _priceController.dispose();
+    _quantityController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImages() async {
     final images = await _picker.pickMultiImage();
@@ -37,39 +90,64 @@ class _AddItemDialogState extends State<AddItemDialog> {
       context: context,
       firstDate: DateTime.now(),
       lastDate: DateTime(DateTime.now().year + 1),
+      initialDateRange: _availability,
     );
     if (picked != null) setState(() => _availability = picked);
   }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final imageUrls = await ItemRepository().uploadImages(_imagePaths);
+    if (!_formKey.currentState!.validate()) return;
 
-        final user = FirebaseAuth.instance.currentUser!;
+    try {
+      List<String> imageUrls = [];
 
-        final newItem = Item(
-          id: '',
-          name: _nameController.text,
-          description: _descController.text,
-          category: _categoryController.text,
-          quantity: int.parse(_quantityController.text),
-          price: double.parse(_priceController.text),
-          availableFrom: _availability?.start ?? DateTime.now(),
-          availableTo: _availability?.end ?? DateTime.now().add(const Duration(days: 30)),
-          condition: _condition,
-          imageUrls: imageUrls,
-          ownerId: user.uid,
-          ownerName: user.displayName ?? 'Anonymous',
-          createdAt: DateTime.now(),
-          isAvailable: true,
-        );
+      if (widget.itemId != null) {
+        final localImagePaths = _imagePaths.where((p) => !p.startsWith('http')).toList();
+        final existingUrls = _imagePaths.where((p) => p.startsWith('http')).toList();
+        final uploadedUrls = await ItemRepository().uploadImages(localImagePaths);
+        imageUrls = [...existingUrls, ...uploadedUrls];
+      } else {
+        imageUrls = await ItemRepository().uploadImages(_imagePaths);
+      }
 
-        await ItemRepository().addItem(newItem);
-        Navigator.pop(context);
-      } catch (e) {
+      final user = FirebaseAuth.instance.currentUser!;
+      final now = DateTime.now();
+
+      final item = Item(
+        id: widget.itemId ?? '',
+        name: _nameController.text.trim(),
+        description: _descController.text.trim(),
+        category: _selectedCategory,
+        quantity: int.parse(_quantityController.text),
+        price: double.parse(_priceController.text),
+        availableFrom: _availability?.start ?? now,
+        availableTo: _availability?.end ?? now.add(const Duration(days: 30)),
+        condition: _condition,
+        imageUrls: imageUrls,
+        ownerId: user.uid,
+        ownerName: user.displayName ?? 'Anonymous',
+        createdAt: widget.itemId == null
+            ? now
+            : (widget.initialData?['createdAt'] is DateTime
+            ? widget.initialData!['createdAt']
+            : (widget.initialData!['createdAt'] as dynamic).toDate()),
+        isAvailable: true,
+      );
+
+      if (widget.itemId != null) {
+        await ItemRepository().updateItem(widget.itemId!, item);
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item updated')));
+        }
+      } else {
+        await ItemRepository().addItem(item);
+        if (mounted) Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding item: $e')),
+          SnackBar(content: Text('Error submitting item: $e')),
         );
       }
     }
@@ -77,8 +155,10 @@ class _AddItemDialogState extends State<AddItemDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.itemId != null;
+
     return AlertDialog(
-      title: const Text('Add New Item'),
+      title: Text(isEditing ? 'Edit Item' : 'Add New Item'),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -94,9 +174,16 @@ class _AddItemDialogState extends State<AddItemDialog> {
                 decoration: const InputDecoration(labelText: 'Description'),
                 maxLines: 3,
               ),
-              TextFormField(
-                controller: _categoryController,
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
                 decoration: const InputDecoration(labelText: 'Category'),
+                items: _categories.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (value) => setState(() => _selectedCategory = value!),
               ),
               TextFormField(
                 controller: _priceController,
@@ -120,7 +207,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
                 ],
               ),
               if (_availability != null)
-                Text('${DateFormat('MMM d').format(_availability!.start)} - ${DateFormat('MMM d').format(_availability!.end)}'),
+                Text(
+                  '${DateFormat('MMM d').format(_availability!.start)} - ${DateFormat('MMM d').format(_availability!.end)}',
+                ),
               DropdownButtonFormField<String>(
                 value: _condition,
                 items: ['Like New', 'Good', 'Fair', 'Poor'].map((String value) {
@@ -134,10 +223,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
               ),
               ElevatedButton(
                 onPressed: _pickImages,
-                child: const Text('Add Photos'),
+                child: Text(isEditing ? 'Update Photos' : 'Add Photos'),
               ),
-              if (_imagePaths.isNotEmpty)
-                Text('${_imagePaths.length} photos selected'),
+              if (_imagePaths.isNotEmpty) Text('${_imagePaths.length} photos selected'),
             ],
           ),
         ),
@@ -149,7 +237,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
         ),
         TextButton(
           onPressed: _submitForm,
-          child: const Text('Add Item'),
+          child: Text(isEditing ? 'Update Item' : 'Add Item'),
         ),
       ],
     );
