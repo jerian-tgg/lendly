@@ -105,9 +105,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       _buildSectionTitle('Items Listed'),
                       _buildItemsList(),
                       const SizedBox(height: 16),
-                      _buildSectionTitle('Borrowing History'),
-                      _buildBorrowingHistory(),
-                      const SizedBox(height: 16),
                       _buildSectionTitle('Reviews Received'),
                       _buildReviews(),
                     ],
@@ -162,34 +159,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  Widget _buildBorrowingHistory() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _userService.getBorrowingHistory(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          final history = snapshot.data!.docs;
-          if (history.isEmpty) {
-            return const Text('No borrowing history.');
-          }
-          return ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: history.length,
-            itemBuilder: (context, index) {
-              final record = history[index].data() as Map<String, dynamic>;
-              return ListTile(
-                leading: const Icon(Icons.history),
-                title: Text(record['itemTitle'] ?? ''),
-                subtitle: Text('Borrowed on: ${record['borrowDate'] ?? ''}'),
-              );
-            },
-          );
-        }
-        return const CircularProgressIndicator();
-      },
-    );
-  }
-
   Widget _buildReviews() {
     return StreamBuilder<QuerySnapshot>(
       stream: _userService.getUserReviews(),
@@ -206,10 +175,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
             itemBuilder: (context, index) {
               final review = reviews[index].data() as Map<String, dynamic>;
               return ListTile(
-                leading: const Icon(Icons.comment),
-                title: Text(review['reviewerName'] ?? ''),
-                subtitle: Text(review['comment'] ?? ''),
-                trailing: Text('⭐ ${review['rating'] ?? ''}'),
+                leading: const Icon(Icons.star, color: Colors.amber),
+                title: Text('⭐ ${review['rating'] ?? '0'}'),
+                subtitle: const Text('Review'),
+                trailing: Text(review['reviewerName'] ?? ''),
               );
             },
           );
