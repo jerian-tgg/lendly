@@ -6,7 +6,8 @@ import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart'
 import 'package:lendly/features/items/presentation/widgets/item_card.dart';
 import 'package:lendly/features/items/presentation/profile_page.dart';
 import 'package:lendly/features/items/presentation/search_screen.dart';
-import 'package:lendly/features/items/presentation/borrowed_items_screen.dart';  // Import borrowed screen
+import 'package:lendly/features/items/presentation/borrowed_items_screen.dart';
+import 'package:lendly/features/chat/presentation/pages/conversation_screen.dart';// Import borrowed screen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,9 +21,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const ItemListScreen(),
     const SearchScreen(),
-    BorrowedItemsScreen(), // Borrowed tab integrated here
+    BorrowedItemsScreen(),
+    ConversationsScreen(), // <- Add this
     UserProfilePage(),
   ];
+
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -84,16 +87,18 @@ class _HomeScreenState extends State<HomeScreen> {
           : null,
       bottomNavigationBar: BottomNavigationBar(
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search_outlined), activeIcon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), activeIcon: Icon(Icons.shopping_cart), label: 'Borrowed'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outlined), activeIcon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.search_outlined), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Borrowed'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), label: 'Messages'), // <- Add this
+          BottomNavigationBarItem(icon: Icon(Icons.person_outlined), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: const Color(0xFF90E0F3),
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
       ),
+
     );
   }
 }

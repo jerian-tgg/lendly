@@ -2,6 +2,7 @@ import '../../domain/entities/chat_message.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../datasources/chat_remote_data_source.dart';
 import '../models/chat_message_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatRepositoryImpl implements ChatRepository {
   final ChatRemoteDataSource remoteDataSource;
@@ -19,17 +20,20 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Future<void> sendMessage(String convoId, ChatMessage message) {
+    final messageId = FirebaseFirestore.instance.collection('conversations').doc(convoId).collection('messages').doc().id;
+
     return remoteDataSource.sendMessage(
       convoId,
       ChatMessageModel(
-        id: '',  // Add this line
+        id: messageId,
         senderId: message.senderId,
         receiverId: message.receiverId,
         text: message.text,
         timestamp: message.timestamp,
-        seen: false,
+        seen: message.seen,
       ),
     );
   }
+
 
 }

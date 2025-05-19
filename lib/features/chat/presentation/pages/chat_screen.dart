@@ -42,12 +42,30 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _loadReceiverName() async {
-    final doc = await _firestore.collection('users').doc(widget.receiverId).get();
-    final data = doc.data();
-    setState(() {
-      receiverName = data?['username'] ?? 'User';
-    });
+    try {
+      final doc = await _firestore.collection('users').doc(widget.receiverId).get();
+      final data = doc.data();
+
+      if (data != null) {
+        print('User data loaded: $data');
+        setState(() {
+          // Only one field exists, so no need to fallback.
+          receiverName = data['username'] ?? 'User';
+        });
+      } else {
+        print('No user data found for ID: ${widget.receiverId}');
+        setState(() {
+          receiverName = 'User';
+        });
+      }
+    } catch (e) {
+      print('Error fetching receiver name: $e');
+      setState(() {
+        receiverName = 'User';
+      });
+    }
   }
+
 
   // Mark incoming messages as seen when viewed
   void _markMessagesAsSeen(List<ChatMessage> messages, String userId) {
@@ -143,17 +161,17 @@ class _ChatScreenState extends State<ChatScreen> {
                       if (text.isEmpty) return;
 
                       final message = ChatMessage(
-                        id: '',
+                        id: '', // ID generated later in repository
                         senderId: userId,
                         receiverId: widget.receiverId,
                         text: text,
                         timestamp: DateTime.now(),
-                        seen: false,  // required now
+                        seen: false,
                       );
 
-
                       await _sendMessage(widget.convoId, message);
-                      _controller.clear();
+                      _controller.clear(); // already included
+
                     },
                   ),
                 ),

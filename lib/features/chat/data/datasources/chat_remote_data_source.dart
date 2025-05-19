@@ -26,10 +26,16 @@ class FirebaseChatDataSource implements ChatRemoteDataSource {
 
   @override
   Future<void> sendMessage(String convoId, ChatMessageModel message) async {
-    await _firestore
-        .collection('conversations')
-        .doc(convoId)
-        .collection('messages')
-        .add(message.toMap());
+    final convoRef = _firestore.collection('conversations').doc(convoId);
+
+    // Create or update the conversation document with participants
+    await convoRef.set({
+      'participants': [message.senderId, message.receiverId],
+      'lastUpdated': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // Then add the message to the subcollection
+    await convoRef.collection('messages').add(message.toMap());
   }
+
 }
