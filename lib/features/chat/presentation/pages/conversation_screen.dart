@@ -1,65 +1,99 @@
-// features/chat/presentation/conversations_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'chat_screen.dart'; // where your individual chat logic is
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lendly/features/chat/data/repositories/chat_repository_impl.dart';
+import 'package:lendly/features/chat/data/datasources/chat_remote_data_source.dart';
+import 'package:lendly/features/chat/domain/entities/conversation.dart';
+import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 
-class ConversationsScreen extends StatelessWidget {
-  final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
+class ConversationScreen extends StatelessWidget {
+  final chatRepo = ChatRepositoryImpl(FirebaseChatDataSource(FirebaseFirestore.instance));
 
-  ConversationsScreen({super.key});
+  ConversationScreen({super.key});
+
+  String _getOtherUserId(List<String> participants, String currentUserId) {
+    return participants.firstWhere((id) => id != currentUserId, orElse: () => 'Unknown');
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.month}/${date.day}/${date.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('conversations')
-          .where('participants', arrayContains: currentUserId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-        final conversations = snapshot.data!.docs;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Conversations'),
+      ),
+      body: StreamBuilder<List<Conversation>>(
+        stream: chatRepo.getUserConversations(currentUserId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        return ListView.builder(
-          itemCount: conversations.length,
-          itemBuilder: (context, index) {
-            final convo = conversations[index];
-            final participantIds = List<String>.from(convo['participants']);
-            final otherUserId = participantIds.firstWhere((id) => id != currentUserId);
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No conversations yet.'));
+          }
 
-            return FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance.collection('users').doc(otherUserId).get(),
-              builder: (context, userSnapshot) {
-                if (!userSnapshot.hasData) return const ListTile(title: Text("Loading..."));
+          final conversations = snapshot.data!;
 
-                final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                final username = userData['username'] ?? 'User';
+          return ListView.builder(
+            itemCount: conversations.length,
+            itemBuilder: (context, index) {
+              final convo = conversations[index];
+              final otherUserId = _getOtherUserId(convo.participants, currentUserId);
 
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: NetworkImage(userData['photoURL'] ?? ''),
-                  ),
-                  title: Text(username),
-                  subtitle: Text("Tap to chat"),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          convoId: convo.id,
-                          receiverId: otherUserId,
+              return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance.collection('users').doc(otherUserId).get(),
+                builder: (context, userSnapshot) {
+                  if (userSnapshot.connectionState == ConnectionState.waiting) {
+                    return const ListTile(title: Text("Loading..."));
+                  }
+
+                  if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                    return ListTile(title: Text("User not found"));
+                  }
+
+                  final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                  final username = userData['username'] ?? otherUserId;
+                  final profilePicUrl = userData['profilePicUrl'] as String?;
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: profilePicUrl != null
+                          ? NetworkImage(profilePicUrl)
+                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                    ),
+                    title: Text(username),
+                    subtitle: convo.lastMessageText != null
+                        ? Text(convo.lastMessageText!)
+                        : const Text('No messages yet.'),
+                    trailing: Text(
+                      _formatDate(convo.lastUpdated),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            convoId: convo.id,
+                            currentUserId: currentUserId,
+                            otherUserId: otherUserId,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            );
-          },
-        );
-      },
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const ItemListScreen(),
     const SearchScreen(),
     BorrowedItemsScreen(),
-    ConversationsScreen(), // <- Add this
+    ConversationScreen(), // <- Add this
     UserProfilePage(),
   ];
 

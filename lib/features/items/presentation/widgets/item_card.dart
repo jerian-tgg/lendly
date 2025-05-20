@@ -4,8 +4,6 @@ import 'package:lendly/features/items/presentation/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
 import 'package:lendly/features/items/data/item_repository.dart';
 
-import 'add_item_dialog.dart';
-
 class ItemCard extends StatelessWidget {
   final String itemId;
   final Map<String, dynamic> itemData;
@@ -123,7 +121,10 @@ class ItemCard extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ItemDetailScreen(itemData: itemData, itemId: itemId),
+                  builder: (context) => ItemDetailScreen(
+                    itemData: itemData,
+                    itemId: itemId,
+                  ),
                 ),
               );
             },

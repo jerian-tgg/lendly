@@ -56,10 +56,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
         DateTime start = fromTimestamp is DateTime ? fromTimestamp : (fromTimestamp as dynamic).toDate();
         DateTime end = toTimestamp is DateTime ? toTimestamp : (toTimestamp as dynamic).toDate();
 
-        _availability = DateTimeRange(
-          start: start,
-          end: end,
-        );
+        _availability = DateTimeRange(start: start, end: end);
       }
 
       final images = widget.initialData!['imageUrls'];
@@ -80,8 +77,10 @@ class _AddItemDialogState extends State<AddItemDialog> {
 
   Future<void> _pickImages() async {
     final images = await _picker.pickMultiImage();
-    if (images != null) {
-      setState(() => _imagePaths = images.map((e) => e.path).toList());
+    if (images.isNotEmpty) {
+      setState(() {
+        _imagePaths = images.map((e) => e.path).toList();
+      });
     }
   }
 
@@ -92,7 +91,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
       lastDate: DateTime(DateTime.now().year + 1),
       initialDateRange: _availability,
     );
-    if (picked != null) setState(() => _availability = picked);
+    if (picked != null) {
+      setState(() => _availability = picked);
+    }
   }
 
   Future<void> _submitForm() async {
@@ -138,11 +139,15 @@ class _AddItemDialogState extends State<AddItemDialog> {
         await ItemRepository().updateItem(widget.itemId!, item);
         if (mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item updated')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Item updated')),
+          );
         }
       } else {
         await ItemRepository().addItem(item);
-        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -212,6 +217,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                 ),
               DropdownButtonFormField<String>(
                 value: _condition,
+                decoration: const InputDecoration(labelText: 'Condition'),
                 items: ['Like New', 'Good', 'Fair', 'Poor'].map((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
@@ -219,13 +225,13 @@ class _AddItemDialogState extends State<AddItemDialog> {
                   );
                 }).toList(),
                 onChanged: (value) => setState(() => _condition = value!),
-                decoration: const InputDecoration(labelText: 'Condition'),
               ),
               ElevatedButton(
                 onPressed: _pickImages,
                 child: Text(isEditing ? 'Update Photos' : 'Add Photos'),
               ),
-              if (_imagePaths.isNotEmpty) Text('${_imagePaths.length} photos selected'),
+              if (_imagePaths.isNotEmpty)
+                Text('${_imagePaths.length} photo(s) selected'),
             ],
           ),
         ),
