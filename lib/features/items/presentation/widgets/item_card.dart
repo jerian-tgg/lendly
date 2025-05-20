@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lendly/features/items/presentation/item_detail_screen.dart';
+import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
+import 'package:lendly/features/items/data/item_repository.dart';
+
+import 'add_item_dialog.dart';
 
 class ItemCard extends StatelessWidget {
   final String itemId;
-  final Map<String, dynamic> itemData;  // NEW: full item data map
+  final Map<String, dynamic> itemData;
   final String name;
   final String price;
   final String imagePath;
@@ -16,7 +20,7 @@ class ItemCard extends StatelessWidget {
   const ItemCard({
     super.key,
     required this.itemId,
-    required this.itemData,  // required now
+    required this.itemData,
     required this.name,
     required this.price,
     required this.imagePath,
@@ -38,7 +42,7 @@ class ItemCard extends StatelessWidget {
               title: const Text('Edit Item'),
               onTap: () {
                 Navigator.pop(context);
-                if (onEdit != null) onEdit!();
+                _handleEdit(context);
               },
             ),
             ListTile(
@@ -46,13 +50,53 @@ class ItemCard extends StatelessWidget {
               title: const Text('Delete Item', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
-                if (onDelete != null) onDelete!();
+                _confirmDelete(context);
               },
             ),
           ],
         );
       },
     );
+  }
+
+  void _handleEdit(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AddItemDialog(
+        itemId: itemId,
+        initialData: itemData,
+      ),
+    ).then((_) {
+      if (onEdit != null) onEdit!();
+    });
+  }
+
+  void _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: const Text('Are you sure you want to delete this item?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ItemRepository().deleteItem(itemId);
+      if (onDelete != null) onDelete!();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Item deleted')),
+      );
+    }
   }
 
   void _handleBorrow(BuildContext context) {
