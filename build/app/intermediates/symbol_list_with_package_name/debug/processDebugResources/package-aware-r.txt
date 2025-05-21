@@ -3326,6 +3326,7 @@ drawable common_google_signin_btn_text_light
 drawable common_google_signin_btn_text_light_focused
 drawable common_google_signin_btn_text_light_normal
 drawable common_google_signin_btn_text_light_normal_background
+drawable corner
 drawable design_fab_background
 drawable design_ic_visibility
 drawable design_ic_visibility_off
@@ -3591,6 +3592,7 @@ drawable stripe_logo
 drawable stripe_paymentsheet_testmode_background
 drawable stripe_simple_button_background
 drawable test_level_drawable
+drawable toast_bg
 drawable tooltip_frame_dark
 drawable tooltip_frame_light
 id ALT
@@ -4545,6 +4547,7 @@ layout stripe_shipping_method_view
 layout stripe_shipping_method_widget
 layout stripe_vertical_divider
 layout support_simple_spinner_dropdown_item
+layout toast_custom
 layout wallet_test_layout
 menu stripe_add_payment_method
 menu stripe_payment_auth_web_view_menu

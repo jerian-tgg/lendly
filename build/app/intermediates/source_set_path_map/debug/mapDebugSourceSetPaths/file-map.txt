@@ -106,6 +106,7 @@ com.example.lendly.app-debug-104 C:\Users\imgze\Documents\GitHub\lendly\build\fi
 com.example.lendly.app-debug-105 C:\Users\imgze\Documents\GitHub\lendly\build\firebase_messaging\intermediates\packaged_res\debug\packageDebugResources
 com.example.lendly.app-debug-106 C:\Users\imgze\Documents\GitHub\lendly\build\firebase_storage\intermediates\packaged_res\debug\packageDebugResources
 com.example.lendly.app-debug-107 C:\Users\imgze\Documents\GitHub\lendly\build\flutter_plugin_android_lifecycle\intermediates\packaged_res\debug\packageDebugResources
-com.example.lendly.app-debug-108 C:\Users\imgze\Documents\GitHub\lendly\build\google_sign_in_android\intermediates\packaged_res\debug\packageDebugResources
-com.example.lendly.app-debug-109 C:\Users\imgze\Documents\GitHub\lendly\build\image_picker_android\intermediates\packaged_res\debug\packageDebugResources
-com.example.lendly.app-debug-110 C:\Users\imgze\Documents\GitHub\lendly\build\stripe_android\intermediates\packaged_res\debug\packageDebugResources
+com.example.lendly.app-debug-108 C:\Users\imgze\Documents\GitHub\lendly\build\fluttertoast\intermediates\packaged_res\debug\packageDebugResources
+com.example.lendly.app-debug-109 C:\Users\imgze\Documents\GitHub\lendly\build\google_sign_in_android\intermediates\packaged_res\debug\packageDebugResources
+com.example.lendly.app-debug-110 C:\Users\imgze\Documents\GitHub\lendly\build\image_picker_android\intermediates\packaged_res\debug\packageDebugResources
+com.example.lendly.app-debug-111 C:\Users\imgze\Documents\GitHub\lendly\build\stripe_android\intermediates\packaged_res\debug\packageDebugResources

@@ -1,3 +1,4 @@
+// conversation_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,14 +25,21 @@ class ConversationScreen extends StatelessWidget {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Conversations'),
+        backgroundColor: const Color(0xFF90E0F3),
+        title: const Text(
+          'Conversations',
+          style: TextStyle(color: Colors.white),
+        ),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<List<Conversation>>(
         stream: chatRepo.getUserConversations(currentUserId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF90E0F3)));
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -40,8 +48,10 @@ class ConversationScreen extends StatelessWidget {
 
           final conversations = snapshot.data!;
 
-          return ListView.builder(
+          return ListView.separated(
+            padding: const EdgeInsets.all(10),
             itemCount: conversations.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final convo = conversations[index];
               final otherUserId = _getOtherUserId(convo.participants, currentUserId);
@@ -54,27 +64,37 @@ class ConversationScreen extends StatelessWidget {
                   }
 
                   if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                    return ListTile(title: Text("User not found"));
+                    return const ListTile(title: Text("User not found"));
                   }
 
                   final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                  final username = userData['username'] ?? otherUserId;
-                  final profilePicUrl = userData['profilePicUrl'] as String?;
+                  final username = userData['username'] ?? userData['name'] ?? 'User';
+                  final profilePicUrl = userData['photoURL'] as String?;
 
                   return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     leading: CircleAvatar(
+                      radius: 25,
                       backgroundImage: profilePicUrl != null
                           ? NetworkImage(profilePicUrl)
-                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                          : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
                     ),
-                    title: Text(username),
-                    subtitle: convo.lastMessageText != null
-                        ? Text(convo.lastMessageText!)
-                        : const Text('No messages yet.'),
+                    title: Text(
+                      username,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      convo.lastMessageText ?? 'No messages yet.',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.black54),
+                    ),
                     trailing: Text(
                       _formatDate(convo.lastUpdated),
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    tileColor: const Color(0xFFF6FDFF),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -83,6 +103,8 @@ class ConversationScreen extends StatelessWidget {
                             convoId: convo.id,
                             currentUserId: currentUserId,
                             otherUserId: otherUserId,
+                            otherUserName: username,
+                            itemId: convo.itemId,
                           ),
                         ),
                       );

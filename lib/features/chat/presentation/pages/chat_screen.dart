@@ -1,20 +1,21 @@
+// chat_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../domain/entities/chat_message.dart';
-import '../../data/repositories/chat_repository_impl.dart';
-import '../../data/datasources/chat_remote_data_source.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class ChatScreen extends StatefulWidget {
   final String convoId;
   final String currentUserId;
   final String otherUserId;
-  final String? itemId; // Optional itemId for reference
+  final String otherUserName;
+  final String? itemId;
 
   const ChatScreen({
     Key? key,
     required this.convoId,
     required this.currentUserId,
     required this.otherUserId,
+    required this.otherUserName,
     this.itemId,
   }) : super(key: key);
 
@@ -23,32 +24,85 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _messageController = TextEditingController();
-  final _chatRepo =
-  ChatRepositoryImpl(FirebaseChatDataSource(FirebaseFirestore.instance));
-
-  String? otherUserName;
+  final TextEditingController _messageController = TextEditingController();
+  late Stream<DocumentSnapshot> _conversationStream;
+  late Stream<DocumentSnapshot> _userStream;
 
   @override
   void initState() {
     super.initState();
-    _fetchOtherUserName();
-  }
+    _conversationStream = FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(widget.convoId)
+        .snapshots();
 
-  Future<void> _fetchOtherUserName() async {
-    final userDoc = await FirebaseFirestore.instance
+    _userStream = FirebaseFirestore.instance
         .collection('users')
         .doc(widget.otherUserId)
-        .get();
+        .snapshots();
+  }
 
-    if (userDoc.exists) {
-      setState(() {
-        otherUserName = userDoc.data()?['username'] ?? widget.otherUserId;
-      });
-    } else {
-      setState(() {
-        otherUserName = widget.otherUserId; // fallback
-      });
+  void _sendMessage(String text) async {
+    if (text.trim().isEmpty) return;
+
+    final messageData = {
+      'senderId': widget.currentUserId,
+      'text': text.trim(),
+      'timestamp': FieldValue.serverTimestamp(),
+    };
+
+    final convoRef = FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(widget.convoId);
+
+    await convoRef.collection('messages').add(messageData);
+    await convoRef.update({
+      'lastMessageText': text.trim(),
+      'lastUpdated': FieldValue.serverTimestamp(),
+    });
+
+    _messageController.clear();
+  }
+
+  void _approveRequest() async {
+    await FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(widget.convoId)
+        .update({'approved': true});
+  }
+
+  Future<void> _completeTransactionAndDelete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Complete Transaction'),
+        content: const Text('Are you sure you want to complete and delete this conversation?'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          TextButton(
+            child: const Text('Yes, Complete'),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final convoRef = FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(widget.convoId);
+
+      final messagesSnapshot = await convoRef.collection('messages').get();
+      for (var doc in messagesSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      await convoRef.delete();
+      Fluttertoast.showToast(msg: "Transaction marked as completed.");
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -56,89 +110,185 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text("Chat with ${otherUserName ?? '...'}"),
-            if (widget.itemId != null)
-              Text(
-                "Item ID: ${widget.itemId}",
-                style: const TextStyle(fontSize: 12, color: Colors.white70),
-              ),
+            StreamBuilder<DocumentSnapshot>(
+              stream: _userStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircleAvatar(
+                    radius: 16,
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                final photoUrl = snapshot.hasData && snapshot.data!.exists
+                    ? (snapshot.data!.data() as Map<String, dynamic>)['photoURL']
+                    : null;
+
+                return CircleAvatar(
+                  radius: 16,
+                  backgroundImage: photoUrl != null
+                      ? NetworkImage(photoUrl)
+                      : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                );
+              },
+            ),
+            const SizedBox(width: 12),
+            Text(
+              widget.otherUserName,
+              style: const TextStyle(fontSize: 18),
+            ),
           ],
+        ),
+        backgroundColor: const Color(0xFF90E0F3),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder<List<ChatMessage>>(
-              stream: _chatRepo.getMessages(widget.convoId),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('conversations')
+                  .doc(widget.convoId)
+                  .collection('messages')
+                  .orderBy('timestamp', descending: false)
+                  .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No messages yet."));
-                }
-
-                final messages = snapshot.data!;
+                final messages = snapshot.data!.docs;
 
                 return ListView.builder(
-                  reverse: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final msg = messages[index];
-                    final isMe = msg.senderId == widget.currentUserId;
-                    return Align(
-                      alignment:
-                      isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 4, horizontal: 8),
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: isMe ? Colors.blue[100] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(8),
+                    final message = messages[index].data() as Map<String, dynamic>;
+                    final isMe = message['senderId'] == widget.currentUserId;
+
+                    return Column(
+                      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                      children: [
+                        if (!isMe)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 12.0, bottom: 4),
+                            child: Text(
+                              widget.otherUserName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        Container(
+                          constraints: const BoxConstraints(maxWidth: 300),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: isMe ? const Color(0xFF90E0F3) : const Color(0xFFEDEDED),
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(20),
+                              topRight: const Radius.circular(20),
+                              bottomLeft: Radius.circular(isMe ? 20 : 4),
+                              bottomRight: Radius.circular(isMe ? 4 : 20),
+                            ),
+                          ),
+                          child: Text(
+                            message['text'] ?? '',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: isMe ? Colors.white : Colors.black,
+                            ),
+                          ),
                         ),
-                        child: Text(msg.text),
-                      ),
+                      ],
                     );
                   },
                 );
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          StreamBuilder<DocumentSnapshot>(
+            stream: _conversationStream,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const SizedBox();
+
+              final convoData = snapshot.data!.data() as Map<String, dynamic>;
+              final itemOwnerId = convoData['itemOwnerId'] ?? '';
+              final isApproved = convoData['approved'] ?? false;
+
+              if (widget.currentUserId == itemOwnerId) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      if (!isApproved)
+                        ElevatedButton.icon(
+                          onPressed: _approveRequest,
+                          icon: const Icon(Icons.check),
+                          label: const Text("Approve Request"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                          ),
+                        )
+                      else
+                        Column(
+                          children: [
+                            const Text(
+                              "You have approved this item request ✅",
+                              style: TextStyle(color: Colors.green),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: _completeTransactionAndDelete,
+                              icon: const Icon(Icons.check_circle_outline),
+                              label: const Text("Mark Transaction Complete"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                );
+              } else {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    isApproved ? "Your request is approved ✅" : "Waiting for owner approval...",
+                    style: TextStyle(
+                      color: isApproved ? Colors.green : Colors.orange,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: Colors.grey[200],
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _messageController,
-                    decoration:
-                    const InputDecoration(hintText: "Type a message..."),
+                    decoration: const InputDecoration(
+                      hintText: "Type your message...",
+                      border: InputBorder.none,
+                    ),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: () async {
-                    final text = _messageController.text.trim();
-                    if (text.isNotEmpty) {
-                      final message = ChatMessage(
-                        id: '',
-                        convoId: widget.convoId,
-                        senderId: widget.currentUserId,
-                        receiverId: widget.otherUserId,
-                        text: text,
-                        timestamp: DateTime.now(),
-                        seen: false,
-                        type: 'text',
-                      );
-                      await _chatRepo.sendMessage(widget.convoId, message);
-                      _messageController.clear();
-                    }
-                  },
+                  onPressed: () => _sendMessage(_messageController.text),
                 ),
               ],
             ),

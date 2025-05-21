@@ -6,10 +6,18 @@ class ConversationModel extends Conversation {
     required String id,
     required List<String> participants,
     required DateTime lastUpdated,
+    String? lastMessageText,
+    required String itemId,
+    required String itemOwnerId,
+    required bool approved,
   }) : super(
     id: id,
     participants: participants,
     lastUpdated: lastUpdated,
+    lastMessageText: lastMessageText,
+    itemId: itemId,
+    itemOwnerId: itemOwnerId,
+    approved: approved,
   );
 
   factory ConversationModel.fromDocument(DocumentSnapshot doc) {
@@ -17,7 +25,11 @@ class ConversationModel extends Conversation {
     return ConversationModel(
       id: doc.id,
       participants: List<String>.from(data['participants'] ?? []),
-      lastUpdated: (data['lastUpdated'] as Timestamp).toDate(),
+      lastUpdated: (data['lastUpdated'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastMessageText: data['lastMessageText'],
+      itemId: data['itemId'] ?? '',
+      itemOwnerId: data['itemOwnerId'] ?? '',
+      approved: data['approved'] ?? false,
     );
   }
 
@@ -25,6 +37,10 @@ class ConversationModel extends Conversation {
     return {
       'participants': participants,
       'lastUpdated': lastUpdated,
+      'lastMessageText': lastMessageText,
+      'itemId': itemId,
+      'itemOwnerId': itemOwnerId,
+      'approved': approved,
     };
   }
 }

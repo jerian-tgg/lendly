@@ -224,6 +224,12 @@
       "languageVersion": "3.7"
     },
     {
+      "name": "fluttertoast",
+      "rootUri": "file:///C:/Users/imgze/AppData/Local/Pub/Cache/hosted/pub.dev/fluttertoast-8.2.12",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "freezed_annotation",
       "rootUri": "file:///C:/Users/imgze/AppData/Local/Pub/Cache/hosted/pub.dev/freezed_annotation-2.4.4",
       "packageUri": "lib/",
@@ -500,7 +506,7 @@
       "languageVersion": "3.7"
     }
   ],
-  "generated": "2025-05-19T08:51:27.506372Z",
+  "generated": "2025-05-20T18:16:04.156672Z",
   "generator": "pub",
   "generatorVersion": "3.7.2",
   "flutterRoot": "file:///C:/flutter",

@@ -26,6 +26,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Future<String> createOrGetConversation({
     required String currentUserId,
     required String otherUserId,
+    required String itemId, // <--- add this
   }) async {
     final convoRef = FirebaseFirestore.instance.collection('conversations');
     final querySnapshot = await convoRef
@@ -38,7 +39,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       existingConvo = querySnapshot.docs.firstWhere((doc) {
         final participants = List<String>.from(doc['participants']);
         return participants.contains(currentUserId) &&
-            participants.contains(otherUserId);
+            participants.contains(otherUserId) &&
+            doc['itemId'] == itemId; // <--- check for itemId match too
       });
     } catch (e) {
       existingConvo = null;
@@ -53,6 +55,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       await newConvoRef.set({
         'participants': [currentUserId, otherUserId],
         'itemOwnerId': otherUserId,
+        'itemId': itemId, // ✅ Add this!
         'approved': false,
         'lastUpdated': FieldValue.serverTimestamp(),
       });
@@ -60,6 +63,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       return convoId;
     }
   }
+
 
   Future<void> _pickDates(BuildContext context) async {
     final picked = await showDateRangePicker(
@@ -137,7 +141,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     final convoId = await createOrGetConversation(
                       currentUserId: currentUserId,
                       otherUserId: ownerId,
+                      itemId: widget.itemId, // ✅ pass itemId here
                     );
+
 
                     Navigator.push(
                       context,
@@ -146,7 +152,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           convoId: convoId,
                           currentUserId: currentUserId, // <- Replace with the logged-in user's ID
                           otherUserId: ownerId,
-                          itemId: widget.itemId,// optional, if available
+                          itemId: widget.itemId, otherUserName: '',// optional, if available
                         )
 
                       ),

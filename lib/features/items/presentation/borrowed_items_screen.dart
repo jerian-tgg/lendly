@@ -1,182 +1,220 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 
-class BorrowedItemsScreen extends StatelessWidget {
-  final String userId = FirebaseAuth.instance.currentUser!.uid;
+class BorrowedItemsScreen extends StatefulWidget {
+  const BorrowedItemsScreen({super.key});
 
-  BorrowedItemsScreen({super.key});
+  @override
+  State<BorrowedItemsScreen> createState() => _BorrowedItemsScreenState();
+}
 
-  void _openChat(BuildContext context, String ownerId) {
-    // Implement your navigation to chat screen here
-    // Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(ownerId: ownerId)));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Chat feature coming soon!')),
-    );
-  }
+class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
+  bool showCompleted = false;
 
   @override
   Widget build(BuildContext context) {
-    final borrowRequestRef = FirebaseFirestore.instance.collection('borrowList');
-    final itemsRef = FirebaseFirestore.instance.collection('items');
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return const Center(child: Text("Not logged in."));
+    }
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: borrowRequestRef
-          .where('borrowerID', isEqualTo: userId)
-          .orderBy('startDate', descending: true)
-          .snapshots(),
-      builder: (context, borrowSnapshot) {
-        if (borrowSnapshot.hasError) {
-          return Center(child: Text('Error: ${borrowSnapshot.error}'));
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Borrowed Items"),
+        backgroundColor: const Color(0xFF90E0F3),
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('conversations')
+            .where('participants', arrayContains: currentUser.uid)
+            .where('approved', isEqualTo: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+          final conversations = snapshot.data!.docs;
+
+          if (conversations.isEmpty) {
+            return const Center(child: Text("No approved borrowed items yet."));
+          }
+
+          final ongoing = conversations.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return !(data['isPaid'] == true &&
+                data['isReceived'] == true &&
+                data['isReturned'] == true &&
+                data['isReturnConfirmed'] == true);
+          }).toList();
+
+          final completed = conversations.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['isPaid'] == true &&
+                data['isReceived'] == true &&
+                data['isReturned'] == true &&
+                data['isReturnConfirmed'] == true;
+          }).toList();
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                // Ongoing transactions
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: ongoing.length,
+                  itemBuilder: (context, index) {
+                    return _buildItemTile(ongoing[index], currentUser.uid);
+                  },
+                ),
+
+                // Completed Transactions Toggle
+                ExpansionTile(
+                  title: const Text("Completed Transactions"),
+                  initiallyExpanded: showCompleted,
+                  onExpansionChanged: (val) {
+                    setState(() => showCompleted = val);
+                  },
+                  children: completed
+                      .map((doc) => _buildItemTile(doc, currentUser.uid, isCompleted: true))
+                      .toList(),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildItemTile(DocumentSnapshot convoDoc, String currentUserId, {bool isCompleted = false}) {
+    final convo = convoDoc.data() as Map<String, dynamic>;
+    final itemId = convo['itemId'] ?? '';
+    final ownerId = convo['itemOwnerId'] ?? '';
+    final convoId = convoDoc.id;
+
+    if (itemId.isEmpty) return const SizedBox.shrink();
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('items').doc(itemId).get(),
+      builder: (context, itemSnapshot) {
+        if (!itemSnapshot.hasData || !itemSnapshot.data!.exists) {
+          return const ListTile(title: Text("Item not found"));
         }
-        if (borrowSnapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
 
-        final borrowDocs = borrowSnapshot.data?.docs ?? [];
-        if (borrowDocs.isEmpty) {
-          return const Center(child: Text('No borrowed items found.'));
-        }
+        final itemData = itemSnapshot.data!.data() as Map<String, dynamic>;
+        final isOwner = currentUserId == ownerId;
+        final isPaid = convo['isPaid'] ?? false;
+        final isReceived = convo['isReceived'] ?? false;
+        final isReturned = convo['isReturned'] ?? false;
+        final isReturnConfirmed = convo['isReturnConfirmed'] ?? false;
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: borrowDocs.length,
-          itemBuilder: (context, index) {
-            final borrowData = borrowDocs[index].data() as Map<String, dynamic>;
-            final itemId = borrowData['itemID'] as String;
+        final imageUrl = (itemData['imageUrls'] is List && itemData['imageUrls'].isNotEmpty)
+            ? itemData['imageUrls'][0]
+            : null;
 
-            return FutureBuilder<DocumentSnapshot>(
-              future: itemsRef.doc(itemId).get(),
-              builder: (context, itemSnapshot) {
-                if (itemSnapshot.hasError) return const Text('Error loading item');
-                if (!itemSnapshot.hasData) return const CircularProgressIndicator();
 
-                final itemData = itemSnapshot.data!.data() as Map<String, dynamic>?;
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: imageUrl != null
+                      ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(
+                      imageUrl,
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                      : const Icon(Icons.image_not_supported),
+                  title: Text(itemData['name'] ?? 'No title'),
+                  subtitle: Text(itemData['description'] ?? ''),
+                ),
+                const SizedBox(height: 10),
 
-                if (itemData == null) return const Text('Item not found');
-
-                final itemName = itemData['name'] ?? 'Unnamed Item';
-                final imageUrls = (itemData['imageUrls'] as List<dynamic>?) ?? [];
-                final ownerId = itemData['ownerId'] ?? '';
-
-                final startDate = borrowData['startDate'] != null
-                    ? (borrowData['startDate'] as Timestamp).toDate()
-                    : null;
-                final endDate = borrowData['endDate'] != null
-                    ? (borrowData['endDate'] as Timestamp).toDate()
-                    : null;
-                final status = borrowData['status'] ?? 'unknown';
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Image
-                      ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                        child: imageUrls.isNotEmpty
-                            ? Image.network(
-                          imageUrls[0],
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, progress) {
-                            if (progress == null) return child;
-                            return SizedBox(
-                              height: 180,
-                              child: Center(child: CircularProgressIndicator(value: progress.expectedTotalBytes != null
-                                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
-                                  : null)),
-                            );
+                // Status / Action Buttons
+                if (isCompleted)
+                  const Text(
+                    'Transaction completed.',
+                    style: TextStyle(color: Colors.green),
+                  )
+                else if (isOwner && !isPaid)
+                  ElevatedButton(
+                    onPressed: () async {
+                      await FirebaseFirestore.instance
+                          .collection('conversations')
+                          .doc(convoId)
+                          .update({'isPaid': true});
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    child: const Text('Mark as Paid'),
+                  )
+                else if (!isOwner && isPaid && !isReceived)
+                    ElevatedButton(
+                      onPressed: () async {
+                        await FirebaseFirestore.instance
+                            .collection('conversations')
+                            .doc(convoId)
+                            .update({'isReceived': true});
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                      child: const Text('Mark as Received'),
+                    )
+                  else if (!isOwner && isPaid && isReceived && !isReturned)
+                      ElevatedButton(
+                        onPressed: () async {
+                          await FirebaseFirestore.instance
+                              .collection('conversations')
+                              .doc(convoId)
+                              .update({'isReturned': true});
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                        child: const Text('Mark as Returned'),
+                      )
+                    else if (isOwner && isReturned && !isReturnConfirmed)
+                        ElevatedButton(
+                          onPressed: () async {
+                            await FirebaseFirestore.instance
+                                .collection('conversations')
+                                .doc(convoId)
+                                .update({'isReturnConfirmed': true});
                           },
-                          errorBuilder: (_, __, ___) => Container(
-                            height: 180,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.broken_image, size: 80, color: Colors.grey),
-                          ),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+                          child: const Text('Confirm Return'),
                         )
-                            : Container(
-                          height: 180,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.inventory, size: 80, color: Colors.grey),
+                      else
+                        Text(
+                          isOwner
+                              ? (isReturnConfirmed
+                              ? 'Transaction complete.'
+                              : isReturned
+                              ? 'Confirm item return.'
+                              : isPaid
+                              ? 'Waiting for borrower to return item.'
+                              : 'Waiting for payment...')
+                              : isReturnConfirmed
+                              ? 'Transaction complete.'
+                              : isReturned
+                              ? 'Waiting for owner to confirm return.'
+                              : isReceived
+                              ? 'Mark as returned after use.'
+                              : 'Waiting for delivery...',
+                          style: const TextStyle(color: Colors.grey),
                         ),
-                      ),
-
-                      // Details Padding
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              itemName,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (startDate != null)
-                              Text(
-                                'Borrowed from: ${DateFormat('MMM d, yyyy').format(startDate)}',
-                                style: TextStyle(color: Colors.grey[700]),
-                              ),
-                            if (endDate != null)
-                              Text(
-                                'Due by: ${DateFormat('MMM d, yyyy').format(endDate)}',
-                                style: TextStyle(color: Colors.grey[700]),
-                              ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Status: $status',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: status.toLowerCase() == 'returned'
-                                    ? Colors.green
-                                    : status.toLowerCase() == 'pending'
-                                    ? Colors.orange
-                                    : Colors.red,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: const Icon(Icons.chat_bubble_outline),
-                                label: const Text('Chat Owner'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF90E0F3),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  textStyle: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                onPressed: () => _openChat(context, ownerId),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+              ],
+            ),
+          ),
         );
       },
     );
   }
 }
+
+
