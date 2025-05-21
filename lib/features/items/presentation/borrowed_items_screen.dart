@@ -113,7 +113,6 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
             ? itemData['imageUrls'][0]
             : null;
 
-
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           child: Padding(
@@ -139,13 +138,13 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // Status / Action Buttons
+                // Action buttons based on status
                 if (isCompleted)
                   const Text(
                     'Transaction completed.',
                     style: TextStyle(color: Colors.green),
                   )
-                else if (isOwner && !isPaid)
+                else if (!isPaid)
                   ElevatedButton(
                     onPressed: () async {
                       await FirebaseFirestore.instance
@@ -156,7 +155,7 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                     child: const Text('Mark as Paid'),
                   )
-                else if (!isOwner && isPaid && !isReceived)
+                else if (isPaid && !isReceived)
                     ElevatedButton(
                       onPressed: () async {
                         await FirebaseFirestore.instance
@@ -167,7 +166,7 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
                       child: const Text('Mark as Received'),
                     )
-                  else if (!isOwner && isPaid && isReceived && !isReturned)
+                  else if (isReceived && !isReturned)
                       ElevatedButton(
                         onPressed: () async {
                           await FirebaseFirestore.instance
@@ -178,7 +177,7 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                         child: const Text('Mark as Returned'),
                       )
-                    else if (isOwner && isReturned && !isReturnConfirmed)
+                    else if (isReturned && !isReturnConfirmed)
                         ElevatedButton(
                           onPressed: () async {
                             await FirebaseFirestore.instance
@@ -190,23 +189,9 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
                           child: const Text('Confirm Return'),
                         )
                       else
-                        Text(
-                          isOwner
-                              ? (isReturnConfirmed
-                              ? 'Transaction complete.'
-                              : isReturned
-                              ? 'Confirm item return.'
-                              : isPaid
-                              ? 'Waiting for borrower to return item.'
-                              : 'Waiting for payment...')
-                              : isReturnConfirmed
-                              ? 'Transaction complete.'
-                              : isReturned
-                              ? 'Waiting for owner to confirm return.'
-                              : isReceived
-                              ? 'Mark as returned after use.'
-                              : 'Waiting for delivery...',
-                          style: const TextStyle(color: Colors.grey),
+                        const Text(
+                          'Transaction in progress...',
+                          style: TextStyle(color: Colors.grey),
                         ),
               ],
             ),
@@ -216,5 +201,3 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
     );
   }
 }
-
-

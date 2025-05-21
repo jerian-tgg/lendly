@@ -71,12 +71,12 @@ class _ChatScreenState extends State<ChatScreen> {
         .update({'approved': true});
   }
 
-  Future<void> _completeTransactionAndDelete() async {
+  Future<void> _markTransactionAsCompleted() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Complete Transaction'),
-        content: const Text('Are you sure you want to complete and delete this conversation?'),
+        content: const Text('Are you sure you want to mark this transaction as completed?'),
         actions: [
           TextButton(
             child: const Text('Cancel'),
@@ -91,18 +91,12 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     if (confirm == true) {
-      final convoRef = FirebaseFirestore.instance
+      await FirebaseFirestore.instance
           .collection('conversations')
-          .doc(widget.convoId);
+          .doc(widget.convoId)
+          .update({'isCompleted': true});
 
-      final messagesSnapshot = await convoRef.collection('messages').get();
-      for (var doc in messagesSnapshot.docs) {
-        await doc.reference.delete();
-      }
-
-      await convoRef.delete();
       Fluttertoast.showToast(msg: "Transaction marked as completed.");
-      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -222,54 +216,77 @@ class _ChatScreenState extends State<ChatScreen> {
               final convoData = snapshot.data!.data() as Map<String, dynamic>;
               final itemOwnerId = convoData['itemOwnerId'] ?? '';
               final isApproved = convoData['approved'] ?? false;
+              final isCompleted = convoData['isCompleted'] ?? false;
 
-              if (widget.currentUserId == itemOwnerId) {
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      if (!isApproved)
-                        ElevatedButton.icon(
-                          onPressed: _approveRequest,
-                          icon: const Icon(Icons.check),
-                          label: const Text("Approve Request"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                          ),
-                        )
-                      else
-                        Column(
-                          children: [
-                            const Text(
-                              "You have approved this item request ✅",
-                              style: TextStyle(color: Colors.green),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: _completeTransactionAndDelete,
-                              icon: const Icon(Icons.check_circle_outline),
-                              label: const Text("Mark Transaction Complete"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            ),
-                          ],
+              return Column(
+                children: [
+                  if (isCompleted)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        "✅ This transaction has been completed.",
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
                         ),
-                    ],
-                  ),
-                );
-              } else {
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    isApproved ? "Your request is approved ✅" : "Waiting for owner approval...",
-                    style: TextStyle(
-                      color: isApproved ? Colors.green : Colors.orange,
-                      fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                );
-              }
+                  if (widget.currentUserId == itemOwnerId)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          if (!isApproved)
+                            ElevatedButton.icon(
+                              onPressed: _approveRequest,
+                              icon: const Icon(Icons.check),
+                              label: const Text("Approve Request"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                              ),
+                            )
+                          else if (!isCompleted)
+                            Column(
+                              children: [
+                                const Text(
+                                  "You have approved this item request ✅",
+                                  style: TextStyle(color: Colors.green),
+                                ),
+                                const SizedBox(height: 8),
+                                ElevatedButton.icon(
+                                  onPressed: _markTransactionAsCompleted,
+                                  icon: const Icon(Icons.check_circle_outline),
+                                  label: const Text("Mark Transaction Complete"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.redAccent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        isCompleted
+                            ? "✅ This transaction has been completed."
+                            : isApproved
+                            ? "Your request is approved ✅"
+                            : "Waiting for owner approval...",
+                        style: TextStyle(
+                          color: isCompleted
+                              ? Colors.grey
+                              : isApproved
+                              ? Colors.green
+                              : Colors.orange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              );
             },
           ),
           Container(
