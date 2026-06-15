@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:lendly/features/items/presentation/item_detail_screen.dart';
+import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
+import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
-import 'package:lendly/features/items/data/item_repository.dart';
 
 class ItemCard extends StatelessWidget {
   final String itemId;
@@ -89,7 +89,7 @@ class ItemCard extends StatelessWidget {
     );
 
     if (confirmed == true) {
-      await ItemRepository().deleteItem(itemId);
+      await ItemRepositoryImpl().deleteItem(itemId);
       if (onDelete != null) onDelete!();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Item deleted')),

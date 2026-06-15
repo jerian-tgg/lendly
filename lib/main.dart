@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:lendly/features/auth/presentation/auth_wrapper.dart';
-import 'package:lendly/firebase_options.dart';
+import 'package:lendly/core/config/firebase_options.dart';
+import 'package:lendly/features/auth/presentation/pages/auth_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

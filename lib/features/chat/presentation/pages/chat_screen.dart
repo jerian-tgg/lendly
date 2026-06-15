@@ -100,6 +100,60 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _confirmAndClearChat() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear chat'),
+        content: const Text('This will delete all messages in this conversation. The chat head will be preserved. Continue?'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          TextButton(
+            child: const Text('Clear'),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _clearChatMessages();
+        Fluttertoast.showToast(msg: 'Chat cleared');
+      } catch (e) {
+        Fluttertoast.showToast(msg: 'Failed to clear chat');
+      }
+    }
+  }
+
+  Future<void> _clearChatMessages() async {
+    final convoRef = FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(widget.convoId);
+    final messagesRef = convoRef.collection('messages');
+
+    // Delete in batches to handle large conversations
+    while (true) {
+      final snapshot = await messagesRef.limit(500).get();
+      if (snapshot.docs.isEmpty) break;
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+
+    // Optionally reset conversation preview fields but keep the convo doc
+    await convoRef.update({
+      'lastMessageText': FieldValue.delete(),
+      'lastUpdated': FieldValue.serverTimestamp(),
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,6 +194,13 @@ class _ChatScreenState extends State<ChatScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_outlined),
+            tooltip: 'Clear chat',
+            onPressed: _confirmAndClearChat,
+          ),
+        ],
       ),
       body: Column(
         children: [

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:lendly/features/items/domain/item_model.dart';
-import 'package:lendly/features/items/data/item_repository.dart';
+import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
+import 'package:lendly/features/items/domain/entities/item.dart';
 
 class AddItemDialog extends StatefulWidget {
   final String? itemId;
@@ -105,10 +105,10 @@ class _AddItemDialogState extends State<AddItemDialog> {
       if (widget.itemId != null) {
         final localImagePaths = _imagePaths.where((p) => !p.startsWith('http')).toList();
         final existingUrls = _imagePaths.where((p) => p.startsWith('http')).toList();
-        final uploadedUrls = await ItemRepository().uploadImages(localImagePaths);
+        final uploadedUrls = await ItemRepositoryImpl().uploadImages(localImagePaths);
         imageUrls = [...existingUrls, ...uploadedUrls];
       } else {
-        imageUrls = await ItemRepository().uploadImages(_imagePaths);
+        imageUrls = await ItemRepositoryImpl().uploadImages(_imagePaths);
       }
 
       final user = FirebaseAuth.instance.currentUser!;
@@ -136,7 +136,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
       );
 
       if (widget.itemId != null) {
-        await ItemRepository().updateItem(widget.itemId!, item);
+        await ItemRepositoryImpl().updateItem(widget.itemId!, item);
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -144,7 +144,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
           );
         }
       } else {
-        await ItemRepository().addItem(item);
+        await ItemRepositoryImpl().addItem(item);
         if (mounted) {
           Navigator.pop(context);
         }
