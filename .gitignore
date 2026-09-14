@@ -1,16 +1,131 @@
+# -------------------------------------------------------------------------
+# Flutter & Dart
+# -------------------------------------------------------------------------
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-plugins-dependencies.lock
+.melos_tool/
+build/
+*.dart.js
+*.info.json
+*.js.deps
+*.js.map
+
+# -------------------------------------------------------------------------
+# IDEs & Editor configs
+# -------------------------------------------------------------------------
+# IntelliJ/Android Studio
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
+.idea/dictionaries/
+.idea/caches/
+.idea/libraries/
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/appInsightsSettings.xml
+.idea/AndroidProjectSystem.xml
+.idea/kotlinc.xml
+.idea/compiler.xml
+.idea/migrations.xml
+.idea/.name
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# -------------------------------------------------------------------------
+# OS-specific files
+# -------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------------------------------------------------------
+# Android
+# -------------------------------------------------------------------------
+android/.gradle/
+android/local.properties
+android/app/local.properties
+android/app/build/
+android/app/.cxx/
+android/captures/
 gradle-wrapper.jar
-/.gradle
+.gradle/
 /captures/
 /gradlew
 /gradlew.bat
 /local.properties
 GeneratedPluginRegistrant.java
 .cxx/
-build/
 
+# -------------------------------------------------------------------------
+# iOS / macOS
+# -------------------------------------------------------------------------
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/ephemeral/
+ios/Runner/GeneratedPluginRegistrant.h
+ios/Runner/GeneratedPluginRegistrant.m
+**/DerivedData/
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+xcuserdata/
+macos/Flutter/ephemeral/
+macos/Flutter/Generated.xcconfig
+macos/Flutter/flutter_export_environment.sh
+macos/Pods/
 
-# Remember to never publicly share your keystore.
-# See https://flutter.dev/to/reference-keystore
+# -------------------------------------------------------------------------
+# Linux
+# -------------------------------------------------------------------------
+linux/flutter/ephemeral/
+linux/flutter/generated_plugins.cmake
+
+# -------------------------------------------------------------------------
+# Windows
+# -------------------------------------------------------------------------
+windows/flutter/ephemeral/
+windows/flutter/generated_plugins.cmake
+
+# -------------------------------------------------------------------------
+# Firebase & Functions
+# -------------------------------------------------------------------------
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+node_modules/
+functions/node_modules/
+firebase/functions/node_modules/
+firebase/functions/lib/
+
+# -------------------------------------------------------------------------
+# Secrets, keys, and environment variables
+# -------------------------------------------------------------------------
+.env
+.env.*
+*.env
+functions/.env
 key.properties
 **/*.keystore
 **/*.jks
+client_secret_*.json
