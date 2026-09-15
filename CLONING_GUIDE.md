@@ -11,9 +11,9 @@ To run this project, ensure that your device has the exact versions of the SDKs,
 ### 1. SDKs & Core Environments
 | Tool / SDK | Version | Configuration Details |
 | :--- | :--- | :--- |
-| **Flutter SDK** | `^3.7.2` (Dart `^3.7.2`) | Flutter `3.29.x` or later (which supports Dart 3.7.x) |
+| **Flutter SDK** | `3.29.0` (Dart `3.7.2`) | Locked per-project with **FVM** ([.fvm/fvm_config.json](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/.fvm/fvm_config.json)) |
 | **Java JDK** | **JDK 11** | Required for Android build compatibility |
-| **Node.js** | **v18.x** | Required for Firebase Cloud Functions |
+| **Node.js** | **v18.x** | Locked per-project with [functions/.nvmrc](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/functions/.nvmrc) |
 | **Android NDK** | `27.0.12077973` | Specified in [app/build.gradle.kts](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/android/app/build.gradle.kts) |
 | **CocoaPods** | `1.15.x` or later | (Optional) Required for iOS compilation |
 
@@ -31,8 +31,11 @@ These settings are defined in the Gradle and settings configs inside the [androi
 
 ## 📦 Project Dependencies & Versions
 
-### Flutter App Dependencies (`pubspec.yaml`)
-These packages will be automatically downloaded when running `flutter pub get`.
+### Flutter App Dependencies (`pubspec.yaml` & `pubspec.lock`)
+These packages will be automatically downloaded when running `fvm flutter pub get`. 
+
+> [!IMPORTANT]
+> The exact resolved package versions are committed in [pubspec.lock](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/pubspec.lock). **Never delete or ignore `pubspec.lock`**, as it guarantees every team member compiles with identical dependency trees.
 
 | Package | Version Constraint | Purpose |
 | :--- | :--- | :--- |
@@ -74,30 +77,49 @@ git clone https://github.com/jerian-tgg/lendly.git
 cd lendly
 ```
 
-### Step 2: Set Up Local Properties
+### Step 2: Set Up Flutter SDK with FVM (Flutter Version Management)
+To ensure that all team members run on the exact same Flutter SDK version (`3.29.0`), Lendly uses **FVM**:
+
+1. Install FVM globally (if you haven't already):
+   ```bash
+   dart pub global activate fvm
+   ```
+   *(Make sure the Dart global pub cache `bin` directory is added to your system `PATH`)*.
+
+2. Install and link the project-specified Flutter version:
+   ```bash
+   fvm install
+   ```
+
+3. **IDE Configuration**:
+   * **VS Code**: Already configured via [.vscode/settings.json](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/.vscode/settings.json) to use `.fvm/flutter_sdk`.
+   * **Android Studio**: Open **Settings > Languages & Frameworks > Flutter**, and set the Flutter SDK path to:
+     `<project_directory>/.fvm/flutter_sdk`
+
+### Step 3: Set Up Android Local Properties
 1. Navigate to the `android` folder and create a file named `local.properties`.
-2. Add your local Flutter SDK path to it:
+2. Add your local Android SDK and FVM Flutter SDK path:
    ```properties
    sdk.dir=C:/Users/YOUR_USERNAME/AppData/Local/Android/Sdk
-   flutter.sdk=C:/src/flutter
+   flutter.sdk=c:/Users/YOUR_USERNAME/.../lendly/.fvm/flutter_sdk
    ```
    *(Ensure forward slashes `/` are used even on Windows).*
 
-### Step 3: Install Flutter Dependencies
-Run the command in the root folder of the project to retrieve Flutter packages:
+### Step 4: Install Flutter Dependencies
+Run the command in the root folder of the project using FVM:
 ```bash
-flutter pub get
+fvm flutter pub get
 ```
 
-### Step 4: Verify Environment Diagnostics
+### Step 5: Verify Environment Diagnostics
 Verify that your Flutter SDK, Android Studio, Gradle environment, and JDK are properly integrated:
 ```bash
-flutter doctor -v
+fvm flutter doctor -v
 ```
 > [!IMPORTANT]
 > Make sure `flutter doctor` displays JDK 11 under the Android toolchain details. If it shows JDK 17 or JDK 21, it may trigger compilation failures on older Gradle configs.
 
-### Step 5: Firebase Project Association
+### Step 6: Firebase Project Association
 1. Log in to your Firebase CLI:
    ```bash
    firebase login
@@ -109,22 +131,29 @@ flutter doctor -v
    ```
    Follow the prompts to associate the project with your Firebase console.
 
-### Step 6: Install Backend Functions Dependencies
+### Step 7: Install Backend Functions Dependencies
 1. Navigate to the `functions` directory:
    ```bash
    cd functions
+   ```
+2. Switch to Node 18 using `.nvmrc` (if using nvm):
+   ```bash
+   nvm use
+   ```
+3. Install dependencies:
+   ```bash
    npm install
    ```
-2. Create a local environment variables file `functions/.env` and insert your Stripe secret key:
+4. Create a local environment variables file `functions/.env` and insert your Stripe secret key:
    ```env
    STRIPE_SECRET_KEY=sk_test_your_secret_stripe_key
    ```
-3. Deploy the backend functions to Firebase:
+5. Deploy the backend functions to Firebase:
    ```bash
    firebase deploy --only functions
    ```
 
-### Step 7: Cloudinary Credentials Configuration
+### Step 8: Cloudinary Credentials Configuration
 To enable product and profile image uploads, configure your Cloudinary keys inside these three files:
 1. **Mobile Service**: [cloudinary_service_mobile.dart](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/lib/core/services/cloudinary/cloudinary_service_mobile.dart#L7-L8)
 2. **Web Service**: [cloudinary_service_web.dart](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/lib/core/services/cloudinary/cloudinary_service_web.dart#L8-L9)
@@ -132,10 +161,10 @@ To enable product and profile image uploads, configure your Cloudinary keys insi
 
 Replace the placeholder `cloudName` and `uploadPreset` parameters with your Cloudinary account details.
 
-### Step 8: Run the Application
+### Step 9: Run the Application
 Start your preferred emulator/device and execute:
 ```bash
-flutter run
+fvm flutter run
 ```
 
 ---
