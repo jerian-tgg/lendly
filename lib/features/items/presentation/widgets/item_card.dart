@@ -152,7 +152,7 @@ class ItemCard extends StatelessWidget {
               height: 180,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 height: 180,
                 color: Colors.grey[200],
                 child: const Icon(Icons.broken_image, color: Colors.red),

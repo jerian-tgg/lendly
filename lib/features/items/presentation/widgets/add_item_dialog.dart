@@ -180,7 +180,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                 maxLines: 3,
               ),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: _categories.map((String value) {
                   return DropdownMenuItem<String>(
@@ -216,7 +216,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                   '${DateFormat('MMM d').format(_availability!.start)} - ${DateFormat('MMM d').format(_availability!.end)}',
                 ),
               DropdownButtonFormField<String>(
-                value: _condition,
+                initialValue: _condition,
                 decoration: const InputDecoration(labelText: 'Condition'),
                 items: ['Like New', 'Good', 'Fair', 'Poor'].map((String value) {
                   return DropdownMenuItem<String>(

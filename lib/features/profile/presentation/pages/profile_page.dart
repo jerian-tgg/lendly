@@ -4,6 +4,8 @@ import 'package:lendly/features/profile/data/datasources/firebase_user_service.d
 import 'package:lendly/features/profile/presentation/pages/edit_profile.dart';
 
 class UserProfilePage extends StatefulWidget {
+  const UserProfilePage({super.key});
+
   @override
   _UserProfilePageState createState() => _UserProfilePageState();
 }
