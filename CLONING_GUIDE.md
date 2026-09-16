@@ -11,17 +11,17 @@ To run this project, ensure that your device has the exact versions of the SDKs,
 ### 1. SDKs & Core Environments
 | Tool / SDK | Version | Configuration Details |
 | :--- | :--- | :--- |
-| **Flutter SDK** | `3.29.0` (Dart `3.7.2`) | Locked per-project with **FVM** ([.fvm/fvm_config.json](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/.fvm/fvm_config.json)) |
+| **Flutter SDK** | `3.29.0` (Dart `3.7.2`) | Locked per-project with **FVM** ([.fvm/fvm_config.json](.fvm/fvm_config.json)) |
 | **Java JDK** | **JDK 11** | Required for Android build compatibility |
-| **Node.js** | **v18.x** | Locked per-project with [functions/.nvmrc](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/functions/.nvmrc) |
-| **Android NDK** | `27.0.12077973` | Specified in [app/build.gradle.kts](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/android/app/build.gradle.kts) |
+| **Node.js** | **v18.x** | Locked per-project with [functions/.nvmrc](functions/.nvmrc) |
+| **Android NDK** | `27.0.12077973` | Specified in [app/build.gradle.kts](android/app/build.gradle.kts) |
 | **CocoaPods** | `1.15.x` or later | (Optional) Required for iOS compilation |
 
 ### 2. Android Build Infrastructure
-These settings are defined in the Gradle and settings configs inside the [android](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/android) directory:
-*   **Gradle Wrapper Version**: `8.11.1` (configured in [gradle-wrapper.properties](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/android/gradle/wrapper/gradle-wrapper.properties))
-*   **Android Gradle Plugin (AGP)**: `8.9.1` (declared in [settings.gradle.kts](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/android/settings.gradle.kts))
-*   **Kotlin Plugin Version**: `2.2.21` (declared in [settings.gradle.kts](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/android/settings.gradle.kts))
+These settings are defined in the Gradle and settings configs inside the [android](android) directory:
+*   **Gradle Wrapper Version**: `8.11.1` (configured in [gradle-wrapper.properties](android/gradle/wrapper/gradle-wrapper.properties))
+*   **Android Gradle Plugin (AGP)**: `8.9.1` (declared in [settings.gradle.kts](android/settings.gradle.kts))
+*   **Kotlin Plugin Version**: `2.2.21` (declared in [settings.gradle.kts](android/settings.gradle.kts))
 *   **Compile SDK**: `36`
 *   **Target SDK**: `36`
 *   **Minimum SDK**: `23`
@@ -35,7 +35,7 @@ These settings are defined in the Gradle and settings configs inside the [androi
 These packages will be automatically downloaded when running `fvm flutter pub get`. 
 
 > [!IMPORTANT]
-> The exact resolved package versions are committed in [pubspec.lock](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/pubspec.lock). **Never delete or ignore `pubspec.lock`**, as it guarantees every team member compiles with identical dependency trees.
+> The exact resolved package versions are committed in [pubspec.lock](pubspec.lock). **Never delete or ignore `pubspec.lock`**, as it guarantees every team member compiles with identical dependency trees.
 
 | Package | Version Constraint | Purpose |
 | :--- | :--- | :--- |
@@ -92,7 +92,7 @@ To ensure that all team members run on the exact same Flutter SDK version (`3.29
    ```
 
 3. **IDE Configuration**:
-   * **VS Code**: Already configured via [.vscode/settings.json](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/.vscode/settings.json) to use `.fvm/flutter_sdk`.
+   * **VS Code**: Already configured via [.vscode/settings.json](.vscode/settings.json) to use `.fvm/flutter_sdk`.
    * **Android Studio**: Open **Settings > Languages & Frameworks > Flutter**, and set the Flutter SDK path to:
      `<project_directory>/.fvm/flutter_sdk`
 
@@ -155,9 +155,9 @@ fvm flutter doctor -v
 
 ### Step 8: Cloudinary Credentials Configuration
 To enable product and profile image uploads, configure your Cloudinary keys inside these three files:
-1. **Mobile Service**: [cloudinary_service_mobile.dart](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/lib/core/services/cloudinary/cloudinary_service_mobile.dart#L7-L8)
-2. **Web Service**: [cloudinary_service_web.dart](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/lib/core/services/cloudinary/cloudinary_service_web.dart#L8-L9)
-3. **Repository**: [item_repository_impl.dart](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/lib/features/items/data/repositories/item_repository_impl.dart#L33-L34)
+1. **Mobile Service**: [cloudinary_service_mobile.dart](lib/core/services/cloudinary/cloudinary_service_mobile.dart#L7-L8)
+2. **Web Service**: [cloudinary_service_web.dart](lib/core/services/cloudinary/cloudinary_service_web.dart#L8-L9)
+3. **Repository**: [item_repository_impl.dart](lib/features/items/data/repositories/item_repository_impl.dart#L33-L34)
 
 Replace the placeholder `cloudName` and `uploadPreset` parameters with your Cloudinary account details.
 

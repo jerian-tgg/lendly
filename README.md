@@ -54,7 +54,7 @@ lendly/
 └── pubspec.yaml                        # Flutter dependencies and assets assets
 ```
 
-For a detailed explanation of the architecture and data flows, please see [ARCHITECTURE.md](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/ARCHITECTURE.md).
+For a detailed explanation of the architecture and data flows, please see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
@@ -98,7 +98,7 @@ flutter pub get
     dart pub global activate flutterfire_cli
     flutterfire configure
     ```
-    This will automatically link the apps and update [lib/core/config/firebase_options.dart](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/lib/core/config/firebase_options.dart).
+    This will automatically link the apps and update [lib/core/config/firebase_options.dart](lib/core/config/firebase_options.dart).
 
 ### 4. Stripe & Cloud Functions Setup
 1.  Go to your Stripe Dashboard and copy your **Test Secret Key** (`sk_test_...`).
@@ -107,7 +107,7 @@ flutter pub get
     cd functions
     npm install
     ```
-3.  Create or update [functions/.env](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/functions/.env) file:
+3.  Create or update [functions/.env](functions/.env) file:
     ```env
     STRIPE_SECRET_KEY=your_stripe_test_secret_key_here
     ```
@@ -122,9 +122,9 @@ Lendly uses Cloudinary to store images instead of Firebase Storage.
 1.  Sign up or log in to [Cloudinary](https://cloudinary.com/).
 2.  Obtain your **Cloud Name** and create an **unsigned upload preset** (e.g., `lendly_preset`).
 3.  Update the credentials in the codebase:
-    *   Open [lib/features/items/data/repositories/item_repository_impl.dart](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/lib/features/items/data/repositories/item_repository_impl.dart#L33-L34) and set `cloudName` and `uploadPreset`.
-    *   Open [lib/core/services/cloudinary/cloudinary_service_mobile.dart](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/lib/core/services/cloudinary/cloudinary_service_mobile.dart#L7-L8) and update `cloudName` and `uploadPreset`.
-    *   Open [lib/core/services/cloudinary/cloudinary_service_web.dart](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/lib/core/services/cloudinary/cloudinary_service_web.dart#L8-L9) and update `cloudName` and `uploadPreset`.
+    *   Open [lib/features/items/data/repositories/item_repository_impl.dart](lib/features/items/data/repositories/item_repository_impl.dart#L33-L34) and set `cloudName` and `uploadPreset`.
+    *   Open [lib/core/services/cloudinary/cloudinary_service_mobile.dart](lib/core/services/cloudinary/cloudinary_service_mobile.dart#L7-L8) and update `cloudName` and `uploadPreset`.
+    *   Open [lib/core/services/cloudinary/cloudinary_service_web.dart](lib/core/services/cloudinary/cloudinary_service_web.dart#L8-L9) and update `cloudName` and `uploadPreset`.
 
 ### 6. Run the Application
 Make sure you have an emulator open or a physical device connected.
@@ -151,4 +151,4 @@ To deploy the security rules for Firestore:
 ```bash
 firebase deploy --only firestore:rules
 ```
-This deploys the rules defined in [firebase/firestore.rules](file:///c:/Users/palen/OneDrive/Documents/GitHub/lendly/firebase/firestore.rules) to keep conversation and chat data secure.
+This deploys the rules defined in [firebase/firestore.rules](firebase/firestore.rules) to keep conversation and chat data secure.
