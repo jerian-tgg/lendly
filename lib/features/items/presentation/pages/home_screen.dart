@@ -10,7 +10,9 @@ import 'package:lendly/features/items/presentation/widgets/item_card.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool isGuest;
+  const HomeScreen({super.key, this.isGuest = false});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -18,14 +20,33 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
+  bool get isVisitor => widget.isGuest || FirebaseAuth.instance.currentUser == null;
+
+  List<Widget> get _screens => [
     const ItemListScreen(),
     const SearchScreen(),
-    BorrowedItemsScreen(),
-    ConversationScreen(), // <- Add this
-    UserProfilePage(),
+    isVisitor
+        ? const VisitorPromptView(
+            title: 'Borrowed Items',
+            message: 'Log in to track and view your borrowed items.',
+            icon: Icons.shopping_cart_outlined,
+          )
+        : const BorrowedItemsScreen(),
+    isVisitor
+        ? const VisitorPromptView(
+            title: 'Conversations',
+            message: 'Log in to chat with lenders and discuss borrowing.',
+            icon: Icons.chat_outlined,
+          )
+        : ConversationScreen(),
+    isVisitor
+        ? const VisitorPromptView(
+            title: 'Your Profile',
+            message: 'Log in to view your profile and account settings.',
+            icon: Icons.person_outlined,
+          )
+        : const UserProfilePage(),
   ];
-
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -68,17 +89,47 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: _selectedIndex == 0
           ? AppBar(
         backgroundColor: const Color(0xFF90E0F3),
-        title: const Text('Lendly', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Row(
+          children: [
+            const Text('Lendly', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            if (isVisitor) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Visitor',
+                  style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ],
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: _showLogoutConfirmation,
-          ),
+          if (isVisitor)
+            TextButton.icon(
+              icon: const Icon(Icons.login, color: Colors.white),
+              label: const Text('Log In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              },
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white),
+              onPressed: _showLogoutConfirmation,
+            ),
         ],
       )
           : null,
       body: _screens[_selectedIndex],
-      floatingActionButton: _selectedIndex == 0
+      floatingActionButton: (!isVisitor && _selectedIndex == 0)
           ? FloatingActionButton(
         backgroundColor: const Color(0xFF90E0F3),
         onPressed: () => showDialog(context: context, builder: (_) => const AddItemDialog()),
@@ -90,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.search_outlined), label: 'Search'),
           BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Borrowed'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), label: 'Messages'), // <- Add this
+          BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), label: 'Messages'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outlined), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
@@ -98,7 +149,83 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
       ),
+    );
+  }
+}
 
+class VisitorPromptView extends StatelessWidget {
+  final String title;
+  final String message;
+  final IconData icon;
+
+  const VisitorPromptView({
+    super.key,
+    required this.title,
+    required this.message,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFEFF6F9),
+      body: Center(
+        child: Container(
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 12)],
+          ),
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF90E0F3).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 48, color: const Color(0xFF007799)),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.black54, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF90E0F3),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                    );
+                  },
+                  child: const Text(
+                    'Log In / Sign Up',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

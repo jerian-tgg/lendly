@@ -114,6 +114,19 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomeScreen(isGuest: true)),
+                      );
+                    },
+                    icon: const Icon(Icons.arrow_forward, size: 16, color: Colors.grey),
+                    label: const Text('Skip', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                  ),
+                ),
                 const Text('Welcome to', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                 const Text('Lendly', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF90E0F3))),
                 const SizedBox(height: 32),
@@ -173,6 +186,34 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: const [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('OR', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen(isGuest: true)),
+                    );
+                  },
+                  child: const Text(
+                    'Explore as Visitor',
+                    style: TextStyle(
+                      color: Color(0xFF007799),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],

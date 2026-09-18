@@ -111,7 +111,13 @@ class _AddItemDialogState extends State<AddItemDialog> {
         imageUrls = await ItemRepositoryImpl().uploadImages(_imagePaths);
       }
 
-      final user = FirebaseAuth.instance.currentUser!;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to add items.')),
+        );
+        return;
+      }
       final now = DateTime.now();
 
       final item = Item(

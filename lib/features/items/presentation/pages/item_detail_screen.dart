@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/core/utils/convo_id.dart';
 
@@ -84,29 +85,40 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Widget build(BuildContext context) {
     final ownerId = widget.itemData['ownerId'] as String? ?? '';
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final isVisitor = currentUserId.isEmpty || FirebaseAuth.instance.currentUser == null;
+    final itemTitle = widget.itemData['title'] ?? widget.itemData['name'] ?? 'Item Details';
+    final imageUrl = widget.itemData['imageUrl'] ??
+        ((widget.itemData['imageUrls'] != null && (widget.itemData['imageUrls'] as List).isNotEmpty)
+            ? widget.itemData['imageUrls'][0]
+            : null);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.itemData['title'] ?? 'Item Details'),
+        title: Text(itemTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (widget.itemData['imageUrl'] != null)
+            if (imageUrl != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  widget.itemData['imageUrl'],
+                  imageUrl,
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                  ),
                 ),
               ),
             const SizedBox(height: 16),
             Text(
-              widget.itemData['title'] ?? '',
+              itemTitle,
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -122,7 +134,47 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               ),
             const SizedBox(height: 24),
 
-            if (ownerId != currentUserId) ...[
+            if (isVisitor) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF90E0F3)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.lock_outline, color: Color(0xFF007799), size: 32),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Log in to borrow this item',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Visitors can browse items, but booking and messaging the owner require an account.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.black54, fontSize: 13),
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF90E0F3),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                      ),
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        );
+                      },
+                      child: const Text('Log In / Sign Up', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (ownerId != currentUserId) ...[
               ElevatedButton(
                 onPressed: () => _pickDates(context),
                 child: Text(_startDate != null && _endDate != null
@@ -144,17 +196,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       itemId: widget.itemId, // ✅ pass itemId here
                     );
 
-
+                    if (!mounted) return;
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ChatScreen(
                           convoId: convoId,
-                          currentUserId: currentUserId, // <- Replace with the logged-in user's ID
+                          currentUserId: currentUserId,
                           otherUserId: ownerId,
-                          itemId: widget.itemId, otherUserName: '',// optional, if available
-                        )
-
+                          itemId: widget.itemId, otherUserName: '',
+                        ),
                       ),
                     );
                   },
