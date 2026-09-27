@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "412265538580-ci3u01nhppvcok07uhqjorp2604foreu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lendly",
+            "certificate_hash": "470fae731a48c47e5060f5943480fa62a38e87bc"
+          }
+        },
+        {
           "client_id": "412265538580-6laf4qq9j73aqclliihvmqnpjfechttl.apps.googleusercontent.com",
           "client_type": 3
         }

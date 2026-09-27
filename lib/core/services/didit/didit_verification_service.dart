@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:developer' as developer;
 
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 import 'package:lendly/core/config/didit_config.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -25,14 +27,12 @@ class DiditVerificationCallbacks {
 }
 
 class DiditVerificationService {
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Creates a Didit session and opens the hosted ID + liveness page.
+  /// Creates a Didit session directly via Didit REST API and opens the hosted ID + liveness page.
   ///
-  /// The native Didit SDK only runs on iOS/Android. Waiting on it from web or
-  /// desktop leaves the UI stuck on "Verifying..." forever. The hosted URL is
-  /// the same verification flow Didit documents for redirect integrations.
+  /// This eliminates the need for Firebase Cloud Functions / Blaze plan.
   Future<void> startVerificationFlow({
     required DiditVerificationCallbacks callbacks,
   }) async {
@@ -45,9 +45,9 @@ class DiditVerificationService {
     try {
       final session = await _createSession(user.uid);
       final hostedUrl = session.hostedUrl;
-      if (hostedUrl == null) {
+      if (hostedUrl == null || hostedUrl.isEmpty) {
         callbacks.onFailure?.call(
-          'Didit did not return a verification URL. Check that the Cloud Function is deployed and DIDIT_API_KEY is set.',
+          'Didit did not return a valid verification URL. Please try again.',
         );
         return;
       }
@@ -78,20 +78,40 @@ class DiditVerificationService {
     }
   }
 
-  /// Confirms the session decision on the backend after the user returns.
+  /// Confirms the session decision directly from Didit API.
   Future<void> refreshSessionStatus({
     required String sessionId,
     required DiditVerificationCallbacks callbacks,
   }) async {
     try {
-      final callable = _functions.httpsCallable(
-        DiditAppConfig.getSessionFunctionName,
-        options: HttpsCallableOptions(timeout: const Duration(seconds: 20)),
-      );
-      final result = await callable.call({'sessionId': sessionId});
-      final data = _asStringMap(result.data);
-      final status = (data['status'] as String?) ?? '';
-      _dispatchStatus(status, sessionId, callbacks);
+      final response = await http.get(
+        Uri.parse('${DiditAppConfig.apiBaseUrl}/session/$sessionId/decision/'),
+        headers: {
+          'x-api-key': DiditAppConfig.apiKey,
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final status = (data['status'] as String?) ?? '';
+        developer.log(
+          'Didit session decision: status=$status',
+          name: 'DiditVerificationService',
+        );
+
+        // Update Firestore user document if status is known
+        final uid = _auth.currentUser?.uid;
+        if (uid != null && status.isNotEmpty) {
+          await _applyStatusToFirestore(uid, sessionId, status);
+        }
+
+        _dispatchStatus(status, sessionId, callbacks);
+      } else {
+        developer.log(
+          'Didit decision fetch failed: ${response.statusCode} ${response.body}',
+          name: 'DiditVerificationService',
+        );
+      }
     } catch (e, stack) {
       developer.log(
         'Failed to refresh Didit session status: $e',
@@ -103,16 +123,29 @@ class DiditVerificationService {
   }
 
   Future<_DiditSessionLaunch> _createSession(String userId) async {
-    final callable = _functions.httpsCallable(
-      DiditAppConfig.createSessionFunctionName,
-      options: HttpsCallableOptions(timeout: const Duration(seconds: 20)),
-    );
-    final result = await callable.call({'vendorData': userId});
-    final data = _asStringMap(result.data);
+    final response = await http.post(
+      Uri.parse('${DiditAppConfig.apiBaseUrl}/session/'),
+      headers: {
+        'x-api-key': DiditAppConfig.apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'workflow_id': DiditAppConfig.workflowId,
+        'vendor_data': userId,
+        'callback': 'https://lendly.app/verify/done',
+      }),
+    ).timeout(const Duration(seconds: 15));
 
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Failed to create Didit session (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
     final sessionId = (data['sessionId'] ?? data['session_id']) as String? ?? '';
     final sessionToken = (data['sessionToken'] ?? data['session_token']) as String?;
-    final url = (data['url'] ?? data['verificationUrl']) as String?;
+    final url = (data['url'] ?? data['verificationUrl'] ?? data['session_url']) as String?;
 
     final hostedUrl = (url != null && url.isNotEmpty)
         ? url
@@ -121,6 +154,39 @@ class DiditVerificationService {
             : null;
 
     return _DiditSessionLaunch(sessionId: sessionId, hostedUrl: hostedUrl);
+  }
+
+  Future<void> _applyStatusToFirestore(
+    String userId,
+    String sessionId,
+    String status,
+  ) async {
+    try {
+      final userRef = _firestore.collection('users').doc(userId);
+      final updates = <String, dynamic>{
+        'verificationStatus': status,
+        'verificationSessionId': sessionId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (status == 'Approved') {
+        updates['isVerified'] = true;
+        updates['verifiedAt'] = FieldValue.serverTimestamp();
+        updates['isVerificationPending'] = false;
+      } else if (status == 'Declined') {
+        updates['isVerified'] = false;
+        updates['isVerificationPending'] = false;
+      } else if (status == 'In Review') {
+        updates['isVerificationPending'] = true;
+      }
+
+      await userRef.set(updates, SetOptions(merge: true));
+    } catch (e) {
+      developer.log(
+        'Error syncing Didit status to Firestore: $e',
+        name: 'DiditVerificationService',
+      );
+    }
   }
 
   void _dispatchStatus(
@@ -143,17 +209,12 @@ class DiditVerificationService {
     }
   }
 
-  Map<String, dynamic> _asStringMap(dynamic data) {
-    if (data is Map<String, dynamic>) return data;
-    if (data is Map) return Map<String, dynamic>.from(data);
-    return <String, dynamic>{};
-  }
-
   String _readableError(Object e) {
-    if (e is FirebaseFunctionsException) {
-      return e.message ?? e.code;
+    final msg = e.toString();
+    if (msg.startsWith('Exception: ')) {
+      return msg.substring(11);
     }
-    return e.toString();
+    return msg;
   }
 }
 

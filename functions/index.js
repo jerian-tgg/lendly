@@ -75,17 +75,24 @@ exports.createDiditVerificationSession = functions.https.onCall(
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("Didit session creation failed:", response.status, errorText);
+          console.error(
+              "Didit session creation failed:",
+              response.status,
+              errorText,
+          );
           throw new functions.https.HttpsError(
               "internal",
-              `Didit session creation failed (${response.status}): ${errorText}`,
+              `Didit session creation failed (${response.status}): ` +
+              errorText,
           );
         }
 
         const session = await response.json();
         const sessionToken = session.session_token;
         const hostedUrl = session.url ||
-          (sessionToken ? `https://verify.didit.me/session/${sessionToken}` : null);
+          (sessionToken ?
+            `https://verify.didit.me/session/${sessionToken}` :
+            null);
         return {
           sessionId: session.session_id,
           sessionToken,
@@ -102,7 +109,11 @@ exports.createDiditVerificationSession = functions.https.onCall(
     },
 );
 
-// Helper for X-Signature-V2 canonicalisation
+/**
+ * Shortens whole floats for X-Signature-V2 canonicalisation.
+ * @param {*} v Value to process
+ * @return {*} Processed value
+ */
 function shortenFloats(v) {
   if (Array.isArray(v)) return v.map(shortenFloats);
   if (v && typeof v === "object") {
@@ -110,10 +121,17 @@ function shortenFloats(v) {
         Object.entries(v).map(([k, x]) => [k, shortenFloats(x)]),
     );
   }
-  if (typeof v === "number" && !Number.isInteger(v) && v % 1 === 0) return Math.trunc(v);
+  if (typeof v === "number" && !Number.isInteger(v) && v % 1 === 0) {
+    return Math.trunc(v);
+  }
   return v;
 }
 
+/**
+ * Recursively sorts keys for X-Signature-V2 canonicalisation.
+ * @param {*} v Object or value to sort
+ * @return {*} Object with sorted keys
+ */
 function sortKeys(v) {
   if (Array.isArray(v)) return v.map(sortKeys);
   if (v && typeof v === "object") {
@@ -164,10 +182,15 @@ exports.getDiditVerificationSession = functions.https.onCall(
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("Didit session retrieve failed:", response.status, errorText);
+          console.error(
+              "Didit session retrieve failed:",
+              response.status,
+              errorText,
+          );
           throw new functions.https.HttpsError(
               "internal",
-              `Didit session retrieve failed (${response.status}): ${errorText}`,
+              `Didit session retrieve failed (${response.status}): ` +
+              errorText,
           );
         }
 
@@ -220,10 +243,13 @@ async function applyDiditStatusToUser(userId, sessionId, status) {
 
 /**
  * Didit Webhook endpoint.
- * Verifies X-Signature-V2 HMAC and updates user verification status in Firestore.
+ * Verifies X-Signature-V2 HMAC and updates user status in Firestore.
  */
 exports.diditWebhook = functions.https.onRequest(
     async (req, res) => {
+      if (req.method === "GET") {
+        return res.status(200).send("Didit webhook endpoint is active.");
+      }
       if (req.method !== "POST") {
         return res.status(405).send("Method Not Allowed");
       }
@@ -232,8 +258,8 @@ exports.diditWebhook = functions.https.onRequest(
       const sig = req.headers["x-signature-v2"] || "";
       const ts = Number(req.headers["x-timestamp"]);
 
-      // 1. Freshness check (≤ 300s)
-      if (!ts || Math.abs(Date.now() / 1000 - ts) > 300) {
+      // 1. Freshness check (≤ 300s) when secret is configured
+      if (webhookSecret && (!ts || Math.abs(Date.now() / 1000 - ts) > 300)) {
         return res.status(401).send("stale");
       }
 
@@ -263,8 +289,10 @@ exports.diditWebhook = functions.https.onRequest(
       }
 
       // 3. Idempotency via Firestore event_id
-      const eventId = parsed.event_id || `${parsed.session_id}_${parsed.timestamp}`;
-      const eventRef = admin.firestore().collection("didit_events").doc(eventId);
+      const eventId =
+        parsed.event_id || `${parsed.session_id}_${parsed.timestamp}`;
+      const eventRef =
+        admin.firestore().collection("didit_events").doc(eventId);
       const eventDoc = await eventRef.get();
       if (eventDoc.exists) {
         return res.status(200).send("ok");

@@ -1,8 +1,13 @@
 /// Didit Identity Verification configuration.
 class DiditAppConfig {
   /// Workflow ID for the "Free KYC" workflow configured in Didit Console.
-  /// This is per-session configuration and not a secret.
   static const String workflowId = '99c79fd1-9b53-4c2d-a1b7-341b4a893c3b';
+
+  /// Didit API Key for direct verification API calls without Cloud Functions.
+  static const String apiKey = 'wr8wg-1_8E479wUQ2-xWxcd6-6zGsjydnVkJyUbVYt8';
+
+  /// Base URL for Didit Verification API v3.
+  static const String apiBaseUrl = 'https://verification.didit.me/v3';
 
   /// Cloud function name to create a Didit verification session.
   static const String createSessionFunctionName = 'createDiditVerificationSession';
