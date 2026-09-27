@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
+import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final Map<String, dynamic> itemData;
@@ -90,6 +91,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     }
   }
 
+  void _openOwnerProfile(BuildContext context, String ownerId) {
+    if (ownerId.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UserProfilePage(userId: ownerId),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = widget.itemData['name'] ?? widget.itemData['title'] ?? 'Item Details';
@@ -99,7 +110,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final priceNum = (widget.itemData['price'] as num?)?.toDouble() ?? 0.0;
     final priceStr = '₱${priceNum.toStringAsFixed(0)}';
     
-    // Appraisal Value (Calculated or from item data - Checklist requirement!)
+    // Appraisal Value (Calculated or from item data)
     final appraisalValue = (widget.itemData['appraisal'] as num?)?.toDouble() ??
         (priceNum * 25 > 1000 ? priceNum * 25 : 5000.0);
     final appraisalStr = '₱${appraisalValue.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
@@ -308,7 +319,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // PRICE & APPRAISAL CARD (Checklist requirement!)
+                  // PRICE & APPRAISAL CARD
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -366,7 +377,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         Container(width: 1, height: 45, color: Colors.grey[300]),
                         const SizedBox(width: 16),
 
-                        // Appraisal Value Section (Checklist requirement!)
+                        // Appraisal Value Section
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,7 +414,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // CONDITION SECTION (Checklist requirement!)
+                  // CONDITION SECTION
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
@@ -457,7 +468,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // DESCRIPTION SECTION (Checklist requirement!)
+                  // DESCRIPTION SECTION
                   const Row(
                     children: [
                       Icon(Icons.notes_rounded, color: Color(0xFF7B40B5), size: 20),
@@ -489,72 +500,82 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Owner Information Card
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        FutureBuilder<DocumentSnapshot>(
-                          future: ownerId.isNotEmpty
-                              ? FirebaseFirestore.instance.collection('users').doc(ownerId).get()
-                              : null,
-                          builder: (context, snapshot) {
-                            String? photoUrl;
-                            if (snapshot.hasData && snapshot.data!.exists) {
-                              final uData = snapshot.data!.data() as Map<String, dynamic>?;
-                              photoUrl = uData?['photoURL'] ?? uData?['profilePictureUrl'];
-                            }
-                            return CircleAvatar(
-                              radius: 22,
-                              backgroundColor: const Color(0xFFEFE8FA),
-                              backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
-                                  ? NetworkImage(photoUrl)
-                                  : null,
-                              child: (photoUrl == null || photoUrl.isEmpty)
-                                  ? const Icon(Icons.person, color: Color(0xFF7B40B5))
-                                  : null,
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                ownerName,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                              ),
-                              Row(
-                                children: [
-                                  const Icon(Icons.verified, size: 12, color: Colors.blue),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Verified Lender • 100% Response Rate',
-                                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                                  ),
-                                ],
-                              ),
-                            ],
+                  // Owner Information Card (Tapping opens Lender Profile!)
+                  InkWell(
+                    onTap: () => _openOwnerProfile(context, ownerId),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          FutureBuilder<DocumentSnapshot>(
+                            future: ownerId.isNotEmpty
+                                ? FirebaseFirestore.instance.collection('users').doc(ownerId).get()
+                                : null,
+                            builder: (context, snapshot) {
+                              String? photoUrl;
+                              if (snapshot.hasData && snapshot.data!.exists) {
+                                final uData = snapshot.data!.data() as Map<String, dynamic>?;
+                                photoUrl = uData?['photoURL'] ?? uData?['profilePictureUrl'];
+                              }
+                              return CircleAvatar(
+                                radius: 22,
+                                backgroundColor: const Color(0xFFEFE8FA),
+                                backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                                    ? NetworkImage(photoUrl)
+                                    : null,
+                                child: (photoUrl == null || photoUrl.isEmpty)
+                                    ? const Icon(Icons.person, color: Color(0xFF7B40B5))
+                                    : null,
+                              );
+                            },
                           ),
-                        ),
-                        if (!isOwner)
-                          OutlinedButton.icon(
-                            onPressed: () => _handleMessageOwner(context, ownerId, ownerName),
-                            icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                            label: const Text('Chat'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF7B40B5),
-                              side: const BorderSide(color: Color(0xFF7B40B5)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      ownerName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.verified, size: 12, color: Colors.blue),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'View Lender Profile • 100% Response',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                      ],
+                          if (!isOwner)
+                            OutlinedButton.icon(
+                              onPressed: () => _handleMessageOwner(context, ownerId, ownerName),
+                              icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                              label: const Text('Chat'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF7B40B5),
+                                side: const BorderSide(color: Color(0xFF7B40B5)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
 

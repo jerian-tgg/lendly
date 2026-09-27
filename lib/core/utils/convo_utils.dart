@@ -15,7 +15,7 @@ Future<String> createOrGetConversation({
 
   try {
     existingConvo = querySnapshot.docs.firstWhere((doc) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
       final participants = List<String>.from(data['participants'] ?? []);
       return participants.contains(currentUserId) &&
           participants.contains(otherUserId) &&

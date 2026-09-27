@@ -7,6 +7,7 @@ import 'package:lendly/features/items/data/repositories/item_repository_impl.dar
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
 import 'package:lendly/features/items/presentation/widgets/ribbon_banner.dart';
+import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 
 class ItemCard extends StatelessWidget {
   final String itemId;
@@ -171,6 +172,16 @@ class ItemCard extends StatelessWidget {
     }
   }
 
+  void _openOwnerProfile(BuildContext context, String ownerId) {
+    if (ownerId.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UserProfilePage(userId: ownerId),
+      ),
+    );
+  }
+
   RibbonType? _getRibbonType() {
     if (itemData['isBoosted'] == true) return RibbonType.boosted;
     if (itemData['isFeatured'] == true) return RibbonType.featured;
@@ -211,7 +222,7 @@ class ItemCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Owner Header Bar (Compact for 2-column grid, expanded for list)
+          // Owner Header Bar (Tapping owner avatar/name opens User Profile!)
           Padding(
             padding: EdgeInsets.symmetric(
               horizontal: isGrid ? 8 : 12,
@@ -219,62 +230,68 @@ class ItemCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                FutureBuilder<DocumentSnapshot>(
-                  future: ownerId.isNotEmpty
-                      ? FirebaseFirestore.instance.collection('users').doc(ownerId).get()
-                      : null,
-                  builder: (context, snapshot) {
-                    String? photoUrl;
-                    if (snapshot.hasData && snapshot.data!.exists) {
-                      final uData = snapshot.data!.data() as Map<String, dynamic>?;
-                      photoUrl = uData?['photoURL'] ?? uData?['profilePictureUrl'];
-                    }
+                GestureDetector(
+                  onTap: () => _openOwnerProfile(context, ownerId),
+                  child: FutureBuilder<DocumentSnapshot>(
+                    future: ownerId.isNotEmpty
+                        ? FirebaseFirestore.instance.collection('users').doc(ownerId).get()
+                        : null,
+                    builder: (context, snapshot) {
+                      String? photoUrl;
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        final uData = snapshot.data!.data() as Map<String, dynamic>?;
+                        photoUrl = uData?['photoURL'] ?? uData?['profilePictureUrl'];
+                      }
 
-                    return CircleAvatar(
-                      radius: isGrid ? 13 : 16,
-                      backgroundColor: const Color(0xFFEFE8FA),
-                      backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
-                          ? NetworkImage(photoUrl)
-                          : null,
-                      child: (photoUrl == null || photoUrl.isEmpty)
-                          ? Icon(Icons.person, size: isGrid ? 14 : 18, color: const Color(0xFF7B40B5))
-                          : null,
-                    );
-                  },
+                      return CircleAvatar(
+                        radius: isGrid ? 13 : 16,
+                        backgroundColor: const Color(0xFFEFE8FA),
+                        backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                            ? NetworkImage(photoUrl)
+                            : null,
+                        child: (photoUrl == null || photoUrl.isEmpty)
+                            ? Icon(Icons.person, size: isGrid ? 14 : 18, color: const Color(0xFF7B40B5))
+                            : null,
+                      );
+                    },
+                  ),
                 ),
                 SizedBox(width: isGrid ? 6 : 8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ownerName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: isGrid ? 12 : 13,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, size: 10, color: Color(0xFF7B40B5)),
-                          const SizedBox(width: 2),
-                          Expanded(
-                            child: Text(
-                              locationText,
-                              style: TextStyle(
-                                fontSize: isGrid ? 9 : 11,
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                  child: GestureDetector(
+                    onTap: () => _openOwnerProfile(context, ownerId),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ownerName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isGrid ? 12 : 13,
+                            color: Colors.black87,
                           ),
-                        ],
-                      ),
-                    ],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, size: 10, color: Color(0xFF7B40B5)),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                locationText,
+                                style: TextStyle(
+                                  fontSize: isGrid ? 9 : 11,
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -333,7 +350,7 @@ class ItemCard extends StatelessWidget {
                                 ),
                         ),
 
-                        // Ribbon Banner (Feature 1: Ribbon!)
+                        // Ribbon Banner
                         if (ribbonType != null)
                           Positioned(
                             top: 0,
