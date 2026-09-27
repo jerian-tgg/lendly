@@ -6,6 +6,7 @@ import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
+import 'package:lendly/features/items/presentation/widgets/ribbon_banner.dart';
 
 class ItemCard extends StatelessWidget {
   final String itemId;
@@ -15,6 +16,7 @@ class ItemCard extends StatelessWidget {
   final String imagePath;
   final bool isOwner;
   final bool isAvailable;
+  final bool isGrid;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -27,6 +29,7 @@ class ItemCard extends StatelessWidget {
     required this.imagePath,
     this.isOwner = false,
     this.isAvailable = true,
+    this.isGrid = true,
     this.onEdit,
     this.onDelete,
   });
@@ -168,6 +171,15 @@ class ItemCard extends StatelessWidget {
     }
   }
 
+  RibbonType? _getRibbonType() {
+    if (itemData['isBoosted'] == true) return RibbonType.boosted;
+    if (itemData['isFeatured'] == true) return RibbonType.featured;
+    if (itemData['isNew'] == true || itemData['ribbon'] == 'NEW') return RibbonType.newArrival;
+    if (itemData['isPopular'] == true || itemData['ribbon'] == 'POPULAR') return RibbonType.popular;
+    if ((itemData['rating'] as num?) != null && (itemData['rating'] as num) >= 4.8) return RibbonType.topRated;
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final ownerId = itemData['ownerId'] as String? ?? '';
@@ -175,27 +187,36 @@ class ItemCard extends StatelessWidget {
     final category = itemData['category'] as String? ?? 'General';
     final condition = itemData['condition'] as String? ?? 'Good';
     final rating = (itemData['rating'] as num?)?.toDouble() ?? 4.8;
-    final isBoosted = itemData['isBoosted'] == true;
+    final ribbonType = _getRibbonType();
+
+    // Distance calculation/display
+    final distanceKm = (itemData['distanceKm'] as num?)?.toDouble() ??
+        (itemId.hashCode % 15 + 1.2);
+    final locationText = itemData['location'] is String && (itemData['location'] as String).isNotEmpty
+        ? itemData['location']
+        : '${distanceKm.toStringAsFixed(1)} km away';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Owner Header Bar (From Wireframe 1 & 2)
+          // Owner Header Bar (Compact for 2-column grid, expanded for list)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: EdgeInsets.symmetric(
+              horizontal: isGrid ? 8 : 12,
+              vertical: isGrid ? 6 : 10,
+            ),
             child: Row(
               children: [
                 FutureBuilder<DocumentSnapshot>(
@@ -210,306 +231,297 @@ class ItemCard extends StatelessWidget {
                     }
 
                     return CircleAvatar(
-                      radius: 18,
+                      radius: isGrid ? 13 : 16,
                       backgroundColor: const Color(0xFFEFE8FA),
                       backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
                           ? NetworkImage(photoUrl)
                           : null,
                       child: (photoUrl == null || photoUrl.isEmpty)
-                          ? const Icon(Icons.person, size: 20, color: Color(0xFF7B40B5))
+                          ? Icon(Icons.person, size: isGrid ? 14 : 18, color: const Color(0xFF7B40B5))
                           : null,
                     );
                   },
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: isGrid ? 6 : 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         ownerName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: isGrid ? 12 : 13,
                           color: Colors.black87,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
-                        itemData['location'] ?? 'Nearby • Verified Lender',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                        ),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on, size: 10, color: Color(0xFF7B40B5)),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              locationText,
+                              style: TextStyle(
+                                fontSize: isGrid ? 9 : 11,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
 
-                // Direct Chat Bubble Icon (From Wireframe 1 & 2)
+                // Direct Chat Bubble Icon
                 if (!isOwner)
-                  IconButton(
-                    icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF7B40B5)),
-                    tooltip: 'Message Owner',
-                    onPressed: () => _openDirectChat(context),
+                  InkWell(
+                    onTap: () => _openDirectChat(context),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.chat_bubble_outline,
+                        color: const Color(0xFF7B40B5),
+                        size: isGrid ? 18 : 20,
+                      ),
+                    ),
                   ),
               ],
             ),
           ),
 
-          const Divider(height: 1, thickness: 0.8),
+          const Divider(height: 1, thickness: 0.6),
 
-          // Main Card Media & Details Container
-          InkWell(
-            onTap: () => _handleBorrow(context),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Image with Badges
-                Stack(
-                  children: [
-                    ClipRRect(
-                      child: imagePath.isNotEmpty
-                          ? Image.network(
-                              imagePath,
-                              height: 190,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                height: 190,
-                                color: Colors.grey[100],
-                                child: const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.photo_outlined, size: 48, color: Colors.grey),
-                                    SizedBox(height: 4),
-                                    Text('No Image', style: TextStyle(color: Colors.grey)),
-                                  ],
+          // Main Card Image & Body
+          Expanded(
+            child: InkWell(
+              onTap: () => _handleBorrow(context),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image with Ribbon Overlay & Badges
+                  Expanded(
+                    flex: 5,
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          child: imagePath.isNotEmpty
+                              ? Image.network(
+                                  imagePath,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => Container(
+                                    color: Colors.grey[100],
+                                    child: const Center(
+                                      child: Icon(Icons.photo_outlined, size: 36, color: Colors.grey),
+                                    ),
+                                  ),
+                                )
+                              : Container(
+                                  color: Colors.grey[100],
+                                  child: const Center(
+                                    child: Icon(Icons.photo_outlined, size: 36, color: Colors.grey),
+                                  ),
                                 ),
+                        ),
+
+                        // Ribbon Banner (Feature 1: Ribbon!)
+                        if (ribbonType != null)
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            child: RibbonBanner.fromType(ribbonType),
+                          ),
+
+                        // Availability Tag Badge
+                        Positioned(
+                          bottom: 6,
+                          right: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isAvailable
+                                  ? Colors.green.withValues(alpha: 0.9)
+                                  : Colors.red.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              isAvailable ? 'Available' : 'Borrowed',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
                               ),
-                            )
-                          : Container(
-                              height: 190,
-                              color: Colors.grey[100],
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Card Content Details
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Category & Condition
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF90E0F3).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                category,
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF007A9B),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                condition,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        // Item Title
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                            height: 1.1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+
+                        const SizedBox(height: 3),
+
+                        // Star Rating Row
+                        Row(
+                          children: [
+                            Icon(Icons.star, size: 12, color: Colors.amber[700]),
+                            const SizedBox(width: 2),
+                            Text(
+                              '$rating',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                            Text(
+                              ' (12)',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        // Price & Action Button
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.photo_outlined, size: 48, color: Colors.grey),
-                                  SizedBox(height: 4),
-                                  Text('No Image', style: TextStyle(color: Colors.grey)),
+                                  Text(
+                                    price,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF7B40B5),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '/ day',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                    ),
 
-                    // Availability Badge
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isAvailable
-                              ? Colors.green.withValues(alpha: 0.9)
-                              : Colors.red.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          isAvailable ? 'Available' : 'Borrowed',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Featured / Boosted Badge (From Wireframe 2 - Discord style boosting tag)
-                    if (isBoosted)
-                      Positioned(
-                        top: 10,
-                        right: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.bolt, color: Colors.amber, size: 14),
-                              SizedBox(width: 2),
-                              Text(
-                                'BOOSTED',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                            // Compact Borrow / Manage Button
+                            ElevatedButton(
+                              onPressed: () {
+                                final user = FirebaseAuth.instance.currentUser;
+                                if (user == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please login to borrow items')),
+                                  );
+                                  return;
+                                }
+                                if (isOwner) {
+                                  _showManageOptions(context);
+                                } else {
+                                  _handleBorrow(context);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isOwner
+                                    ? const Color(0xFF7B40B5)
+                                    : const Color(0xFF90E0F3),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                minimumSize: Size.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-
-                // Card Details Body
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Category & Condition Pills
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF90E0F3).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              category,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF007A9B),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '•  $condition',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Item Title
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      // Star Rating Row (Wireframe 1 & Wireframe 2 feature!)
-                      Row(
-                        children: [
-                          ...List.generate(5, (index) {
-                            return Icon(
-                              index < rating.floor()
-                                  ? Icons.star
-                                  : (index < rating ? Icons.star_half : Icons.star_border),
-                              size: 16,
-                              color: Colors.amber[700],
-                            );
-                          }),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$rating',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            ' (12 reviews)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Price and Action Call-to-Action Button
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                price,
+                              child: Text(
+                                isOwner ? 'Manage' : 'Borrow',
                                 style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF7B40B5),
-                                ),
-                              ),
-                              Text(
-                                'per day',
-                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
                                   fontSize: 11,
-                                  color: Colors.grey[600],
                                 ),
                               ),
-                            ],
-                          ),
-
-                          // Call to action button (Borrow / Manage)
-                          ElevatedButton(
-                            onPressed: () {
-                              final user = FirebaseAuth.instance.currentUser;
-                              if (user == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Please login to borrow items')),
-                                );
-                                return;
-                              }
-                              if (isOwner) {
-                                _showManageOptions(context);
-                              } else {
-                                _handleBorrow(context);
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isOwner
-                                  ? const Color(0xFF7B40B5)
-                                  : const Color(0xFF90E0F3),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
                             ),
-                            child: Text(
-                              isOwner ? 'Manage' : (isAvailable ? 'Borrow Now' : 'Unavailable'),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

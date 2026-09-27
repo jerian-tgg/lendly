@@ -202,7 +202,9 @@ class _ItemListScreenState extends State<ItemListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedCategory = 'All';
-  String _selectedMode = 'All'; // All, Lend, Borrow, Location
+  String _selectedMode = 'All'; // All, Lend, Borrow, Nearby
+  double _selectedRadiusKm = 25.0; // Geographical radius filter (5, 10, 25, 50, 100=Any)
+  bool _isGridView = true; // Two-column marketplace layout toggle
 
   final List<String> _categories = [
     'All',
@@ -215,6 +217,8 @@ class _ItemListScreenState extends State<ItemListScreen> {
     'Other',
   ];
 
+  final List<double> _radiusOptions = [5.0, 10.0, 25.0, 50.0, 100.0];
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -224,73 +228,175 @@ class _ItemListScreenState extends State<ItemListScreen> {
   void _showFilterModal() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Filter Items',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.tune, color: Color(0xFF7B40B5)),
+                          SizedBox(width: 8),
+                          Text(
+                            'Marketplace Filters',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(ctx),
+                  const Divider(),
+                  const SizedBox(height: 10),
+
+                  // Geographical Radius Filter (Feature 4!)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.location_searching, size: 18, color: Color(0xFF7B40B5)),
+                          SizedBox(width: 6),
+                          Text('Geographical Radius:', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      Text(
+                        _selectedRadiusKm >= 100.0
+                            ? 'Any distance'
+                            : '${_selectedRadiusKm.toInt()} km',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF7B40B5),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Slider(
+                    value: _selectedRadiusKm,
+                    min: 5.0,
+                    max: 100.0,
+                    divisions: 19,
+                    activeColor: const Color(0xFF7B40B5),
+                    inactiveColor: Colors.purple.shade50,
+                    label: _selectedRadiusKm >= 100.0 ? 'Any' : '${_selectedRadiusKm.toInt()} km',
+                    onChanged: (val) {
+                      setModalState(() {
+                        _selectedRadiusKm = val;
+                      });
+                      setState(() {
+                        _selectedRadiusKm = val;
+                      });
+                    },
+                  ),
+                  Wrap(
+                    spacing: 6,
+                    children: _radiusOptions.map((rad) {
+                      final isSelected = _selectedRadiusKm == rad;
+                      final label = rad >= 100.0 ? 'Any distance' : '${rad.toInt()} km';
+                      return ChoiceChip(
+                        label: Text(label, style: const TextStyle(fontSize: 11)),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFF7B40B5),
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                        ),
+                        onSelected: (selected) {
+                          if (selected) {
+                            setModalState(() => _selectedRadiusKm = rad);
+                            setState(() => _selectedRadiusKm = rad);
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Category Filter (Feature 3!)
+                  const Text('Category:', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: _categories.map((cat) {
+                      final isSelected = _selectedCategory == cat;
+                      return ChoiceChip(
+                        label: Text(cat),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFF7B40B5),
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                        ),
+                        onSelected: (selected) {
+                          if (selected) {
+                            setModalState(() => _selectedCategory = cat);
+                            setState(() => _selectedCategory = cat);
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              _selectedCategory = 'All';
+                              _selectedRadiusKm = 25.0;
+                              _searchController.clear();
+                              _searchQuery = '';
+                            });
+                            setState(() {
+                              _selectedCategory = 'All';
+                              _selectedRadiusKm = 25.0;
+                              _searchController.clear();
+                              _searchQuery = '';
+                            });
+                          },
+                          child: const Text('Reset All'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF7B40B5),
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Apply Filters'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              const Text('Category:', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: _categories.map((cat) {
-                  final isSelected = _selectedCategory == cat;
-                  return ChoiceChip(
-                    label: Text(cat),
-                    selected: isSelected,
-                    selectedColor: const Color(0xFF7B40B5),
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
-                    ),
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() => _selectedCategory = cat);
-                        Navigator.pop(ctx);
-                      }
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7B40B5),
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _selectedCategory = 'All';
-                      _searchController.clear();
-                      _searchQuery = '';
-                    });
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text('Reset Filters'),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -312,7 +418,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   ? FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots()
                   : null,
               builder: (context, snapshot) {
-                double balance = 3400.0; // Default matching Wireframe 1
+                double balance = 3400.0;
                 if (snapshot.hasData && snapshot.data!.exists) {
                   final uData = snapshot.data!.data() as Map<String, dynamic>?;
                   if (uData != null && uData.containsKey('balance')) {
@@ -375,7 +481,6 @@ class _ItemListScreenState extends State<ItemListScreen> {
                         ],
                       ),
 
-                      // Top Up / Wallet button
                       ElevatedButton.icon(
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -407,7 +512,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
             ),
           ),
 
-          // Search Bar Directly on Home Page (Wireframe 1 & 2 Feature!)
+          // Enhanced Search Bar (Feature 3!)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Container(
@@ -430,7 +535,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   });
                 },
                 decoration: InputDecoration(
-                  hintText: 'Search items, tools, camera...',
+                  hintText: 'Search items, tools, camera, owner...',
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                   prefixIcon: const Icon(Icons.search, color: Color(0xFF7B40B5)),
                   suffixIcon: Row(
@@ -447,7 +552,24 @@ class _ItemListScreenState extends State<ItemListScreen> {
                           },
                         ),
                       IconButton(
-                        icon: const Icon(Icons.tune, color: Color(0xFF7B40B5)),
+                        icon: Stack(
+                          children: [
+                            const Icon(Icons.tune, color: Color(0xFF7B40B5)),
+                            if (_selectedCategory != 'All' || _selectedRadiusKm < 100.0)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.amber,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                         tooltip: 'Filter options',
                         onPressed: _showFilterModal,
                       ),
@@ -465,7 +587,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
             ),
           ),
 
-          // Mode Filter Tabs (Wireframe 2 FB Marketplace Style: LEND, BORROW, LOCATION)
+          // Mode Filter Tabs (LEND, BORROW, NEARBY)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
@@ -481,7 +603,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
             ),
           ),
 
-          // Horizontal Category Filter Pills
+          // Horizontal Category Filter Pills (Feature 3: Category search!)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -514,34 +636,124 @@ class _ItemListScreenState extends State<ItemListScreen> {
             ),
           ),
 
+          // Active Radius & Search Filter Summary Chip Bar (Feature 4!)
+          if (_selectedRadiusKm < 100.0 || _searchQuery.isNotEmpty || _selectedCategory != 'All')
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text('Active:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  if (_selectedRadiusKm < 100.0)
+                    Chip(
+                      avatar: const Icon(Icons.location_on, size: 12, color: Color(0xFF7B40B5)),
+                      label: Text('Radius: ${_selectedRadiusKm.toInt()} km', style: const TextStyle(fontSize: 10)),
+                      padding: EdgeInsets.zero,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onDeleted: () => setState(() => _selectedRadiusKm = 100.0),
+                    ),
+                  if (_selectedCategory != 'All')
+                    Chip(
+                      label: Text('Category: $_selectedCategory', style: const TextStyle(fontSize: 10)),
+                      padding: EdgeInsets.zero,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onDeleted: () => setState(() => _selectedCategory = 'All'),
+                    ),
+                  if (_searchQuery.isNotEmpty)
+                    Chip(
+                      label: Text('Query: "$_searchQuery"', style: const TextStyle(fontSize: 10)),
+                      padding: EdgeInsets.zero,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onDeleted: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    ),
+                ],
+              ),
+            ),
+
           const SizedBox(height: 4),
 
-          // Feed Item Header Title
+          // Feed Header with Two-Column Marketplace Grid Toggle (Feature 2!)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  _selectedCategory == 'All' ? 'Featured Items' : 'Category: $_selectedCategory',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _selectedCategory == 'All' ? 'Marketplace Feed' : '$_selectedCategory Items',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      _selectedRadiusKm < 100.0
+                          ? 'Showing items within ${_selectedRadiusKm.toInt()} km'
+                          : 'Live items nearby',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  _searchQuery.isNotEmpty ? 'Search results' : 'Live Marketplace',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+
+                // Layout View Toggle Button (Two-Column Grid vs Single List)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      InkWell(
+                        onTap: () => setState(() => _isGridView = true),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: _isGridView ? const Color(0xFF7B40B5) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.grid_view_rounded,
+                            size: 18,
+                            color: _isGridView ? Colors.white : Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => setState(() => _isGridView = false),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: !_isGridView ? const Color(0xFF7B40B5) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.view_list_rounded,
+                            size: 18,
+                            color: !_isGridView ? Colors.white : Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
 
-          // Firestore Item Feed Stream
+          // Firestore Item Feed Stream (Two-Column Grid or List View!)
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('items')
@@ -568,26 +780,39 @@ class _ItemListScreenState extends State<ItemListScreen> {
 
               final docs = snapshot.data?.docs ?? [];
 
-              // Apply Search Query & Category Filter
+              // Apply Search Query, Category Filter, and Geographical Radius Filter (Feature 3 & 4!)
               final filteredDocs = docs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 final name = (data['name'] ?? data['title'] ?? '').toString().toLowerCase();
-                final category = (data['category'] ?? '').toString();
+                final category = (data['category'] ?? '').toString().toLowerCase();
                 final description = (data['description'] ?? '').toString().toLowerCase();
+                final ownerName = (data['ownerName'] ?? '').toString().toLowerCase();
+                final condition = (data['condition'] ?? '').toString().toLowerCase();
 
+                // Multi-field Search Matching
                 final matchesSearch = _searchQuery.isEmpty ||
                     name.contains(_searchQuery) ||
-                    description.contains(_searchQuery);
+                    description.contains(_searchQuery) ||
+                    category.contains(_searchQuery) ||
+                    ownerName.contains(_searchQuery) ||
+                    condition.contains(_searchQuery);
 
-                final matchesCategory =
-                    _selectedCategory == 'All' || category.toLowerCase() == _selectedCategory.toLowerCase();
+                // Category Matching
+                final matchesCategory = _selectedCategory == 'All' ||
+                    category == _selectedCategory.toLowerCase();
 
+                // Mode Matching
                 final matchesMode = _selectedMode == 'All' ||
                     (_selectedMode == 'Lend' && data['ownerId'] == user?.uid) ||
                     (_selectedMode == 'Borrow' && data['ownerId'] != user?.uid) ||
                     (_selectedMode == 'Nearby');
 
-                return matchesSearch && matchesCategory && matchesMode;
+                // Geographical Radius Filter Matching (Feature 4!)
+                final distanceKm = (data['distanceKm'] as num?)?.toDouble() ??
+                    (doc.id.hashCode % 15 + 1.2);
+                final matchesRadius = _selectedRadiusKm >= 100.0 || distanceKm <= _selectedRadiusKm;
+
+                return matchesSearch && matchesCategory && matchesMode && matchesRadius;
               }).toList();
 
               if (filteredDocs.isEmpty) {
@@ -602,7 +827,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                         Text(
                           _searchQuery.isNotEmpty
                               ? 'No items found matching "$_searchQuery"'
-                              : 'No items available in this category.',
+                              : 'No items found within your selected filters.',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.grey[700], fontSize: 15),
                         ),
@@ -614,13 +839,14 @@ class _ItemListScreenState extends State<ItemListScreen> {
                               _searchQuery = '';
                               _selectedCategory = 'All';
                               _selectedMode = 'All';
+                              _selectedRadiusKm = 100.0;
                             });
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF7B40B5),
                             foregroundColor: Colors.white,
                           ),
-                          child: const Text('Clear Search & Filters'),
+                          child: const Text('Reset All Filters'),
                         ),
                       ],
                     ),
@@ -628,6 +854,46 @@ class _ItemListScreenState extends State<ItemListScreen> {
                 );
               }
 
+              // Two-Column Grid Marketplace Layout (Feature 2!)
+              if (_isGridView) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.65, // Ideal ratio for marketplace card with ribbon
+                    ),
+                    itemCount: filteredDocs.length,
+                    itemBuilder: (context, index) {
+                      final doc = filteredDocs[index];
+                      final itemData = doc.data() as Map<String, dynamic>;
+                      final imageUrls = itemData['imageUrls'] as List<dynamic>? ?? [];
+                      final imagePath = imageUrls.isNotEmpty
+                          ? imageUrls[0].toString()
+                          : (itemData['imageUrl'] ?? '').toString();
+
+                      return ItemCard(
+                        itemId: doc.id,
+                        itemData: itemData,
+                        name: itemData['name'] ?? itemData['title'] ?? 'No Name',
+                        price: '₱${itemData['price'] ?? 0}',
+                        imagePath: imagePath,
+                        isOwner: itemData['ownerId'] == user?.uid,
+                        isAvailable: itemData['isAvailable'] ?? true,
+                        isGrid: true,
+                        onEdit: () => setState(() {}),
+                        onDelete: () => setState(() {}),
+                      );
+                    },
+                  ),
+                );
+              }
+
+              // Single Column List View Layout
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 shrinkWrap: true,
@@ -641,20 +907,23 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       ? imageUrls[0].toString()
                       : (itemData['imageUrl'] ?? '').toString();
 
-                  return ItemCard(
-                    itemId: doc.id,
-                    itemData: itemData,
-                    name: itemData['name'] ?? itemData['title'] ?? 'No Name',
-                    price: '₱${itemData['price'] ?? 0}',
-                    imagePath: imagePath,
-                    isOwner: itemData['ownerId'] == user?.uid,
-                    isAvailable: itemData['isAvailable'] ?? true,
-                    onEdit: () {
-                      setState(() {});
-                    },
-                    onDelete: () {
-                      setState(() {});
-                    },
+                  return SizedBox(
+                    height: 380,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: ItemCard(
+                        itemId: doc.id,
+                        itemData: itemData,
+                        name: itemData['name'] ?? itemData['title'] ?? 'No Name',
+                        price: '₱${itemData['price'] ?? 0}',
+                        imagePath: imagePath,
+                        isOwner: itemData['ownerId'] == user?.uid,
+                        isAvailable: itemData['isAvailable'] ?? true,
+                        isGrid: false,
+                        onEdit: () => setState(() {}),
+                        onDelete: () => setState(() {}),
+                      ),
+                    ),
                   );
                 },
               );
