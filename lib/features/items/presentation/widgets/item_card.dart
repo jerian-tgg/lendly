@@ -358,6 +358,38 @@ class ItemCard extends StatelessWidget {
                             child: RibbonBanner.fromType(ribbonType),
                           ),
 
+                        // Certified Appraised Badge
+                        if (itemData['appraisalStatus'] == 'certified')
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.amber[800],
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: const [
+                                  BoxShadow(color: Colors.black26, blurRadius: 4),
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.shield, color: Colors.white, size: 10),
+                                  SizedBox(width: 2),
+                                  Text(
+                                    'APPRAISED',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
                         // Availability Tag Badge
                         Positioned(
                           bottom: 6,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
+import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/profile/presentation/pages/edit_profile.dart';
@@ -61,6 +62,120 @@ class _UserProfilePageState extends State<UserProfilePage> {
         );
       }
     }
+  }
+
+  void _showRegisterAppraiserDialog(BuildContext context) {
+    final bNameController = TextEditingController();
+    final licController = TextEditingController();
+    String spec = 'Electronics & Technology';
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.verified_user, color: Color(0xFF7B40B5)),
+              SizedBox(width: 8),
+              Text('Appraiser Registration', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Upgrade your account to issue certified appraisals.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: bNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Business / Agency Name',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: licController,
+                  decoration: InputDecoration(
+                    labelText: 'License / Accreditation No.',
+                    hintText: 'e.g. APP-2026-8891',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Primary Specialization', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  initialValue: spec,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Electronics & Technology', child: Text('Electronics & Tech', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(value: 'Industrial Tools & Equipment', child: Text('Tools & Equipment', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(value: 'Jewelry & Luxury Goods', child: Text('Jewelry & Luxury', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(value: 'Vehicles & Transport', child: Text('Vehicles & Transport', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(value: 'General Merchandise', child: Text('General Merchandise', style: TextStyle(fontSize: 12))),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) spec = val;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final bName = bNameController.text.trim();
+                final lic = licController.text.trim();
+                if (bName.isEmpty || lic.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all required fields')),
+                  );
+                  return;
+                }
+
+                final uid = FirebaseAuth.instance.currentUser?.uid;
+                if (uid != null) {
+                  await FirebaseFirestore.instance.collection('users').doc(uid).set({
+                    'isAppraiser': true,
+                    'isBusiness': true,
+                    'accountType': 'appraiser',
+                    'businessName': bName,
+                    'licenseNumber': lic,
+                    'specialization': spec,
+                  }, SetOptions(merge: true));
+
+                  if (context.mounted) {
+                    Navigator.pop(dialogCtx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Registration successful! You are now a Professional Appraiser.'),
+                        backgroundColor: Color(0xFF7B40B5),
+                      ),
+                    );
+                    setState(() {});
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7B40B5),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Submit & Register'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -266,6 +381,123 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // Appraiser Portal / Registration Section
+                    if (_isSelf) ...[
+                      if (userData['isAppraiser'] == true) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF5A2A94), Color(0xFF7B40B5)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.verified, color: Colors.amber, size: 24),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          userData['businessName'] is String && (userData['businessName'] as String).isNotEmpty
+                                              ? userData['businessName']
+                                              : 'Professional Appraisal Business',
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                        ),
+                                        Text(
+                                          'Lic #: ${userData['licenseNumber'] ?? 'APP-2026-REG'}',
+                                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => const AppraisalDashboard()),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.assessment_rounded, color: Color(0xFF7B40B5)),
+                                  label: const Text(
+                                    'Open Professional Appraisal Portal',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.business_center, color: Color(0xFF7B40B5), size: 30),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Register as Appraiser',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF7B40B5)),
+                                    ),
+                                    Text(
+                                      'Issue official valuation certificates & build lender trust',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => _showRegisterAppraiserDialog(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF7B40B5),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
 
                     const SizedBox(height: 20),
 

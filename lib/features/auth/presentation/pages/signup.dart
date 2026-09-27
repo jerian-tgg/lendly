@@ -18,10 +18,24 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _birthdateController = TextEditingController();
+  final TextEditingController _businessNameController = TextEditingController();
+  final TextEditingController _licenseNumberController = TextEditingController();
+
+  bool _isAppraiser = false;
+  String _specialization = 'Electronics & Technology';
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   final RegExp _emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+
+  final List<String> _specializations = [
+    'Electronics & Technology',
+    'Industrial Tools & Equipment',
+    'Jewelry & Luxury Goods',
+    'Vehicles & Transport',
+    'Musical Instruments',
+    'General Merchandise',
+  ];
 
   Future<void> _selectBirthdate() async {
     final picked = await showDatePicker(
@@ -46,26 +60,36 @@ class _SignUpPageState extends State<SignUpPage> {
         birthdate: DateFormat('yyyy-MM-dd').parse(_birthdateController.text),
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
+        isAppraiser: _isAppraiser,
+        businessName: _isAppraiser ? _businessNameController.text.trim() : null,
+        licenseNumber: _isAppraiser ? _licenseNumberController.text.trim() : null,
+        specialization: _isAppraiser ? _specialization : null,
       );
 
       if (user != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent! Please check your inbox.'),
-            duration: Duration(seconds: 5),
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => LoginPage(initialEmail: user.email)),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Verification email sent! Please check your inbox.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => LoginPage(initialEmail: user.email)),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Sign up failed: ${e.toString()}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Sign up failed: ${e.toString()}")),
+        );
+      }
     }
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -161,6 +185,89 @@ class _SignUpPageState extends State<SignUpPage> {
               }
               return null;
             },
+          ),
+          const SizedBox(height: 20),
+
+          // Business / Appraiser Registration Box
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _isAppraiser
+                  ? const Color(0xFF7B40B5).withValues(alpha: 0.08)
+                  : Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isAppraiser ? const Color(0xFF7B40B5) : Colors.grey[300]!,
+                width: _isAppraiser ? 1.5 : 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: const Color(0xFF7B40B5),
+                  title: const Text(
+                    'Register as Business / Professional Appraiser',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF7B40B5),
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Offer certified item valuations & official appraisals',
+                    style: TextStyle(fontSize: 11, color: Colors.black54),
+                  ),
+                  value: _isAppraiser,
+                  onChanged: (val) {
+                    setState(() => _isAppraiser = val);
+                  },
+                ),
+                if (_isAppraiser) ...[
+                  const Divider(height: 20),
+                  _buildTextFormField(
+                    controller: _businessNameController,
+                    hint: 'Business / Agency Name',
+                    icon: Icons.business,
+                    validator: (val) =>
+                        _isAppraiser && (val == null || val.isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextFormField(
+                    controller: _licenseNumberController,
+                    hint: 'License / Accreditation No. (e.g. APP-2026-XXXX)',
+                    icon: Icons.verified_user,
+                    validator: (val) =>
+                        _isAppraiser && (val == null || val.isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Specialization Category',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: _specialization,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.category),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    items: _specializations.map((cat) {
+                      return DropdownMenuItem(value: cat, child: Text(cat, style: const TextStyle(fontSize: 13)));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => _specialization = val);
+                    },
+                  ),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: 24),
 

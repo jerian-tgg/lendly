@@ -414,57 +414,214 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // CONDITION SECTION
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFE8FA),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.stars_rounded, color: Color(0xFF7B40B5), size: 24),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                  // OFFICIAL APPRAISAL CERTIFICATE OR CONDITION SECTION
+                  if (widget.itemData['appraisalStatus'] == 'certified') ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFFFFBEB),
+                            Colors.amber.shade50,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.amber.shade400, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.amber.withValues(alpha: 0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  const Text(
-                                    'Item Condition: ',
-                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF7B40B5),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      condition,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                  color: Colors.amber,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.verified, color: Colors.white, size: 22),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Certified Professional Appraisal',
+                                      style: TextStyle(
+                                        fontSize: 15,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 11,
+                                        color: Colors.black87,
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      'Cert ID: ${widget.itemData['appraisalCertificateId'] ?? 'CERT-APPRAISED'}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.amber,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 2),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'VERIFIED',
+                                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+                          Row(
+                            children: [
+                              const Icon(Icons.business, size: 14, color: Color(0xFF7B40B5)),
+                              const SizedBox(width: 4),
                               Text(
-                                'Camera verified photo inspection by lender',
+                                'Appraiser: ${widget.itemData['certifiedByBusinessName'] ?? 'Licensed Professional Appraiser'}',
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                              ),
+                              const Spacer(),
+                              Text(
+                                'Lic: ${widget.itemData['certifiedByLicense'] ?? 'APP-REG'}',
                                 style: TextStyle(fontSize: 11, color: Colors.grey[700]),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.stars, size: 14, color: Colors.amber),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Certified Condition: ${widget.itemData['conditionGrade'] ?? condition}',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          if (widget.itemData['appraiserNotes'] != null &&
+                              (widget.itemData['appraiserNotes'] as String).isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              '"${widget.itemData['appraiserNotes']}"',
+                              style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey[800]),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
+                  ] else ...[
+                    // Standard Condition Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFE8FA),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.stars_rounded, color: Color(0xFF7B40B5), size: 24),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'Item Condition: ',
+                                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF7B40B5),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            condition,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Camera verified photo inspection by lender',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (isOwner) ...[
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: widget.itemData['appraisalRequested'] == true
+                                    ? null
+                                    : () async {
+                                        await FirebaseFirestore.instance
+                                            .collection('items')
+                                            .doc(widget.itemId)
+                                            .update({'appraisalRequested': true});
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Appraisal requested! Professional appraisers will review your item.'),
+                                              backgroundColor: Color(0xFF7B40B5),
+                                            ),
+                                          );
+                                          setState(() {
+                                            widget.itemData['appraisalRequested'] = true;
+                                          });
+                                        }
+                                      },
+                                icon: const Icon(Icons.verified_outlined, size: 16),
+                                label: Text(
+                                  widget.itemData['appraisalRequested'] == true
+                                      ? 'Appraisal Requested (Pending Review)'
+                                      : 'Request Official Professional Appraisal',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF7B40B5),
+                                  side: const BorderSide(color: Color(0xFF7B40B5)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 16),
 
