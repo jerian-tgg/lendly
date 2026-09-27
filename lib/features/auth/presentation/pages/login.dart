@@ -58,6 +58,8 @@ class _LoginPageState extends State<LoginPage> {
         await user.reload();
         final refreshedUser = FirebaseAuth.instance.currentUser;
 
+        if (!mounted) return;
+
         if (refreshedUser != null && refreshedUser.emailVerified) {
           Navigator.pushReplacement(
             context,
@@ -72,29 +74,14 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Login failed: ${e.toString()}")),
       );
     }
-    setState(() => isLoading = false);
-  }
-
-  Future<void> _signInWithGoogle() async {
-    setState(() => isLoading = true);
-    try {
-      final user = await _authService.signInWithGoogle();
-      if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Google sign-in failed: ${e.toString()}")),
-      );
+    if (mounted) {
+      setState(() => isLoading = false);
     }
-    setState(() => isLoading = false);
   }
 
   @override
@@ -158,17 +145,6 @@ class _LoginPageState extends State<LoginPage> {
                     child: isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text('Login', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: isLoading ? null : _signInWithGoogle,
-                    icon: Image.asset('assets/logos/google.png', width: 24, height: 24),
-                    label: const Text('Sign in with Google', style: TextStyle(color: Colors.black)),
-                    style: _buttonStyle(backgroundColor: Colors.white, textColor: Colors.black),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -237,13 +213,12 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  ButtonStyle _buttonStyle({Color? backgroundColor, Color? textColor}) {
+  ButtonStyle _buttonStyle() {
     return ElevatedButton.styleFrom(
-      backgroundColor: backgroundColor ?? const Color(0xFF90E0F3),
+      backgroundColor: const Color(0xFF90E0F3),
       padding: const EdgeInsets.symmetric(vertical: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: backgroundColor == Colors.white ? Colors.black12 : Colors.transparent),
       ),
     );
   }
