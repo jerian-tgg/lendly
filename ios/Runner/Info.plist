@@ -45,5 +45,12 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is required for identity verification and liveness checks.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Microphone access is required for liveness verification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photo library access is required to upload identity documents.</string>
 </dict>
+
 </plist>

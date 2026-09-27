@@ -37,6 +37,32 @@ class FirebaseUserService {
     await _auth.currentUser?.verifyBeforeUpdateEmail(email);
   }
 
+  // Update verification status in Firestore
+  Future<void> updateUserVerificationStatus({
+    required bool isVerified,
+    String? sessionId,
+    String? status,
+  }) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) throw Exception("User not logged in");
+
+    final Map<String, dynamic> updateData = {
+      'isVerified': isVerified,
+      'verificationStatus': status ?? (isVerified ? 'Approved' : 'Declined'),
+    };
+
+    if (isVerified) {
+      updateData['verifiedAt'] = FieldValue.serverTimestamp();
+    }
+
+    if (sessionId != null) {
+      updateData['verificationSessionId'] = sessionId;
+    }
+
+    await _firestore.collection('users').doc(uid).set(updateData, SetOptions(merge: true));
+  }
+
+
   // Get user's profile as a map
   Future<Map<String, dynamic>> getUserProfile() async {
     final uid = _auth.currentUser?.uid;
