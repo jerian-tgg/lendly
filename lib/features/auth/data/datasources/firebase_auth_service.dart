@@ -14,6 +14,10 @@ class FirebaseAuthService {
     required DateTime birthdate,
     required String firstName, // Added first name
     required String lastName,  // Added last name
+    bool isAppraiser = false,
+    String? businessName,
+    String? licenseNumber,
+    String? specialization,
   }) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
@@ -33,6 +37,12 @@ class FirebaseAuthService {
           'email': user.email,
           'photoURL': 'https://...', // Placeholder, update later
           'isVerified': false,
+          'isAppraiser': isAppraiser,
+          'isBusiness': isAppraiser,
+          'accountType': isAppraiser ? 'appraiser' : 'standard',
+          'businessName': businessName ?? '',
+          'licenseNumber': licenseNumber ?? '',
+          'specialization': specialization ?? '',
           'joinedAt': FieldValue.serverTimestamp(),
           'location': {
             'lat': 10.123,
