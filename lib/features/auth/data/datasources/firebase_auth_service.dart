@@ -58,7 +58,22 @@ class FirebaseAuthService {
         email: email,
         password: password,
       );
-      return result.user;
+      final user = result.user;
+
+      // Check if the user has been blocked by an admin (skip for admins)
+      if (user != null &&
+          user.email != 'palenciajerjer28@gmail.com' &&
+          user.email != 'admin-portal@lendly.internal') {
+        final doc = await _firestore.collection('users').doc(user.uid).get();
+        if (doc.exists && doc.data()?['isBlocked'] == true) {
+          await _auth.signOut(); // Sign them back out immediately
+          throw Exception(
+            'Your account has been blocked. Please contact support.'
+          );
+        }
+      }
+
+      return user;
     } on FirebaseAuthException catch (e) {
       throw Exception(e.message);
     }
@@ -96,6 +111,17 @@ class FirebaseAuthService {
             },
             'birthdate': Timestamp.fromDate(DateTime(2004, 12, 28)), // Default for Google sign in
           });
+        } else {
+          // Check if the existing user has been blocked by an admin (skip for admins)
+          if (user.email != 'palenciajerjer28@gmail.com' &&
+              user.email != 'admin-portal@lendly.internal' &&
+              doc.data() != null &&
+              (doc.data() as Map<String, dynamic>)['isBlocked'] == true) {
+            await _auth.signOut(); // Sign them back out immediately
+            throw Exception(
+              'Your account has been blocked. Please contact support.'
+            );
+          }
         }
       }
 

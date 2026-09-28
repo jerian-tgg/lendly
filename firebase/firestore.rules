@@ -1,14 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'admin-portal@lendly.internal' ||
+        request.auth.token.email == 'palenciajerjer28@gmail.com'
+      );
+    }
+
+    // ── Users collection ────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Any authenticated user can read all users (covers admin session too)
+      allow read: if request.auth != null;
+
+      // Full access for administrators
+      allow write: if isAdmin();
+
+      // Users can write their own document
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null &&
+        (request.auth.uid == userId ||
+         // Any authenticated session can update the isBlocked field (admin use)
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isBlocked']));
+    }
+
+    // ── Conversations ────────────────────────────────────────────────────────
     match /conversations/{convoId} {
-      allow read, write: if request.auth != null &&
-        (request.auth.uid in convoId.split('_'));
+      allow read, write: if isAdmin() || (request.auth != null &&
+        (request.auth.uid in convoId.split('_')));
 
       match /messages/{messageId} {
-        allow read, write: if request.auth != null &&
-          (request.auth.uid in convoId.split('_'));
+        allow read, write: if isAdmin() || (request.auth != null &&
+          (request.auth.uid in convoId.split('_')));
       }
+    }
+
+    // ── All other collections ─────────────────────────────────────────────
+    match /{collection}/{docId} {
+      allow read, write: if request.auth != null;
     }
   }
 }

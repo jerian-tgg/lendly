@@ -48,11 +48,14 @@ class _LoginPageState extends State<LoginPage> {
   void _togglePasswordView() => setState(() => _obscureText = !_obscureText);
 
   Future<void> _login() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
     setState(() => isLoading = true);
     try {
       final user = await _authService.login(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+        email: email,
+        password: password,
       );
 
       if (user != null) {

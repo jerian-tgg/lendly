@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_dashboard_page.dart';
 
@@ -14,27 +15,92 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   bool _obscure = true;
   bool _loading = false;
 
-  void _login() {
-    setState(() => _loading = true);
-    final user = _usernameController.text.trim();
-    final pass = _passwordController.text.trim();
-    if (user == 'admin' && pass == 'admin') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => AdminDashboardPage()),
-      );
-    } else {
+  // Internal Firebase credentials for the admin session.
+  // These are never shown to the user — the user only sees "admin/admin".
+  static const String _adminFirebaseEmail = 'admin-portal@lendly.internal';
+  static const String _adminFirebasePassword = 'Lendly@Admin2024!';
+
+  Future<void> _login() async {
+    final rawUser = _usernameController.text.trim();
+    final rawPass = _passwordController.text.trim();
+
+    final cleanUser = rawUser.replaceAll('\\', '/').toLowerCase();
+    final cleanPass = rawPass.trim();
+
+    // Check credentials:
+    // Only 'admin' / 'admin' and 'palenciajerjer28@gmail.com' / 'admin' are allowed
+    final bool isValidAdmin =
+        (cleanUser == 'admin' && cleanPass.toLowerCase() == 'admin') ||
+        (cleanUser == 'admin/admin') ||
+        (cleanUser == 'palenciajerjer28@gmail.com' && cleanPass.toLowerCase() == 'admin') ||
+        (cleanUser == 'palenciajerjer28@gmail.com/admin');
+
+    if (!isValidAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid admin credentials')),
+        const SnackBar(
+          content: Text('Invalid admin credentials. Use admin / admin'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
+      return;
     }
-    setState(() => _loading = false);
+
+    setState(() => _loading = true);
+
+    try {
+      // Sign in with the Firebase admin credentials
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _adminFirebaseEmail,
+          password: _adminFirebasePassword,
+        );
+      } catch (_) {
+        // If signIn fails, attempt createUser in case it doesn't exist yet
+        try {
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: _adminFirebaseEmail,
+            password: _adminFirebasePassword,
+          );
+        } catch (_) {
+          // If creation fails (e.g. already exists), retry signIn once
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: _adminFirebaseEmail,
+            password: _adminFirebasePassword,
+          );
+        }
+      }
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin Login'), backgroundColor: const Color(0xFF90E0F3)),
+      appBar: AppBar(
+        title: const Text('Admin Login'),
+        backgroundColor: const Color(0xFF007799),
+        iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: const TextStyle(
+            color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+      backgroundColor: const Color(0xFFF0F4F8),
       body: Center(
         child: Container(
           padding: const EdgeInsets.all(32),
@@ -48,6 +114,15 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const Icon(Icons.admin_panel_settings,
+                    size: 56, color: Color(0xFF007799)),
+                const SizedBox(height: 16),
+                const Text('Admin Portal',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF007799))),
+                const SizedBox(height: 24),
                 TextField(
                   controller: _usernameController,
                   decoration: const InputDecoration(
@@ -75,7 +150,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       borderSide: BorderSide.none,
                     ),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                      icon: Icon(
+                          _obscure ? Icons.visibility_off : Icons.visibility),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
@@ -85,8 +161,13 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _loading ? null : _login,
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF90E0F3), padding: const EdgeInsets.symmetric(vertical: 16)),
-                    child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('Login', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF007799),
+                        padding: const EdgeInsets.symmetric(vertical: 16)),
+                    child: _loading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Login',
+                            style: TextStyle(color: Colors.white)),
                   ),
                 ),
               ],
