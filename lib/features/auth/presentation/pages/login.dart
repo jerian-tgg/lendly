@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
 import 'package:lendly/features/auth/presentation/pages/signup.dart';
 import 'package:lendly/features/items/presentation/pages/home_screen.dart';
+import 'package:lendly/features/admin/presentation/pages/admin_login_page.dart';
 
 class LoginPage extends StatefulWidget {
   final String? initialEmail;
@@ -187,6 +188,24 @@ class _LoginPageState extends State<LoginPage> {
                     'Explore as Visitor',
                     style: TextStyle(
                       color: Color(0xFF007799),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                // Admin Login Button
+                TextButton(
+                  onPressed: () {
+                    // Navigate to admin login page
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => AdminLoginPage()),
+                    );
+                  },
+                  child: const Text(
+                    'Admin Login',
+                    style: TextStyle(
+                      color: Color(0xFFAA0000),
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
