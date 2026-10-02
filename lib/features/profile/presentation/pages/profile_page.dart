@@ -20,7 +20,8 @@ class UserProfilePage extends StatefulWidget {
   State<UserProfilePage> createState() => _UserProfilePageState();
 }
 
-class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingObserver {
+class _UserProfilePageState extends State<UserProfilePage>
+    with WidgetsBindingObserver {
   final FirebaseUserService _userService = FirebaseUserService();
   final DiditVerificationService _diditService = DiditVerificationService();
 
@@ -116,7 +117,9 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 8),
                 Expanded(
-                  child: Text('Identity verified successfully! Verified badge granted.'),
+                  child: Text(
+                    'Identity verified successfully! Verified badge granted.',
+                  ),
                 ),
               ],
             ),
@@ -144,7 +147,9 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Your verification has been submitted and is in review.'),
+            content: Text(
+              'Your verification has been submitted and is in review.',
+            ),
             backgroundColor: Colors.orange,
           ),
         );
@@ -159,7 +164,9 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Verification was not approved. Please try again with a valid ID.'),
+            content: Text(
+              'Verification was not approved. Please try again with a valid ID.',
+            ),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -230,7 +237,10 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
     }
   }
 
-  Future<void> _handleDirectChat(BuildContext context, String targetName) async {
+  Future<void> _handleDirectChat(
+    BuildContext context,
+    String targetName,
+  ) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -261,12 +271,9 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error opening chat: $e')),
-        );
-      }
-    }
-  }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error opening chat: $e')));
       }
     }
   }
@@ -318,9 +325,7 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
         backgroundColor: const Color(0xFF0077B6),
         elevation: 2,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
   }
@@ -331,10 +336,7 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
       decoration: BoxDecoration(
         color: const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF81C784),
-          width: 1.2,
-        ),
+        border: Border.all(color: const Color(0xFF81C784), width: 1.2),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
@@ -342,16 +344,11 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
             offset: const Offset(0, 2),
           ),
         ],
-
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.verified,
-            color: Color(0xFF2E7D32),
-            size: 16,
-          ),
+          Icon(Icons.verified, color: Color(0xFF2E7D32), size: 16),
           SizedBox(width: 6),
           Text(
             'Verified',
@@ -376,12 +373,17 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Row(
             children: [
               Icon(Icons.verified_user, color: Color(0xFF7B40B5)),
               SizedBox(width: 8),
-              Text('Appraiser Registration', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                'Appraiser Registration',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
           content: SingleChildScrollView(
@@ -389,13 +391,18 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Upgrade your account to issue certified appraisals.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const Text(
+                  'Upgrade your account to issue certified appraisals.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: bNameController,
                   decoration: InputDecoration(
                     labelText: 'Business / Agency Name',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -404,24 +411,64 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                   decoration: InputDecoration(
                     labelText: 'License / Accreditation No.',
                     hintText: 'e.g. APP-2026-8891',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text('Primary Specialization', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Primary Specialization',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
                   initialValue: spec,
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'Electronics & Technology', child: Text('Electronics & Tech', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Industrial Tools & Equipment', child: Text('Tools & Equipment', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Jewelry & Luxury Goods', child: Text('Jewelry & Luxury', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Vehicles & Transport', child: Text('Vehicles & Transport', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'General Merchandise', child: Text('General Merchandise', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(
+                      value: 'Electronics & Technology',
+                      child: Text(
+                        'Electronics & Tech',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Industrial Tools & Equipment',
+                      child: Text(
+                        'Tools & Equipment',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Jewelry & Luxury Goods',
+                      child: Text(
+                        'Jewelry & Luxury',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Vehicles & Transport',
+                      child: Text(
+                        'Vehicles & Transport',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'General Merchandise',
+                      child: Text(
+                        'General Merchandise',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
                   ],
                   onChanged: (val) {
                     if (val != null) spec = val;
@@ -441,27 +488,34 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                 final lic = licController.text.trim();
                 if (bName.isEmpty || lic.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill all required fields')),
+                    const SnackBar(
+                      content: Text('Please fill all required fields'),
+                    ),
                   );
                   return;
                 }
 
                 final uid = FirebaseAuth.instance.currentUser?.uid;
                 if (uid != null) {
-                  await FirebaseFirestore.instance.collection('users').doc(uid).set({
-                    'isAppraiser': true,
-                    'isBusiness': true,
-                    'accountType': 'appraiser',
-                    'businessName': bName,
-                    'licenseNumber': lic,
-                    'specialization': spec,
-                  }, SetOptions(merge: true));
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid)
+                      .set({
+                        'isAppraiser': true,
+                        'isBusiness': true,
+                        'accountType': 'appraiser',
+                        'businessName': bName,
+                        'licenseNumber': lic,
+                        'specialization': spec,
+                      }, SetOptions(merge: true));
 
                   if (context.mounted) {
                     Navigator.pop(dialogCtx);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Registration successful! You are now a Professional Appraiser.'),
+                        content: Text(
+                          'Registration successful! You are now a Professional Appraiser.',
+                        ),
                         backgroundColor: Color(0xFF7B40B5),
                       ),
                     );
@@ -488,7 +542,10 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
       appBar: AppBar(
         title: Text(
           _isSelf ? 'My Profile' : 'User Profile',
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 1,
@@ -500,12 +557,19 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
             child: StreamBuilder<DocumentSnapshot>(
-              stream: FirebaseFirestore.instance.collection('users').doc(_targetUserId).snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(_targetUserId)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.all(40),
-                    child: Center(child: CircularProgressIndicator(color: Color(0xFF7B40B5))),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF7B40B5),
+                      ),
+                    ),
                   );
                 }
 
@@ -514,233 +578,205 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                   userData = snapshot.data!.data() as Map<String, dynamic>;
                 }
 
-                final displayName = userData['username'] ??
-                    '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
-                final nameStr = displayName.isNotEmpty ? displayName : 'Lendly User';
-                final location = userData['location'] is String && (userData['location'] as String).isNotEmpty
+                final displayName =
+                    userData['username'] ??
+                    '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'
+                        .trim();
+                final nameStr = displayName.isNotEmpty
+                    ? displayName
+                    : 'Lendly User';
+                final location =
+                    userData['location'] is String &&
+                        (userData['location'] as String).isNotEmpty
                     ? userData['location']
                     : 'Location not specified';
                 final phone = userData['phone'] ?? '';
-                final profilePictureUrl = userData['photoURL'] ?? userData['profilePictureUrl'];
-                final imageUrl = profilePictureUrl is String ? profilePictureUrl : '';
+                final profilePictureUrl =
+                    userData['photoURL'] ?? userData['profilePictureUrl'];
+                final imageUrl = profilePictureUrl is String
+                    ? profilePictureUrl
+                    : '';
 
                 final bool firestoreIsVerified = userData['isVerified'] == true;
                 final bool isVerified = _localIsVerified ?? firestoreIsVerified;
 
-                return SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // Header Row with Title and Upper-Right Corner action/badge
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'User Profile',
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
+                return Column(
+                  children: [
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 52,
+                          backgroundColor: const Color(0xFFEFE8FA),
+                          backgroundImage: imageUrl.isNotEmpty
+                              ? NetworkImage(imageUrl)
+                              : null,
+                          child: imageUrl.isEmpty
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 55,
+                                  color: Color(0xFF7B40B5),
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              size: 14,
+                              color: Colors.white,
                             ),
                           ),
-                          // Upper-Right Corner: Verify Button or Verified Badge
-                          isVerified
-                              ? _buildVerifiedBadge()
-                              : _buildVerifyButton(),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      nameStr,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
-                      const SizedBox(height: 24),
-                      Stack(
-                        alignment: Alignment.bottomRight,
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
-                            child: imageUrl.isEmpty
-                                ? const Icon(Icons.person, size: 50)
-                                : null,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          size: 14,
+                          color: Color(0xFF7B40B5),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          location,
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 13,
                           ),
-                          if (isVerified)
-                            Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF7B40B5,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.star, size: 14, color: Colors.amber),
+                              SizedBox(width: 4),
+                              Text(
+                                '4.9 Verified Lender',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF7B40B5),
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.verified,
-                                color: Color(0xFF0077B6),
-                                size: 24,
-                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Action Buttons (Edit Profile if Self, Message/Contact if Viewing Another User)
+                    if (_isSelf)
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const EditProfilePage(),
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                          );
+                        },
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit Profile'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7B40B5),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      )
+                    else
                       Row(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            displayName,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (isVerified) ...[
-                            const SizedBox(width: 6),
-                            const Icon(
-                              Icons.verified,
-                              color: Color(0xFF0077B6),
+                          ElevatedButton.icon(
+                            onPressed: () =>
+                                _handleDirectChat(context, nameStr),
+                            icon: const Icon(
+                              Icons.chat_bubble_rounded,
                               size: 18,
+                            ),
+                            label: const Text('Send Message'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7B40B5),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                          if (phone.isNotEmpty) ...[
+                            const SizedBox(width: 10),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Contact: $phone')),
+                                );
+                              },
+                              icon: const Icon(Icons.phone, size: 18),
+                              label: const Text('Call'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF7B40B5),
+                                side: const BorderSide(
+                                  color: Color(0xFF7B40B5),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
                             ),
                           ],
                         ],
                       ),
-                    ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 52,
-                                backgroundColor: const Color(0xFFEFE8FA),
-                                backgroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
-                                child: imageUrl.isEmpty
-                                    ? const Icon(Icons.person, size: 55, color: Color(0xFF7B40B5))
-                                    : null,
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.check, size: 14, color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            nameStr,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.location_on, size: 14, color: Color(0xFF7B40B5)),
-                              const SizedBox(width: 4),
-                              Text(
-                                location,
-                                style: TextStyle(color: Colors.grey[700], fontSize: 13),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Icon(Icons.star, size: 14, color: Colors.amber),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      '4.9 Verified Lender',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF7B40B5),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Action Buttons (Edit Profile if Self, Message/Contact if Viewing Another User)
-                          if (_isSelf)
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const EditProfilePage(),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.edit, size: 18),
-                              label: const Text('Edit Profile'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF7B40B5),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                            )
-                          else
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () => _handleDirectChat(context, nameStr),
-                                  icon: const Icon(Icons.chat_bubble_rounded, size: 18),
-                                  label: const Text('Send Message'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF7B40B5),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                  ),
-                                ),
-                                if (phone.isNotEmpty) ...[
-                                  const SizedBox(width: 10),
-                                  OutlinedButton.icon(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Contact: $phone')),
-                                      );
-                                    },
-                                    icon: const Icon(Icons.phone, size: 18),
-                                    label: const Text('Call'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFF7B40B5),
-                                      side: const BorderSide(color: Color(0xFF7B40B5)),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
 
                     const SizedBox(height: 16),
 
@@ -759,7 +795,9 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                                color: const Color(
+                                  0xFF7B40B5,
+                                ).withValues(alpha: 0.3),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -770,21 +808,36 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.verified, color: Colors.amber, size: 24),
+                                  const Icon(
+                                    Icons.verified,
+                                    color: Colors.amber,
+                                    size: 24,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          userData['businessName'] is String && (userData['businessName'] as String).isNotEmpty
+                                          userData['businessName'] is String &&
+                                                  (userData['businessName']
+                                                          as String)
+                                                      .isNotEmpty
                                               ? userData['businessName']
                                               : 'Professional Appraisal Business',
-                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
                                         ),
                                         Text(
                                           'Lic #: ${userData['licenseNumber'] ?? 'APP-2026-REG'}',
-                                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -798,18 +851,31 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                                   onPressed: () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (_) => const AppraisalDashboard()),
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const AppraisalDashboard(),
+                                      ),
                                     );
                                   },
-                                  icon: const Icon(Icons.assessment_rounded, color: Color(0xFF7B40B5)),
+                                  icon: const Icon(
+                                    Icons.assessment_rounded,
+                                    color: Color(0xFF7B40B5),
+                                  ),
                                   label: const Text(
                                     'Open Professional Appraisal Portal',
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF7B40B5),
+                                    ),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -821,13 +887,23 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                            color: const Color(
+                              0xFF7B40B5,
+                            ).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: const Color(
+                                0xFF7B40B5,
+                              ).withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.business_center, color: Color(0xFF7B40B5), size: 30),
+                              const Icon(
+                                Icons.business_center,
+                                color: Color(0xFF7B40B5),
+                                size: 30,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -835,23 +911,39 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                                   children: [
                                     const Text(
                                       'Register as Appraiser',
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF7B40B5)),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: Color(0xFF7B40B5),
+                                      ),
                                     ),
                                     Text(
                                       'Issue official valuation certificates & build lender trust',
-                                      style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[700],
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               ElevatedButton(
-                                onPressed: () => _showRegisterAppraiserDialog(context),
+                                onPressed: () =>
+                                    _showRegisterAppraiserDialog(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF7B40B5),
                                   foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
-                                child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                child: const Text(
+                                  'Apply',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -895,7 +987,11 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
         const SizedBox(width: 6),
         Text(
           title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
       ],
     );
@@ -947,18 +1043,25 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
             final itemPrice = '₱${item['price'] ?? 0}/day';
 
             List<String> imgs = [];
-            if (item['imageUrls'] is List && (item['imageUrls'] as List).isNotEmpty) {
+            if (item['imageUrls'] is List &&
+                (item['imageUrls'] as List).isNotEmpty) {
               imgs = List<String>.from(item['imageUrls']);
-            } else if (item['imageUrl'] is String && (item['imageUrl'] as String).isNotEmpty) {
+            } else if (item['imageUrl'] is String &&
+                (item['imageUrl'] as String).isNotEmpty) {
               imgs = [item['imageUrl']];
             }
 
             return Card(
               margin: const EdgeInsets.only(bottom: 10),
               elevation: 1,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 leading: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: imgs.isNotEmpty
@@ -981,17 +1084,32 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                           child: const Icon(Icons.shopping_bag_outlined),
                         ),
                 ),
-                title: Text(itemTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text(itemDesc, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                title: Text(
+                  itemTitle,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                subtitle: Text(
+                  itemDesc,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12),
+                ),
                 trailing: Text(
                   itemPrice,
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7B40B5),
+                  ),
                 ),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ItemDetailScreen(itemData: item, itemId: doc.id),
+                      builder: (_) =>
+                          ItemDetailScreen(itemData: item, itemId: doc.id),
                     ),
                   );
                 },
@@ -1011,7 +1129,9 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF7B40B5)));
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+          );
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -1039,26 +1159,36 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
           itemBuilder: (context, index) {
             final review = docs[index].data() as Map<String, dynamic>;
             final ratingVal = (review['rating'] as num?)?.toDouble() ?? 5.0;
-            final comment = review['comment'] ?? review['reviewText'] ?? 'Great lender!';
+            final comment =
+                review['comment'] ?? review['reviewText'] ?? 'Great lender!';
             final reviewerName = review['reviewerName'] ?? 'Verified Borrower';
 
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
               elevation: 0.5,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: const Color(0xFFEFE8FA),
                   child: Text(
-                    reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'U',
-                    style: const TextStyle(color: Color(0xFF7B40B5), fontWeight: FontWeight.bold),
+                    reviewerName.isNotEmpty
+                        ? reviewerName[0].toUpperCase()
+                        : 'U',
+                    style: const TextStyle(
+                      color: Color(0xFF7B40B5),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 title: Row(
                   children: [
                     ...List.generate(5, (starIdx) {
                       return Icon(
-                        starIdx < ratingVal.floor() ? Icons.star : Icons.star_border,
+                        starIdx < ratingVal.floor()
+                            ? Icons.star
+                            : Icons.star_border,
                         size: 14,
                         color: Colors.amber[700],
                       );
@@ -1066,7 +1196,10 @@ class _UserProfilePageState extends State<UserProfilePage> with WidgetsBindingOb
                     const SizedBox(width: 6),
                     Text(
                       reviewerName,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),

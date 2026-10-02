@@ -11,6 +11,7 @@ import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isGuest;
+
   const HomeScreen({super.key, this.isGuest = false});
 
   @override
@@ -20,7 +21,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  bool get isVisitor => widget.isGuest || FirebaseAuth.instance.currentUser == null;
+  bool get isVisitor =>
+      widget.isGuest || FirebaseAuth.instance.currentUser == null;
 
   List<Widget> get _screens => [
     const ItemListScreen(),
@@ -130,14 +132,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (isVisitor) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
                         'Visitor',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF7B40B5), fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF7B40B5),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -147,7 +156,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (isVisitor)
                   TextButton.icon(
                     icon: const Icon(Icons.login, color: Color(0xFF7B40B5)),
-                    label: const Text('Log In', style: TextStyle(color: Color(0xFF7B40B5), fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Log In',
+                      style: TextStyle(
+                        color: Color(0xFF7B40B5),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
@@ -157,7 +172,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
                 else ...[
                   IconButton(
-                    icon: const Icon(Icons.notifications_none_outlined, color: Colors.black54),
+                    icon: const Icon(
+                      Icons.notifications_none_outlined,
+                      color: Colors.black54,
+                    ),
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('No new notifications')),
@@ -168,13 +186,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.only(right: 12),
                     child: StreamBuilder<DocumentSnapshot>(
                       stream: user != null
-                          ? FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots()
+                          ? FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(user.uid)
+                                .snapshots()
                           : null,
                       builder: (context, snapshot) {
                         String? photoUrl;
                         if (snapshot.hasData && snapshot.data!.exists) {
-                          final data = snapshot.data!.data() as Map<String, dynamic>?;
-                          photoUrl = data?['photoURL'] ?? data?['profilePictureUrl'];
+                          final data =
+                              snapshot.data!.data() as Map<String, dynamic>?;
+                          photoUrl =
+                              data?['photoURL'] ?? data?['profilePictureUrl'];
                         }
 
                         return GestureDetector(
@@ -182,11 +205,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: CircleAvatar(
                             radius: 17,
                             backgroundColor: const Color(0xFF90E0F3),
-                            backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                            backgroundImage:
+                                (photoUrl != null && photoUrl.isNotEmpty)
                                 ? NetworkImage(photoUrl)
                                 : null,
                             child: (photoUrl == null || photoUrl.isEmpty)
-                                ? const Icon(Icons.person, size: 20, color: Colors.white)
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 20,
+                                    color: Colors.white,
+                                  )
                                 : null,
                           ),
                         );
@@ -207,21 +235,42 @@ class _HomeScreenState extends State<HomeScreen> {
           ? FloatingActionButton.extended(
               backgroundColor: const Color(0xFF7B40B5),
               elevation: 4,
-              onPressed: () => showDialog(context: context, builder: (_) => const AddItemDialog()),
+              onPressed: () => showDialog(
+                context: context,
+                builder: (_) => const AddItemDialog(),
+              ),
               icon: const Icon(Icons.add, color: Colors.white),
               label: const Text(
                 'Lend Item',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             )
           : null,
       bottomNavigationBar: BottomNavigationBar(
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search_outlined), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Borrowed'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), label: 'Messages'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outlined), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search_outlined),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart_outlined),
+            label: 'Borrowed',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_outlined),
+            label: 'Messages',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outlined),
+            label: 'Profile',
+          ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: const Color(0xFF7B40B5),
@@ -273,7 +322,10 @@ class VisitorPromptView extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -288,7 +340,9 @@ class VisitorPromptView extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF90E0F3),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   onPressed: () {
                     Navigator.pushReplacement(
@@ -298,7 +352,10 @@ class VisitorPromptView extends StatelessWidget {
                   },
                   child: const Text(
                     'Log In / Sign Up',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -306,8 +363,6 @@ class VisitorPromptView extends StatelessWidget {
           ),
         ),
       ),
-=======
->>>>>>> mari-tasks
     );
   }
 }
@@ -324,7 +379,8 @@ class _ItemListScreenState extends State<ItemListScreen> {
   String _searchQuery = '';
   String _selectedCategory = 'All';
   String _selectedMode = 'All'; // All, Lend, Borrow, Nearby
-  double _selectedRadiusKm = 25.0; // Geographical radius filter (5, 10, 25, 50, 100=Any)
+  double _selectedRadiusKm =
+      25.0; // Geographical radius filter (5, 10, 25, 50, 100=Any)
   bool _isGridView = true; // Two-column marketplace layout toggle
 
   final List<String> _categories = [
@@ -376,7 +432,10 @@ class _ItemListScreenState extends State<ItemListScreen> {
                           SizedBox(width: 8),
                           Text(
                             'Marketplace Filters',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -395,9 +454,16 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.location_searching, size: 18, color: Color(0xFF7B40B5)),
+                          Icon(
+                            Icons.location_searching,
+                            size: 18,
+                            color: Color(0xFF7B40B5),
+                          ),
                           SizedBox(width: 6),
-                          Text('Geographical Radius:', style: TextStyle(fontWeight: FontWeight.w600)),
+                          Text(
+                            'Geographical Radius:',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ],
                       ),
                       Text(
@@ -419,7 +485,9 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     divisions: 19,
                     activeColor: const Color(0xFF7B40B5),
                     inactiveColor: Colors.purple.shade50,
-                    label: _selectedRadiusKm >= 100.0 ? 'Any' : '${_selectedRadiusKm.toInt()} km',
+                    label: _selectedRadiusKm >= 100.0
+                        ? 'Any'
+                        : '${_selectedRadiusKm.toInt()} km',
                     onChanged: (val) {
                       setModalState(() {
                         _selectedRadiusKm = val;
@@ -433,9 +501,14 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     spacing: 6,
                     children: _radiusOptions.map((rad) {
                       final isSelected = _selectedRadiusKm == rad;
-                      final label = rad >= 100.0 ? 'Any distance' : '${rad.toInt()} km';
+                      final label = rad >= 100.0
+                          ? 'Any distance'
+                          : '${rad.toInt()} km';
                       return ChoiceChip(
-                        label: Text(label, style: const TextStyle(fontSize: 11)),
+                        label: Text(
+                          label,
+                          style: const TextStyle(fontSize: 11),
+                        ),
                         selected: isSelected,
                         selectedColor: const Color(0xFF7B40B5),
                         labelStyle: TextStyle(
@@ -454,7 +527,10 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   const SizedBox(height: 16),
 
                   // Category Filter (Feature 3!)
-                  const Text('Category:', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Category:',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -536,7 +612,10 @@ class _ItemListScreenState extends State<ItemListScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: StreamBuilder<DocumentSnapshot>(
               stream: user != null
-                  ? FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots()
+                  ? FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .snapshots()
                   : null,
               builder: (context, snapshot) {
                 double balance = 3400.0;
@@ -549,7 +628,10 @@ class _ItemListScreenState extends State<ItemListScreen> {
 
                 return Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
@@ -605,10 +687,16 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       ElevatedButton.icon(
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Wallet top-up features active.')),
+                            const SnackBar(
+                              content: Text('Wallet top-up features active.'),
+                            ),
                           );
                         },
-                        icon: const Icon(Icons.add_card, size: 16, color: Color(0xFF7B40B5)),
+                        icon: const Icon(
+                          Icons.add_card,
+                          size: 16,
+                          color: Color(0xFF7B40B5),
+                        ),
                         label: const Text(
                           'Top Up',
                           style: TextStyle(
@@ -620,7 +708,10 @@ class _ItemListScreenState extends State<ItemListScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -658,13 +749,20 @@ class _ItemListScreenState extends State<ItemListScreen> {
                 decoration: InputDecoration(
                   hintText: 'Search items, tools, camera, owner...',
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFF7B40B5)),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Color(0xFF7B40B5),
+                  ),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_searchQuery.isNotEmpty)
                         IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.grey, size: 18),
+                          icon: const Icon(
+                            Icons.clear,
+                            color: Colors.grey,
+                            size: 18,
+                          ),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {
@@ -676,7 +774,8 @@ class _ItemListScreenState extends State<ItemListScreen> {
                         icon: Stack(
                           children: [
                             const Icon(Icons.tune, color: Color(0xFF7B40B5)),
-                            if (_selectedCategory != 'All' || _selectedRadiusKm < 100.0)
+                            if (_selectedCategory != 'All' ||
+                                _selectedRadiusKm < 100.0)
                               Positioned(
                                 right: 0,
                                 top: 0,
@@ -739,11 +838,15 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     selectedColor: const Color(0xFF7B40B5),
                     backgroundColor: Colors.white,
                     side: BorderSide(
-                      color: isSelected ? const Color(0xFF7B40B5) : Colors.grey.shade300,
+                      color: isSelected
+                          ? const Color(0xFF7B40B5)
+                          : Colors.grey.shade300,
                     ),
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : Colors.grey[800],
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       fontSize: 12,
                     ),
                     onSelected: (selected) {
@@ -758,7 +861,9 @@ class _ItemListScreenState extends State<ItemListScreen> {
           ),
 
           // Active Radius & Search Filter Summary Chip Bar (Feature 4!)
-          if (_selectedRadiusKm < 100.0 || _searchQuery.isNotEmpty || _selectedCategory != 'All')
+          if (_selectedRadiusKm < 100.0 ||
+              _searchQuery.isNotEmpty ||
+              _selectedCategory != 'All')
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Wrap(
@@ -766,25 +871,47 @@ class _ItemListScreenState extends State<ItemListScreen> {
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const Text('Active:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  const Text(
+                    'Active:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
                   if (_selectedRadiusKm < 100.0)
                     Chip(
-                      avatar: const Icon(Icons.location_on, size: 12, color: Color(0xFF7B40B5)),
-                      label: Text('Radius: ${_selectedRadiusKm.toInt()} km', style: const TextStyle(fontSize: 10)),
+                      avatar: const Icon(
+                        Icons.location_on,
+                        size: 12,
+                        color: Color(0xFF7B40B5),
+                      ),
+                      label: Text(
+                        'Radius: ${_selectedRadiusKm.toInt()} km',
+                        style: const TextStyle(fontSize: 10),
+                      ),
                       padding: EdgeInsets.zero,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      onDeleted: () => setState(() => _selectedRadiusKm = 100.0),
+                      onDeleted: () =>
+                          setState(() => _selectedRadiusKm = 100.0),
                     ),
                   if (_selectedCategory != 'All')
                     Chip(
-                      label: Text('Category: $_selectedCategory', style: const TextStyle(fontSize: 10)),
+                      label: Text(
+                        'Category: $_selectedCategory',
+                        style: const TextStyle(fontSize: 10),
+                      ),
                       padding: EdgeInsets.zero,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      onDeleted: () => setState(() => _selectedCategory = 'All'),
+                      onDeleted: () =>
+                          setState(() => _selectedCategory = 'All'),
                     ),
                   if (_searchQuery.isNotEmpty)
                     Chip(
-                      label: Text('Query: "$_searchQuery"', style: const TextStyle(fontSize: 10)),
+                      label: Text(
+                        'Query: "$_searchQuery"',
+                        style: const TextStyle(fontSize: 10),
+                      ),
                       padding: EdgeInsets.zero,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       onDeleted: () {
@@ -808,7 +935,9 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _selectedCategory == 'All' ? 'Marketplace Feed' : '$_selectedCategory Items',
+                      _selectedCategory == 'All'
+                          ? 'Marketplace Feed'
+                          : '$_selectedCategory Items',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -819,10 +948,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       _selectedRadiusKm < 100.0
                           ? 'Showing items within ${_selectedRadiusKm.toInt()} km'
                           : 'Live items nearby',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -841,13 +967,17 @@ class _ItemListScreenState extends State<ItemListScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: _isGridView ? const Color(0xFF7B40B5) : Colors.transparent,
+                            color: _isGridView
+                                ? const Color(0xFF7B40B5)
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.grid_view_rounded,
                             size: 18,
-                            color: _isGridView ? Colors.white : Colors.grey[700],
+                            color: _isGridView
+                                ? Colors.white
+                                : Colors.grey[700],
                           ),
                         ),
                       ),
@@ -857,13 +987,17 @@ class _ItemListScreenState extends State<ItemListScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: !_isGridView ? const Color(0xFF7B40B5) : Colors.transparent,
+                            color: !_isGridView
+                                ? const Color(0xFF7B40B5)
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.view_list_rounded,
                             size: 18,
-                            color: !_isGridView ? Colors.white : Colors.grey[700],
+                            color: !_isGridView
+                                ? Colors.white
+                                : Colors.grey[700],
                           ),
                         ),
                       ),
@@ -904,14 +1038,25 @@ class _ItemListScreenState extends State<ItemListScreen> {
               // Apply Search Query, Category Filter, and Geographical Radius Filter (Feature 3 & 4!)
               final filteredDocs = docs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
-                final name = (data['name'] ?? data['title'] ?? '').toString().toLowerCase();
-                final category = (data['category'] ?? '').toString().toLowerCase();
-                final description = (data['description'] ?? '').toString().toLowerCase();
-                final ownerName = (data['ownerName'] ?? '').toString().toLowerCase();
-                final condition = (data['condition'] ?? '').toString().toLowerCase();
+                final name = (data['name'] ?? data['title'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final category = (data['category'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final description = (data['description'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final ownerName = (data['ownerName'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final condition = (data['condition'] ?? '')
+                    .toString()
+                    .toLowerCase();
 
                 // Multi-field Search Matching
-                final matchesSearch = _searchQuery.isEmpty ||
+                final matchesSearch =
+                    _searchQuery.isEmpty ||
                     name.contains(_searchQuery) ||
                     description.contains(_searchQuery) ||
                     category.contains(_searchQuery) ||
@@ -919,21 +1064,30 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     condition.contains(_searchQuery);
 
                 // Category Matching
-                final matchesCategory = _selectedCategory == 'All' ||
+                final matchesCategory =
+                    _selectedCategory == 'All' ||
                     category == _selectedCategory.toLowerCase();
 
                 // Mode Matching
-                final matchesMode = _selectedMode == 'All' ||
+                final matchesMode =
+                    _selectedMode == 'All' ||
                     (_selectedMode == 'Lend' && data['ownerId'] == user?.uid) ||
-                    (_selectedMode == 'Borrow' && data['ownerId'] != user?.uid) ||
+                    (_selectedMode == 'Borrow' &&
+                        data['ownerId'] != user?.uid) ||
                     (_selectedMode == 'Nearby');
 
                 // Geographical Radius Filter Matching (Feature 4!)
-                final distanceKm = (data['distanceKm'] as num?)?.toDouble() ??
+                final distanceKm =
+                    (data['distanceKm'] as num?)?.toDouble() ??
                     (doc.id.hashCode % 15 + 1.2);
-                final matchesRadius = _selectedRadiusKm >= 100.0 || distanceKm <= _selectedRadiusKm;
+                final matchesRadius =
+                    _selectedRadiusKm >= 100.0 ||
+                    distanceKm <= _selectedRadiusKm;
 
-                return matchesSearch && matchesCategory && matchesMode && matchesRadius;
+                return matchesSearch &&
+                    matchesCategory &&
+                    matchesMode &&
+                    matchesRadius;
               }).toList();
 
               if (filteredDocs.isEmpty) {
@@ -943,14 +1097,21 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.search_off_outlined, size: 64, color: Colors.grey),
+                        const Icon(
+                          Icons.search_off_outlined,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           _searchQuery.isNotEmpty
                               ? 'No items found matching "$_searchQuery"'
                               : 'No items found within your selected filters.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey[700], fontSize: 15),
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 15,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton(
@@ -978,7 +1139,10 @@ class _ItemListScreenState extends State<ItemListScreen> {
               // Two-Column Grid Marketplace Layout (Feature 2!)
               if (_isGridView) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -986,13 +1150,15 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       crossAxisCount: 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 0.65, // Ideal ratio for marketplace card with ribbon
+                      childAspectRatio:
+                          0.65, // Ideal ratio for marketplace card with ribbon
                     ),
                     itemCount: filteredDocs.length,
                     itemBuilder: (context, index) {
                       final doc = filteredDocs[index];
                       final itemData = doc.data() as Map<String, dynamic>;
-                      final imageUrls = itemData['imageUrls'] as List<dynamic>? ?? [];
+                      final imageUrls =
+                          itemData['imageUrls'] as List<dynamic>? ?? [];
                       final imagePath = imageUrls.isNotEmpty
                           ? imageUrls[0].toString()
                           : (itemData['imageUrl'] ?? '').toString();
@@ -1000,7 +1166,8 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       return ItemCard(
                         itemId: doc.id,
                         itemData: itemData,
-                        name: itemData['name'] ?? itemData['title'] ?? 'No Name',
+                        name:
+                            itemData['name'] ?? itemData['title'] ?? 'No Name',
                         price: '₱${itemData['price'] ?? 0}',
                         imagePath: imagePath,
                         isOwner: itemData['ownerId'] == user?.uid,
@@ -1016,14 +1183,18 @@ class _ItemListScreenState extends State<ItemListScreen> {
 
               // Single Column List View Layout
               return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: filteredDocs.length,
                 itemBuilder: (context, index) {
                   final doc = filteredDocs[index];
                   final itemData = doc.data() as Map<String, dynamic>;
-                  final imageUrls = itemData['imageUrls'] as List<dynamic>? ?? [];
+                  final imageUrls =
+                      itemData['imageUrls'] as List<dynamic>? ?? [];
                   final imagePath = imageUrls.isNotEmpty
                       ? imageUrls[0].toString()
                       : (itemData['imageUrl'] ?? '').toString();
@@ -1035,7 +1206,8 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       child: ItemCard(
                         itemId: doc.id,
                         itemData: itemData,
-                        name: itemData['name'] ?? itemData['title'] ?? 'No Name',
+                        name:
+                            itemData['name'] ?? itemData['title'] ?? 'No Name',
                         price: '₱${itemData['price'] ?? 0}',
                         imagePath: imagePath,
                         isOwner: itemData['ownerId'] == user?.uid,
@@ -1071,7 +1243,9 @@ class _ItemListScreenState extends State<ItemListScreen> {
             color: isSelected ? const Color(0xFFEFE8FA) : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isSelected ? const Color(0xFF7B40B5) : Colors.grey.shade300,
+              color: isSelected
+                  ? const Color(0xFF7B40B5)
+                  : Colors.grey.shade300,
               width: isSelected ? 1.5 : 1,
             ),
           ),
@@ -1089,7 +1263,9 @@ class _ItemListScreenState extends State<ItemListScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? const Color(0xFF7B40B5) : Colors.grey[700],
+                  color: isSelected
+                      ? const Color(0xFF7B40B5)
+                      : Colors.grey[700],
                 ),
               ),
             ],
