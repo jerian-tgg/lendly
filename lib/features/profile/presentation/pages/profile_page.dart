@@ -10,6 +10,7 @@ import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/profile/data/datasources/firebase_user_service.dart';
 import 'package:lendly/features/profile/presentation/pages/edit_profile.dart';
+import 'package:lendly/features/profile/presentation/widgets/personal_qr_code_card.dart';
 import 'package:lendly/core/utils/image_utils.dart';
 
 class UserProfilePage extends StatefulWidget {
@@ -238,15 +239,14 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
   }
 
-  Future<void> _handleDirectChat(
-    BuildContext context,
-    String targetName,
-  ) async {
+  Future<void> _handleDirectChat(String targetName) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to send a message.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to send a message.')),
+        );
+      }
       return;
     }
 
@@ -619,32 +619,49 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 )
                               : null,
                         ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              size: 14,
-                              color: Colors.white,
+                        if (isVerified)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF2E7D32),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.verified,
+                                size: 14,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 14),
-                    Text(
-                      nameStr,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            nameStr,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isVerified) ...[
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.verified,
+                            color: Color(0xFF2E7D32),
+                            size: 20,
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Row(
@@ -669,6 +686,35 @@ class _UserProfilePageState extends State<UserProfilePage>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        if (isVerified)
+                          _buildVerifiedBadge()
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.shield_outlined, size: 14, color: Colors.grey),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Unverified User',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -680,13 +726,14 @@ class _UserProfilePageState extends State<UserProfilePage>
                             ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Row(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.star, size: 14, color: Colors.amber),
-                              SizedBox(width: 4),
+                              const Icon(Icons.star, size: 14, color: Colors.amber),
+                              const SizedBox(width: 4),
                               Text(
-                                '4.9 Verified Lender',
-                                style: TextStyle(
+                                isVerified ? '4.9 Verified Lender' : '4.9 Member',
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF7B40B5),
@@ -701,38 +748,130 @@ class _UserProfilePageState extends State<UserProfilePage>
                     const SizedBox(height: 16),
 
                     // Action Buttons (Edit Profile if Self, Message/Contact if Viewing Another User)
-                    if (_isSelf)
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const EditProfilePage(),
+                    if (_isSelf) ...[
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const EditProfilePage(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.edit, size: 18),
+                            label: const Text('Edit Profile'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7B40B5),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.edit, size: 18),
-                        label: const Text('Edit Profile'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7B40B5),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
                           ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
+                          if (!isVerified) _buildVerifyButton(),
+                        ],
+                      ),
+                      if (!isVerified) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0077B6).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF0077B6).withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0077B6).withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.verified_user_outlined,
+                                  color: Color(0xFF0077B6),
+                                  size: 26,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Verify Your Identity',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Color(0xFF0077B6),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Complete instant ID & liveness verification via Didit to unlock your Verified badge.',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: _isVerifying ? null : _handleStartVerification,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0077B6),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                ),
+                                child: _isVerifying
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Verify',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                              ),
+                            ],
                           ),
                         ),
-                      )
-                    else
+                      ],
+                    ] else
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           ElevatedButton.icon(
-                            onPressed: () =>
-                                _handleDirectChat(context, nameStr),
+                            onPressed: () => _handleDirectChat(nameStr),
                             icon: const Icon(
                               Icons.chat_bubble_rounded,
                               size: 18,
@@ -778,6 +917,16 @@ class _UserProfilePageState extends State<UserProfilePage>
                           ],
                         ],
                       ),
+
+                    const SizedBox(height: 16),
+
+                    // Personal QR Code Section
+                    PersonalQrCodeCard(
+                      userId: _targetUserId,
+                      userName: nameStr,
+                      userEmail: (userData['email'] as String?) ?? '',
+                      isSelf: _isSelf,
+                    ),
 
                     const SizedBox(height: 16),
 
