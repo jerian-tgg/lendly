@@ -35,7 +35,7 @@ class FirebaseAuthService {
           'firstName': firstName,  // Save first name
           'lastName': lastName,    // Save last name
           'email': user.email,
-          'photoURL': 'https://...', // Placeholder, update later
+          'photoURL': '', // Empty by default
           'isVerified': false,
           'isAppraiser': isAppraiser,
           'isBusiness': isAppraiser,
@@ -112,7 +112,7 @@ class FirebaseAuthService {
             'firstName': user.displayName?.split(' ').first ?? 'Jerian', // Handle first name
             'lastName': user.displayName?.split(' ').last ?? 'Josh',    // Handle last name
             'email': user.email,
-            'photoURL': user.photoURL ?? 'https://...',
+            'photoURL': user.photoURL ?? '',
             'isVerified': user.emailVerified,
             'joinedAt': FieldValue.serverTimestamp(),
             'location': {

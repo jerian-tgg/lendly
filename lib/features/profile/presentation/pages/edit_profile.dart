@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lendly/core/services/cloudinary/cloudinary_service.dart';
 import 'package:lendly/features/profile/data/datasources/firebase_user_service.dart';
+import 'package:lendly/core/utils/image_utils.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -150,7 +151,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         children: [
                           CircleAvatar(
                             radius: 50,
-                            backgroundImage: _uploadedImageUrl != null
+                            backgroundImage: isValidImageUrl(_uploadedImageUrl)
                                 ? NetworkImage(_uploadedImageUrl!)
                                 : const AssetImage('assets/images/Profile.jpg') as ImageProvider,
                           ),

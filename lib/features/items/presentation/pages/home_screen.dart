@@ -8,6 +8,7 @@ import 'package:lendly/features/items/presentation/pages/search_screen.dart';
 import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
 import 'package:lendly/features/items/presentation/widgets/item_card.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
+import 'package:lendly/core/utils/image_utils.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isGuest;
@@ -24,31 +25,18 @@ class _HomeScreenState extends State<HomeScreen> {
   bool get isVisitor =>
       widget.isGuest || FirebaseAuth.instance.currentUser == null;
 
-  List<Widget> get _screens => [
-    const ItemListScreen(),
-    const SearchScreen(),
-    isVisitor
-        ? const VisitorPromptView(
-            title: 'Borrowed Items',
-            message: 'Log in to track and view your borrowed items.',
-            icon: Icons.shopping_cart_outlined,
-          )
-        : const BorrowedItemsScreen(),
-    isVisitor
-        ? const VisitorPromptView(
-            title: 'Conversations',
-            message: 'Log in to chat with lenders and discuss borrowing.',
-            icon: Icons.chat_outlined,
-          )
-        : ConversationScreen(),
-    isVisitor
-        ? const VisitorPromptView(
-            title: 'Your Profile',
-            message: 'Log in to view your profile and account settings.',
-            icon: Icons.person_outlined,
-          )
-        : const UserProfilePage(),
-  ];
+  List<Widget> get _screens => isVisitor
+      ? const [
+          ItemListScreen(),
+          SearchScreen(),
+        ]
+      : [
+          const ItemListScreen(),
+          const SearchScreen(),
+          const BorrowedItemsScreen(),
+          ConversationScreen(),
+          const UserProfilePage(),
+        ];
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -205,11 +193,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: CircleAvatar(
                             radius: 17,
                             backgroundColor: const Color(0xFF90E0F3),
-                            backgroundImage:
-                                (photoUrl != null && photoUrl.isNotEmpty)
-                                ? NetworkImage(photoUrl)
+                            backgroundImage: isValidImageUrl(photoUrl)
+                                ? NetworkImage(photoUrl!)
                                 : null,
-                            child: (photoUrl == null || photoUrl.isEmpty)
+                            child: !isValidImageUrl(photoUrl)
                                 ? const Icon(
                                     Icons.person,
                                     size: 20,
@@ -230,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             )
           : null,
-      body: _screens[_selectedIndex],
+      body: _screens[_selectedIndex.clamp(0, _screens.length - 1)],
       floatingActionButton: (!isVisitor && _selectedIndex == 0)
           ? FloatingActionButton.extended(
               backgroundColor: const Color(0xFF7B40B5),
@@ -250,29 +237,42 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : null,
       bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart_outlined),
-            label: 'Borrowed',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_outlined),
-            label: 'Messages',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outlined),
-            label: 'Profile',
-          ),
-        ],
-        currentIndex: _selectedIndex,
+        items: isVisitor
+            ? const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home),
+                  label: 'Browse',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.search_outlined),
+                  activeIcon: Icon(Icons.search),
+                  label: 'Search',
+                ),
+              ]
+            : const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.search_outlined),
+                  label: 'Search',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.shopping_cart_outlined),
+                  label: 'Borrowed',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.chat_outlined),
+                  label: 'Messages',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outlined),
+                  label: 'Profile',
+                ),
+              ],
+        currentIndex: _selectedIndex.clamp(0, isVisitor ? 1 : 4),
         selectedItemColor: const Color(0xFF7B40B5),
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
@@ -607,122 +607,180 @@ class _ItemListScreenState extends State<ItemListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Current Balance Box (Wireframe 1 Feature!)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: StreamBuilder<DocumentSnapshot>(
-              stream: user != null
-                  ? FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user.uid)
-                        .snapshots()
-                  : null,
-              builder: (context, snapshot) {
-                double balance = 3400.0;
-                if (snapshot.hasData && snapshot.data!.exists) {
-                  final uData = snapshot.data!.data() as Map<String, dynamic>?;
-                  if (uData != null && uData.containsKey('balance')) {
-                    balance = (uData['balance'] as num).toDouble();
+          // Current Balance Box (for authenticated users) or Visitor Welcome Banner
+          if (user != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  double balance = 3400.0;
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    final uData = snapshot.data!.data() as Map<String, dynamic>?;
+                    if (uData != null && uData.containsKey('balance')) {
+                      balance = (uData['balance'] as num).toDouble();
+                    }
                   }
-                }
 
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    ],
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.account_balance_wallet_outlined,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Current Balance:',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '₱ ${balance.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Wallet top-up features active.'),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.add_card,
+                            size: 16,
+                            color: Color(0xFF7B40B5),
+                          ),
+                          label: const Text(
+                            'Top Up',
+                            style: TextStyle(
+                              color: Color(0xFF7B40B5),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF7B40B5).withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.explore_outlined, color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.account_balance_wallet_outlined,
-                                color: Colors.white.withValues(alpha: 0.9),
-                                size: 18,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Current Balance:',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '₱ ${balance.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
-                            style: const TextStyle(
+                          const Text(
+                            'Browsing as Visitor',
+                            style: TextStyle(
                               color: Colors.white,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Explore items & search available rentals. Log in anytime to borrow.',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 12,
                             ),
                           ),
                         ],
                       ),
-
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Wallet top-up features active.'),
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.add_card,
-                          size: 16,
-                          color: Color(0xFF7B40B5),
-                        ),
-                        label: const Text(
-                          'Top Up',
-                          style: TextStyle(
-                            color: Color(0xFF7B40B5),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
 
           // Enhanced Search Bar (Feature 3!)
           Padding(

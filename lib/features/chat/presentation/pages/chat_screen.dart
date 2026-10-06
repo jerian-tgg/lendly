@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:lendly/core/utils/image_utils.dart';
 
 class ChatScreen extends StatefulWidget {
   final String convoId;
@@ -176,8 +177,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 return CircleAvatar(
                   radius: 16,
-                  backgroundImage: photoUrl != null
-                      ? NetworkImage(photoUrl)
+                  backgroundImage: isValidImageUrl(photoUrl)
+                      ? NetworkImage(photoUrl!)
                       : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
                 );
               },

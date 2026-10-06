@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:lendly/core/utils/image_utils.dart';
 
 class AdminUserManagementPage extends StatefulWidget {
   const AdminUserManagementPage({Key? key}) : super(key: key);
@@ -220,11 +221,11 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
                           children: [
                             CircleAvatar(
                               radius: 26,
-                              backgroundImage: photoURL != null
-                                  ? NetworkImage(photoURL as String)
+                              backgroundImage: isValidImageUrl(photoURL)
+                                  ? NetworkImage(photoURL!)
                                   : null,
                               backgroundColor: const Color(0xFFB2EBF2),
-                              child: photoURL == null
+                              child: !isValidImageUrl(photoURL)
                                   ? Text(
                                       (firstName.isNotEmpty
                                           ? firstName[0]

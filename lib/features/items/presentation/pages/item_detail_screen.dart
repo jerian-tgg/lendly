@@ -6,6 +6,7 @@ import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
+import 'package:lendly/core/utils/image_utils.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final Map<String, dynamic> itemData;
@@ -26,7 +27,52 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   DateTime? _endDate;
   int _currentImageIndex = 0;
 
+  void _showLoginRequiredDialog(BuildContext context, String actionText) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_outline, color: Color(0xFF7B40B5)),
+            SizedBox(width: 8),
+            Text('Login Required'),
+          ],
+        ),
+        content: Text(
+          'Visitors can browse and search items. Please log in or sign up to $actionText.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7B40B5),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+              );
+            },
+            child: const Text('Log In'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _pickDates(BuildContext context) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (currentUserId.isEmpty) {
+      _showLoginRequiredDialog(context, 'select dates and request items');
+      return;
+    }
+
     final picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime.now(),
@@ -56,9 +102,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   Future<void> _handleMessageOwner(BuildContext context, String ownerId, String ownerName) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (currentUserId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to contact the owner.')),
-      );
+      _showLoginRequiredDialog(context, 'message the owner and borrow this item');
       return;
     }
 
@@ -686,10 +730,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               return CircleAvatar(
                                 radius: 22,
                                 backgroundColor: const Color(0xFFEFE8FA),
-                                backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
-                                    ? NetworkImage(photoUrl)
+                                backgroundImage: isValidImageUrl(photoUrl)
+                                    ? NetworkImage(photoUrl!)
                                     : null,
-                                child: (photoUrl == null || photoUrl.isEmpty)
+                                child: !isValidImageUrl(photoUrl)
                                     ? const Icon(Icons.person, color: Color(0xFF7B40B5))
                                     : null,
                               );
@@ -805,11 +849,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () => _handleMessageOwner(context, ownerId, ownerName),
-                        icon: const Icon(Icons.message_rounded),
+                        icon: Icon(isVisitor ? Icons.login : Icons.message_rounded),
                         label: Text(
-                          _startDate != null && _endDate != null
-                              ? 'Request to Borrow (₱${totalPrice.toStringAsFixed(0)})'
-                              : 'Message Owner',
+                          isVisitor
+                              ? 'Log In to Borrow'
+                              : (_startDate != null && _endDate != null
+                                  ? 'Request to Borrow (₱${totalPrice.toStringAsFixed(0)})'
+                                  : 'Message Owner'),
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         style: ElevatedButton.styleFrom(

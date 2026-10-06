@@ -384,7 +384,18 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                           ClipRRect(
                                             borderRadius: BorderRadius.circular(12),
                                             child: isNetwork
-                                                ? Image.network(path, width: 80, height: 80, fit: BoxFit.cover)
+                                                ? Image.network(
+                                                    path,
+                                                    width: 80,
+                                                    height: 80,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, _, _) => Container(
+                                                      width: 80,
+                                                      height: 80,
+                                                      color: Colors.grey[200],
+                                                      child: const Icon(Icons.broken_image, size: 24, color: Colors.grey),
+                                                    ),
+                                                  )
                                                 : Image.file(File(path), width: 80, height: 80, fit: BoxFit.cover),
                                           ),
                                           Positioned(

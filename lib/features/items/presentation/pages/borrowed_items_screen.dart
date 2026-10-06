@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:lendly/core/utils/image_utils.dart';
 
 class BorrowedItemsScreen extends StatefulWidget {
   const BorrowedItemsScreen({super.key});
@@ -120,17 +121,18 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
               children: [
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: imageUrl != null
+                  leading: isValidImageUrl(imageUrl)
                       ? ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: Image.network(
-                      imageUrl,
+                      imageUrl!,
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const Icon(Icons.broken_image, size: 50),
                     ),
                   )
-                      : const Icon(Icons.image_not_supported),
+                      : const Icon(Icons.image_not_supported, size: 50),
                   title: Text(itemData['name'] ?? 'No title'),
                   subtitle: Text(itemData['description'] ?? ''),
                 ),

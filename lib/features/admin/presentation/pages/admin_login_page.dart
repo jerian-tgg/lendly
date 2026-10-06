@@ -1,9 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_dashboard_page.dart';
+import 'package:lendly/features/auth/presentation/pages/login.dart';
 
 class AdminLoginPage extends StatefulWidget {
-  const AdminLoginPage({Key? key}) : super(key: key);
+  const AdminLoginPage({super.key});
 
   @override
   State<AdminLoginPage> createState() => _AdminLoginPageState();
@@ -90,6 +91,17 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
     }
   }
 
+  void _navigateToRegularLogin() {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -97,6 +109,11 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
         title: const Text('Admin Login'),
         backgroundColor: const Color(0xFF007799),
         iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back to Regular Login',
+          onPressed: _loading ? null : _navigateToRegularLogin,
+        ),
         titleTextStyle: const TextStyle(
             color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
       ),
@@ -168,6 +185,19 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text('Login',
                             style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: _loading ? null : _navigateToRegularLogin,
+                  icon: const Icon(Icons.arrow_back, size: 16, color: Color(0xFF007799)),
+                  label: const Text(
+                    'Back to User Login',
+                    style: TextStyle(
+                      color: Color(0xFF007799),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],

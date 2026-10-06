@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
-import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
 import 'package:lendly/features/items/presentation/widgets/ribbon_banner.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
+import 'package:lendly/core/utils/image_utils.dart';
 
 class ItemCard extends StatelessWidget {
   final String itemId;
@@ -247,10 +247,10 @@ class ItemCard extends StatelessWidget {
                       return CircleAvatar(
                         radius: isGrid ? 13 : 16,
                         backgroundColor: const Color(0xFFEFE8FA),
-                        backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
-                            ? NetworkImage(photoUrl)
+                        backgroundImage: isValidImageUrl(photoUrl)
+                            ? NetworkImage(photoUrl!)
                             : null,
-                        child: (photoUrl == null || photoUrl.isEmpty)
+                        child: !isValidImageUrl(photoUrl)
                             ? Icon(Icons.person, size: isGrid ? 14 : 18, color: const Color(0xFF7B40B5))
                             : null,
                       );
@@ -330,7 +330,7 @@ class ItemCard extends StatelessWidget {
                     child: Stack(
                       children: [
                         ClipRRect(
-                          child: imagePath.isNotEmpty
+                          child: isValidImageUrl(imagePath)
                               ? Image.network(
                                   imagePath,
                                   width: double.infinity,

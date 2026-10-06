@@ -1,14 +1,58 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'admin-portal@lendly.internal' ||
+        request.auth.token.email == 'palenciajerjer28@gmail.com'
+      );
+    }
+
+    // ── Items collection ────────────────────────────────────────────────────
+    // Anyone (including unauthenticated visitors) can read items to browse & search
+    match /items/{itemId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin() || (request.auth != null && resource.data.ownerId == request.auth.uid);
+    }
+
+    // ── Users collection ────────────────────────────────────────────────────
+    // Anyone can read basic user info (for displaying owner name/avatar on items)
+    match /users/{userId} {
+      allow read: if true;
+
+      // Full access for administrators
+      allow write: if isAdmin();
+
+      // Users can write their own document
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null &&
+        (request.auth.uid == userId ||
+         // Any authenticated session can update the isBlocked field (admin use)
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isBlocked']));
+    }
+
+    // ── Reviews collection ──────────────────────────────────────────────────
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── Conversations ────────────────────────────────────────────────────────
     match /conversations/{convoId} {
-      allow read, write: if request.auth != null &&
-        (request.auth.uid in convoId.split('_'));
+      allow read, write: if isAdmin() || (request.auth != null &&
+        (request.auth.uid in convoId.split('_')));
 
       match /messages/{messageId} {
-        allow read, write: if request.auth != null &&
-          (request.auth.uid in convoId.split('_'));
+        allow read, write: if isAdmin() || (request.auth != null &&
+          (request.auth.uid in convoId.split('_')));
       }
+    }
+
+    // ── All other collections (borrowings, payments, appraisals, etc.) ────────
+    match /{collection}/{docId} {
+      allow read, write: if request.auth != null;
     }
   }
 }

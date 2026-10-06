@@ -10,6 +10,7 @@ import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/profile/data/datasources/firebase_user_service.dart';
 import 'package:lendly/features/profile/presentation/pages/edit_profile.dart';
+import 'package:lendly/core/utils/image_utils.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String? userId; // If null, displays current logged-in user's profile
@@ -607,10 +608,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                         CircleAvatar(
                           radius: 52,
                           backgroundColor: const Color(0xFFEFE8FA),
-                          backgroundImage: imageUrl.isNotEmpty
+                          backgroundImage: isValidImageUrl(imageUrl)
                               ? NetworkImage(imageUrl)
                               : null,
-                          child: imageUrl.isEmpty
+                          child: !isValidImageUrl(imageUrl)
                               ? const Icon(
                                   Icons.person,
                                   size: 55,

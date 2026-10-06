@@ -6,6 +6,7 @@ import 'package:lendly/features/chat/data/repositories/chat_repository_impl.dart
 import 'package:lendly/features/chat/data/datasources/chat_remote_data_source.dart';
 import 'package:lendly/features/chat/domain/entities/conversation.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
+import 'package:lendly/core/utils/image_utils.dart';
 
 class ConversationScreen extends StatelessWidget {
   final chatRepo = ChatRepositoryImpl(FirebaseChatDataSource(FirebaseFirestore.instance));
@@ -75,8 +76,8 @@ class ConversationScreen extends StatelessWidget {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     leading: CircleAvatar(
                       radius: 25,
-                      backgroundImage: profilePicUrl != null
-                          ? NetworkImage(profilePicUrl)
+                      backgroundImage: isValidImageUrl(profilePicUrl)
+                          ? NetworkImage(profilePicUrl!)
                           : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
                     ),
                     title: Text(
