@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:lendly/features/admin/presentation/pages/admin_reports_page.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_user_management_page.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 
@@ -60,6 +61,18 @@ class AdminDashboardPage extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (_) => AdminUserManagementPage()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _DashboardCard(
+              icon: Icons.flag_rounded,
+              title: 'Reports',
+              subtitle: 'Review user & item violation reports',
+              color: const Color(0xFFE74C3C),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AdminReportsPage()),
               ),
             ),
           ],

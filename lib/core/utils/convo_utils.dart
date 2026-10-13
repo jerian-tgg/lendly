@@ -5,6 +5,10 @@ Future<String> createOrGetConversation({
   required String currentUserId,
   required String otherUserId,
   required String itemId,
+  DateTime? startDate,
+  DateTime? endDate,
+  int? totalDays,
+  double? totalPrice,
 }) async {
   final convoRef = FirebaseFirestore.instance.collection('conversations');
   final querySnapshot = await convoRef
@@ -26,6 +30,17 @@ Future<String> createOrGetConversation({
   }
 
   if (existingConvo != null) {
+    // Update borrow details if provided (borrower re-requested with new dates)
+    if (startDate != null && endDate != null) {
+      await existingConvo.reference.update({
+        'startDate': startDate.toIso8601String(),
+        'endDate': endDate.toIso8601String(),
+        'totalDays': totalDays,
+        'totalPrice': totalPrice,
+        'approved': false,
+        'denied': false,
+      });
+    }
     return existingConvo.id;
   } else {
     final convoId = getConvoId(currentUserId, otherUserId);
@@ -34,8 +49,15 @@ Future<String> createOrGetConversation({
     await newConvoRef.set({
       'participants': [currentUserId, otherUserId],
       'itemOwnerId': otherUserId,
+      'ownerId': otherUserId,
+      'borrowerId': currentUserId,
       'itemId': itemId,
       'approved': false,
+      'denied': false,
+      'startDate': startDate?.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
+      'totalDays': totalDays,
+      'totalPrice': totalPrice,
       'lastUpdated': FieldValue.serverTimestamp(),
     });
 

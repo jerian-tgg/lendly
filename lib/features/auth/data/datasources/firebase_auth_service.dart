@@ -11,9 +11,25 @@ class FirebaseAuthService {
   Future<User?> signUp({
     required String email,
     required String password,
+    required String firstName,
+    required String lastName,
     required DateTime birthdate,
-    required String firstName, // Added first name
-    required String lastName,  // Added last name
+    String middleName = '',
+    String suffix = '',
+    String sex = '',
+    String civilStatus = '',
+    String phone = '',
+    String altPhone = '',
+    String street = '',
+    String barangay = '',
+    String city = '',
+    String province = '',
+    String zip = '',
+    String occupation = '',
+    String employer = '',
+    String emergencyName = '',
+    String emergencyPhone = '',
+    String emergencyRelation = '',
     bool isAppraiser = false,
     String? businessName,
     String? licenseNumber,
@@ -32,10 +48,46 @@ class FirebaseAuthService {
 
         // Add user details to Firestore
         await _firestore.collection('users').doc(user.uid).set({
-          'firstName': firstName,  // Save first name
-          'lastName': lastName,    // Save last name
+          // ── Name ──
+          'firstName': firstName,
+          'middleName': middleName,
+          'lastName': lastName,
+          'suffix': suffix,
+          'displayName': '$firstName $lastName'.trim(),
+
+          // ── Personal ──
+          'birthdate': Timestamp.fromDate(birthdate),
+          'sex': sex,
+          'civilStatus': civilStatus,
+
+          // ── Contact ──
           'email': user.email,
-          'photoURL': '', // Empty by default
+          'phone': phone,
+          'altPhone': altPhone,
+
+          // ── Address ──
+          'address': {
+            'street': street,
+            'barangay': barangay,
+            'city': city,
+            'province': province,
+            'zip': zip,
+            'full': '$street, $barangay, $city, $province $zip'.trim(),
+          },
+
+          // ── Occupation ──
+          'occupation': occupation,
+          'employer': employer,
+
+          // ── Emergency Contact ──
+          'emergencyContact': {
+            'name': emergencyName,
+            'phone': emergencyPhone,
+            'relation': emergencyRelation,
+          },
+
+          // ── Account ──
+          'photoURL': '',
           'isVerified': false,
           'isAppraiser': isAppraiser,
           'isBusiness': isAppraiser,
@@ -44,11 +96,13 @@ class FirebaseAuthService {
           'licenseNumber': licenseNumber ?? '',
           'specialization': specialization ?? '',
           'joinedAt': FieldValue.serverTimestamp(),
+
+          // ── Location (default lat/lng/geohash — updated when user grants GPS permission) ──
           'location': {
-            'lat': 10.123,
-            'lng': 122.345,
+            'lat': 0.0,
+            'lng': 0.0,
+            'geohash': '', // populated when geo-radius feature is activated
           },
-          'birthdate': Timestamp.fromDate(birthdate), // Birthdate
         });
       }
 
@@ -116,8 +170,9 @@ class FirebaseAuthService {
             'isVerified': user.emailVerified,
             'joinedAt': FieldValue.serverTimestamp(),
             'location': {
-              'lat': 10.123,
-              'lng': 122.345,
+              'lat': 0.0,
+              'lng': 0.0,
+              'geohash': '',
             },
             'birthdate': Timestamp.fromDate(DateTime(2004, 12, 28)), // Default for Google sign in
           });

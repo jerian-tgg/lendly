@@ -14,7 +14,7 @@ class FirebaseUserService {
     required String username,
     required String email,
     required String phone,
-    required String location,
+    Map<String, dynamic>? location, // {lat, lng, geohash} — null = don't overwrite
     String? photoURL,
   }) async {
     final uid = _auth.currentUser?.uid;
@@ -26,8 +26,12 @@ class FirebaseUserService {
       'username': username,
       'email': email,
       'phone': phone,
-      'location': location,
     };
+
+    // Only update location if valid coordinates were provided
+    if (location != null) {
+      updateData['location'] = location;
+    }
 
     if (photoURL != null) {
       updateData['photoURL'] = photoURL;

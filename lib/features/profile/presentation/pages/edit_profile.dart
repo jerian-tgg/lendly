@@ -37,8 +37,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _emailController.text = data['email'] ?? '';
       _phoneController.text = data['phone'] ?? '';
 
-      if (data['location'] != null) {
-        _locationController.text = '${data['location']['lat']}, ${data['location']['lng']}';
+      if (data['location'] is Map) {
+        final loc = data['location'] as Map;
+        final lat = loc['lat'];
+        final lng = loc['lng'];
+        if (lat != null && lng != null) {
+          _locationController.text = '$lat, $lng';
+        }
       }
       _uploadedImageUrl = data['profilePictureUrl'];
     });
@@ -65,13 +70,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
     setState(() => _isLoading = true);
 
     try {
-      final location = _locationController.text.trim();
-      final locationParts = location.split(',');
-      double? lat, lng;
+      // Parse "lat, lng" text input into a geo-ready map
+      final locationText = _locationController.text.trim();
+      final locationParts = locationText.split(',');
+      Map<String, dynamic>? locationMap;
 
       if (locationParts.length == 2) {
-        lat = double.tryParse(locationParts[0].trim());
-        lng = double.tryParse(locationParts[1].trim());
+        final lat = double.tryParse(locationParts[0].trim());
+        final lng = double.tryParse(locationParts[1].trim());
+        if (lat != null && lng != null) {
+          locationMap = {
+            'lat': lat,
+            'lng': lng,
+            'geohash': '', // will be computed when geo-radius feature is activated
+          };
+        }
       }
 
       await FirebaseUserService().updateUserProfile(
@@ -80,9 +93,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         username: _usernameController.text.trim(),
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
-        location: lat != null && lng != null
-            ? '${lat.toString()},${lng.toString()}'
-            : '',
+        location: locationMap, // null if input was blank/invalid — won't overwrite existing coords
         photoURL: _uploadedImageUrl,
       );
 

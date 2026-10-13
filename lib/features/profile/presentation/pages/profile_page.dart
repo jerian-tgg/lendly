@@ -8,6 +8,7 @@ import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
+import 'package:lendly/features/items/presentation/pages/report_screen.dart';
 import 'package:lendly/features/profile/data/datasources/firebase_user_service.dart';
 import 'package:lendly/features/profile/presentation/pages/edit_profile.dart';
 import 'package:lendly/features/profile/presentation/widgets/personal_qr_code_card.dart';
@@ -551,6 +552,23 @@ class _UserProfilePageState extends State<UserProfilePage>
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black87),
+        actions: [
+          if (!_isSelf)
+            IconButton(
+              icon: const Icon(Icons.flag_outlined, color: Color(0xFFE74C3C)),
+              tooltip: 'Report this user',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ReportScreen(
+                    targetId: _targetUserId,
+                    targetType: 'user',
+                    targetName: 'User',
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -586,11 +604,25 @@ class _UserProfilePageState extends State<UserProfilePage>
                 final nameStr = displayName.isNotEmpty
                     ? displayName
                     : 'Lendly User';
-                final location =
-                    userData['location'] is String &&
-                        (userData['location'] as String).isNotEmpty
-                    ? userData['location']
-                    : 'Location not specified';
+                // Show city from address (human-readable); lat/lng lives in location map for geo queries
+                final locationLabel = () {
+                  final addr = userData['address'];
+                  if (addr is Map) {
+                    final city = addr['city']?.toString() ?? '';
+                    final province = addr['province']?.toString() ?? '';
+                    if (city.isNotEmpty) return '$city${province.isNotEmpty ? ', $province' : ''}';
+                  }
+                  final loc = userData['location'];
+                  if (loc is Map) {
+                    final lat = loc['lat'];
+                    final lng = loc['lng'];
+                    if (lat != null && lng != null && (lat != 0.0 || lng != 0.0)) {
+                      return '$lat, $lng';
+                    }
+                  }
+                  return 'Location not specified';
+                }();
+                final location = locationLabel;
                 final phone = userData['phone'] ?? '';
                 final profilePictureUrl =
                     userData['photoURL'] ?? userData['profilePictureUrl'];

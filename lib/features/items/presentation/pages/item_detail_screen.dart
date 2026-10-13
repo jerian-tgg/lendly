@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
+import 'package:lendly/features/items/presentation/pages/report_screen.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 import 'package:lendly/core/utils/image_utils.dart';
 
@@ -106,12 +107,87 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       return;
     }
 
+    // Require dates to be selected first
+    if (_startDate == null || _endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.calendar_today_outlined, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Please select borrow dates first.'),
+            ],
+          ),
+          backgroundColor: const Color(0xFF7B40B5),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
+    final priceNum = (widget.itemData['price'] as num?)?.toDouble() ?? 0.0;
+    final totalDays = _endDate!.difference(_startDate!).inDays + 1;
+    final totalPrice = totalDays * priceNum;
+    final itemName = widget.itemData['name'] ?? widget.itemData['title'] ?? 'Item';
+    final location = widget.itemData['location'] ?? widget.itemData['address'] ?? 'Location TBD';
+    final pricePer = widget.itemData['pricePer'] ?? 'day';
+
+    // Show borrow request confirmation bottom sheet
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _BorrowRequestSheet(
+        itemName: itemName,
+        startDate: _startDate!,
+        endDate: _endDate!,
+        totalDays: totalDays,
+        pricePerDay: priceNum,
+        totalPrice: totalPrice,
+        ownerName: ownerName,
+        location: location,
+        pricePer: pricePer,
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
     try {
       final convoId = await createOrGetConversation(
         currentUserId: currentUserId,
         otherUserId: ownerId,
         itemId: widget.itemId,
+        startDate: _startDate!,
+        endDate: _endDate!,
+        totalDays: totalDays,
+        totalPrice: totalPrice,
       );
+
+      // Post a system borrow-request card as the first message
+      await FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(convoId)
+          .collection('messages')
+          .add({
+        'senderId': currentUserId,
+        'type': 'borrow_request',
+        'itemName': itemName,
+        'startDate': _startDate!.toIso8601String(),
+        'endDate': _endDate!.toIso8601String(),
+        'totalDays': totalDays,
+        'totalPrice': totalPrice,
+        'location': location,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      await FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(convoId)
+          .update({
+        'lastMessageText': 'Borrow request sent for $itemName',
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
 
       if (context.mounted) {
         Navigator.push(
@@ -135,6 +211,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       }
     }
   }
+
 
   void _openOwnerProfile(BuildContext context, String ownerId) {
     if (ownerId.isEmpty) return;
@@ -192,6 +269,22 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black87),
         actions: [
+          // Report button — only for non-owner logged-in users
+          if (!isOwner && !isVisitor)
+            IconButton(
+              icon: const Icon(Icons.flag_outlined, color: Color(0xFFE74C3C)),
+              tooltip: 'Report this item',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ReportScreen(
+                    targetId: widget.itemId,
+                    targetType: 'item',
+                    targetName: title,
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: () {
@@ -992,6 +1085,277 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Borrow Request Confirmation Bottom Sheet ──────────────────────────────────
+
+class _BorrowRequestSheet extends StatelessWidget {
+  final String itemName;
+  final DateTime startDate;
+  final DateTime endDate;
+  final int totalDays;
+  final double pricePerDay;
+  final double totalPrice;
+  final String ownerName;
+  final String location;
+  final String pricePer;
+
+  const _BorrowRequestSheet({
+    required this.itemName,
+    required this.startDate,
+    required this.endDate,
+    required this.totalDays,
+    required this.pricePerDay,
+    required this.totalPrice,
+    required this.ownerName,
+    required this.location,
+    required this.pricePer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    String fmt(DateTime d) =>
+        '${_monthName(d.month)} ${d.day}, ${d.year}';
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Title
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.handshake_outlined,
+                    color: Color(0xFF7B40B5), size: 24),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Borrow Request',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A1A2E))),
+                  Text('Send to $ownerName',
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.black45)),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          // Request details card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                _DetailRow(
+                  icon: Icons.inventory_2_outlined,
+                  label: 'Item',
+                  value: itemName,
+                  bold: true,
+                ),
+                const SizedBox(height: 12),
+                _DetailRow(
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Start Date',
+                  value: fmt(startDate),
+                ),
+                const SizedBox(height: 12),
+                _DetailRow(
+                  icon: Icons.event_outlined,
+                  label: 'End Date',
+                  value: fmt(endDate),
+                ),
+                const SizedBox(height: 12),
+                _DetailRow(
+                  icon: Icons.timelapse,
+                  label: 'Duration',
+                  value: '$totalDays day${totalDays > 1 ? 's' : ''}',
+                ),
+                const SizedBox(height: 12),
+                _DetailRow(
+                  icon: Icons.location_on_outlined,
+                  label: 'Location',
+                  value: location,
+                ),
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '₱${pricePerDay.toStringAsFixed(0)} × $totalDays $pricePer${totalDays > 1 ? 's' : ''}',
+                      style: const TextStyle(
+                          fontSize: 13, color: Colors.black54),
+                    ),
+                    Text(
+                      '₱${totalPrice.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF7B40B5),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Color(0xFFE67E22)),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Your request will be sent to the lender. They may negotiate or deny it in the chat.',
+                    style: TextStyle(
+                        fontSize: 11, color: Color(0xFFE67E22)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cancel',
+                      style: TextStyle(
+                          color: Colors.grey, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context, true),
+                  icon: const Icon(Icons.send_rounded,
+                      size: 18, color: Colors.white),
+                  label: const Text(
+                    'Send Request',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7B40B5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _monthName(int m) => const [
+        '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ][m];
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool bold;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.bold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFF7B40B5)),
+        const SizedBox(width: 10),
+        Text('$label  ',
+            style:
+                const TextStyle(fontSize: 12, color: Colors.black45)),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: bold ? FontWeight.bold : FontWeight.w500,
+              color: const Color(0xFF1A1A2E),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

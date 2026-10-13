@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/features/chat/presentation/pages/conversation_screen.dart';
-import 'package:lendly/features/items/presentation/pages/borrowed_items_screen.dart';
+import 'package:lendly/features/items/presentation/pages/transactions_page.dart';
 import 'package:lendly/features/items/presentation/pages/search_screen.dart';
 import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
 import 'package:lendly/features/items/presentation/widgets/item_card.dart';
@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
       : [
           const ItemListScreen(),
           const SearchScreen(),
-          const BorrowedItemsScreen(),
+          const TransactionsPage(),
           ConversationScreen(),
           const UserProfilePage(),
         ];
@@ -260,8 +260,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: 'Search',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.shopping_cart_outlined),
-                  label: 'Borrowed',
+                  icon: Icon(Icons.receipt_long_outlined),
+                  activeIcon: Icon(Icons.receipt_long),
+                  label: 'Transactions',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.chat_outlined),
