@@ -104,39 +104,55 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.itemData['name'] ?? widget.itemData['title'] ?? 'Item Details';
-    final description = widget.itemData['description'] ?? 'No description provided.';
-    final category = widget.itemData['category'] ?? 'General';
-    final condition = widget.itemData['condition'] ?? 'Like New';
-    final priceNum = (widget.itemData['price'] as num?)?.toDouble() ?? 0.0;
-    final priceStr = '₱${priceNum.toStringAsFixed(0)}';
-    
-    // Appraisal Value (Calculated or from item data)
-    final appraisalValue = (widget.itemData['appraisal'] as num?)?.toDouble() ??
-        (priceNum * 25 > 1000 ? priceNum * 25 : 5000.0);
-    final appraisalStr = '₱${appraisalValue.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
+    return StreamBuilder<DocumentSnapshot>(
+      stream: widget.itemId.isNotEmpty
+          ? FirebaseFirestore.instance.collection('items').doc(widget.itemId).snapshots()
+          : null,
+      builder: (context, snapshot) {
+        final itemData = Map<String, dynamic>.from(widget.itemData);
+        if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
+          final liveData = snapshot.data!.data() as Map<String, dynamic>?;
+          if (liveData != null) {
+            itemData.addAll(liveData);
+          }
+        }
 
-    final rating = (widget.itemData['rating'] as num?)?.toDouble() ?? 4.8;
-    final isAvailable = widget.itemData['isAvailable'] ?? true;
-    final ownerId = widget.itemData['ownerId'] as String? ?? '';
-    final ownerName = widget.itemData['ownerName'] ?? 'Lender';
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    final isOwner = ownerId == currentUserId;
+        final title = itemData['name'] ?? itemData['title'] ?? 'Item Details';
+        final description = itemData['description'] ?? 'No description provided.';
+        final category = itemData['category'] ?? 'General';
+        final condition = itemData['condition'] ?? 'Like New';
+        final priceNum = (itemData['price'] as num?)?.toDouble() ?? 0.0;
+        final priceStr = '₱${priceNum.toStringAsFixed(0)}';
 
-    // Image list extraction
-    List<String> imageUrls = [];
-    if (widget.itemData['imageUrls'] is List && (widget.itemData['imageUrls'] as List).isNotEmpty) {
-      imageUrls = List<String>.from(widget.itemData['imageUrls']);
-    } else if (widget.itemData['imageUrl'] is String && (widget.itemData['imageUrl'] as String).isNotEmpty) {
-      imageUrls = [widget.itemData['imageUrl']];
-    }
+        // Appraisal Status and Appraiser-Rated Condition (monetary appraisal value intentionally omitted)
+        final rawStatus = (itemData['appraisalStatus'] as String?)?.toLowerCase();
+        final isCertified = rawStatus == 'certified' || rawStatus == 'approved' || itemData['isAppraised'] == true;
+        final isUnderReview = !isCertified && (rawStatus == 'in_review' || rawStatus == 'pending' || itemData['appraisalRequested'] == true);
+        final isRejected = !isCertified && rawStatus == 'rejected';
+        final appraiserCondition = (itemData['conditionGrade'] as String?) ??
+            (itemData['appraisedCondition'] as String?);
 
-    final totalDays = (_startDate != null && _endDate != null)
-        ? _endDate!.difference(_startDate!).inDays + 1
-        : 0;
-    final totalPrice = totalDays * priceNum;
+        final rating = (itemData['rating'] as num?)?.toDouble() ?? 4.8;
+        final isAvailable = itemData['isAvailable'] ?? true;
+        final ownerId = itemData['ownerId'] as String? ?? '';
+        final ownerName = itemData['ownerName'] ?? 'Lender';
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        final isOwner = ownerId == currentUserId;
 
-    return Scaffold(
+        // Image list extraction
+        List<String> imageUrls = [];
+        if (itemData['imageUrls'] is List && (itemData['imageUrls'] as List).isNotEmpty) {
+          imageUrls = List<String>.from(itemData['imageUrls']);
+        } else if (itemData['imageUrl'] is String && (itemData['imageUrl'] as String).isNotEmpty) {
+          imageUrls = [itemData['imageUrl']];
+        }
+
+        final totalDays = (_startDate != null && _endDate != null)
+            ? _endDate!.difference(_startDate!).inDays + 1
+            : 0;
+        final totalPrice = totalDays * priceNum;
+
+        return Scaffold(
       backgroundColor: const Color(0xFFF7FAFC),
       appBar: AppBar(
         title: const Text(
@@ -311,8 +327,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           const SizedBox(width: 2),
                           Text(
                             LocationHelper.formatLocationWithDistance(
-                              locationData: widget.itemData['location'],
-                              distanceKm: (widget.itemData['distanceKm'] as num?)?.toDouble(),
+                              locationData: itemData['location'],
+                              distanceKm: (itemData['distanceKm'] as num?)?.toDouble(),
                             ),
                             style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                           ),
@@ -323,10 +339,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // PRICE & APPRAISAL CARD
+                  // PRICE & APPRAISAL STATUS CARD
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -347,11 +363,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.sell_outlined, size: 16, color: Color(0xFF7B40B5)),
+                                  const Icon(Icons.sell_outlined, size: 15, color: Color(0xFF7B40B5)),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Rental Price:',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
                                   ),
                                 ],
                               ),
@@ -363,14 +379,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   Text(
                                     priceStr,
                                     style: const TextStyle(
-                                      fontSize: 24,
+                                      fontSize: 22,
                                       fontWeight: FontWeight.w800,
                                       color: Color(0xFF7B40B5),
                                     ),
                                   ),
                                   Text(
                                     ' / day',
-                                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                                   ),
                                 ],
                               ),
@@ -378,36 +394,99 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           ),
                         ),
 
-                        Container(width: 1, height: 45, color: Colors.grey[300]),
-                        const SizedBox(width: 16),
+                        Container(width: 1, height: 48, color: Colors.grey[200]),
+                        const SizedBox(width: 14),
 
-                        // Appraisal Value Section
+                        // Appraisal Status Section (Displaying status & rated condition, no appraisal value)
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.verified_outlined, size: 16, color: Colors.green),
+                                  Icon(
+                                    isCertified
+                                        ? Icons.verified
+                                        : isUnderReview
+                                            ? Icons.hourglass_top_rounded
+                                            : isRejected
+                                                ? Icons.error_outline_rounded
+                                                : Icons.shield_outlined,
+                                    size: 15,
+                                    color: isCertified
+                                        ? const Color(0xFF059669)
+                                        : isUnderReview
+                                            ? const Color(0xFFD97706)
+                                            : isRejected
+                                                ? Colors.red[700]
+                                                : const Color(0xFF6B7280),
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Appraisal Value:',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                    'Appraisal Status:',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                appraisalStr,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: isCertified
+                                      ? const Color(0xFFECFDF5)
+                                      : isUnderReview
+                                          ? const Color(0xFFFFFBEB)
+                                          : isRejected
+                                              ? const Color(0xFFFEF2F2)
+                                              : const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: isCertified
+                                        ? const Color(0xFFA7F3D0)
+                                        : isUnderReview
+                                            ? const Color(0xFFFDE68A)
+                                            : isRejected
+                                                ? const Color(0xFFFECACA)
+                                                : const Color(0xFFE5E7EB),
+                                  ),
+                                ),
+                                child: Text(
+                                  isCertified
+                                      ? 'Certified Appraised'
+                                      : isUnderReview
+                                          ? 'Being Checked'
+                                          : isRejected
+                                              ? 'Appraisal Rejected'
+                                              : 'Self-Reported',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isCertified
+                                        ? const Color(0xFF047857)
+                                        : isUnderReview
+                                            ? const Color(0xFFB45309)
+                                            : isRejected
+                                                ? const Color(0xFFB91C1C)
+                                                : const Color(0xFF4B5563),
+                                  ),
                                 ),
                               ),
-                              const Text(
-                                'Estimated replacement',
-                                style: TextStyle(fontSize: 10, color: Colors.grey),
+                              const SizedBox(height: 3),
+                              Text(
+                                isCertified
+                                    ? 'Rated: ${appraiserCondition ?? condition}'
+                                    : isUnderReview
+                                        ? 'Review in progress'
+                                        : isRejected
+                                            ? 'Needs revision'
+                                            : 'Lender: $condition',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
                           ),
@@ -418,8 +497,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // OFFICIAL APPRAISAL CERTIFICATE OR CONDITION SECTION
-                  if (widget.itemData['appraisalStatus'] == 'certified') ...[
+                  // APPRAISAL & CONDITION DETAILS SECTION
+                  if (isCertified) ...[
+                    // State 1: Officially Certified by Appraiser
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -469,7 +549,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'Cert ID: ${widget.itemData['appraisalCertificateId'] ?? 'CERT-APPRAISED'}',
+                                      'Cert ID: ${itemData['appraisalCertificateId'] ?? 'CERT-APPRAISED'}',
                                       style: const TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -497,41 +577,257 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             children: [
                               const Icon(Icons.business, size: 14, color: Color(0xFF7B40B5)),
                               const SizedBox(width: 4),
-                              Text(
-                                'Appraiser: ${widget.itemData['certifiedByBusinessName'] ?? 'Licensed Professional Appraiser'}',
-                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                              Expanded(
+                                child: Text(
+                                  'Appraiser: ${itemData['certifiedByBusinessName'] ?? 'Licensed Professional Appraiser'}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                                ),
                               ),
-                              const Spacer(),
+                              const SizedBox(width: 8),
                               Text(
-                                'Lic: ${widget.itemData['certifiedByLicense'] ?? 'APP-REG'}',
+                                'Lic: ${itemData['certifiedByLicense'] ?? 'APP-REG'}',
                                 style: TextStyle(fontSize: 11, color: Colors.grey[700]),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.stars, size: 14, color: Colors.amber),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Certified Condition: ${widget.itemData['conditionGrade'] ?? condition}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                              ),
-                            ],
+                          const SizedBox(height: 10),
+                          // Prominent Appraiser-Rated Condition Badge
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade100.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.amber.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.stars_rounded, size: 20, color: Colors.amber),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Appraiser Rated Condition:',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    appraiserCondition ?? condition,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13,
+                                      color: Color(0xFF92400E),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          if (widget.itemData['appraiserNotes'] != null &&
-                              (widget.itemData['appraiserNotes'] as String).isNotEmpty) ...[
-                            const SizedBox(height: 6),
+                          if (itemData['isSerialVerified'] == true || itemData['isCleanWorking'] == true) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                if (itemData['isSerialVerified'] == true)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: Colors.green.shade200),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.check_circle, size: 12, color: Colors.green),
+                                        SizedBox(width: 4),
+                                        Text('Serial # Verified', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                                if (itemData['isCleanWorking'] == true)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: Colors.green.shade200),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.check_circle, size: 12, color: Colors.green),
+                                        SizedBox(width: 4),
+                                        Text('Clean & Fully Functional', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                          if (itemData['appraiserNotes'] != null &&
+                              (itemData['appraiserNotes'] as String).isNotEmpty) ...[
+                            const SizedBox(height: 8),
                             Text(
-                              '"${widget.itemData['appraiserNotes']}"',
+                              '"${itemData['appraiserNotes']}"',
                               style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey[800]),
                             ),
                           ],
                         ],
                       ),
                     ),
+                  ] else if (isUnderReview) ...[
+                    // State 2: Currently Being Checked by Appraiser
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFDF5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.amber.shade300, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.amber.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.manage_search_rounded, color: Color(0xFFD97706), size: 22),
+                              ),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Being Checked by Appraiser',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Professional inspection in progress',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFFD97706),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFFCD34D)),
+                                ),
+                                child: const Text(
+                                  'UNDER REVIEW',
+                                  style: TextStyle(
+                                    color: Color(0xFF92400E),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+                          Text(
+                            'An accredited Lendly appraiser is currently inspecting this item to verify its specifications and rate its physical condition.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.3),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.amber.shade200),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.hourglass_top_rounded, size: 16, color: Color(0xFFD97706)),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Appraiser Rated Condition: ',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    'Assessment in Progress',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: Color(0xFFB45309),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.info_outline, size: 13, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Lender declared condition: "$condition"',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                          if (isOwner) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.check_circle_outline, size: 16, color: Color(0xFF7B40B5)),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Your appraisal request is queued. An appraiser will rate your item shortly.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ] else ...[
-                    // Standard Condition Section
+                    // State 3: Standard Listing (Not Appraised / Self-Reported)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
@@ -541,6 +837,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
                       ),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
@@ -575,7 +872,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Camera verified photo inspection by lender',
+                                      'Self-reported condition by lender (Unappraised)',
                                       style: TextStyle(fontSize: 11, color: Colors.grey[700]),
                                     ),
                                   ],
@@ -588,31 +885,33 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
-                                onPressed: widget.itemData['appraisalRequested'] == true
-                                    ? null
-                                    : () async {
-                                        await FirebaseFirestore.instance
-                                            .collection('items')
-                                            .doc(widget.itemId)
-                                            .update({'appraisalRequested': true});
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Appraisal requested! Professional appraisers will review your item.'),
-                                              backgroundColor: Color(0xFF7B40B5),
-                                            ),
-                                          );
-                                          setState(() {
-                                            widget.itemData['appraisalRequested'] = true;
-                                          });
-                                        }
-                                      },
+                                onPressed: () async {
+                                  if (widget.itemId.isNotEmpty) {
+                                    await FirebaseFirestore.instance
+                                        .collection('items')
+                                        .doc(widget.itemId)
+                                        .update({
+                                          'appraisalRequested': true,
+                                          'appraisalStatus': 'pending',
+                                        });
+                                  }
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Appraisal requested! Professional appraisers will review your item.'),
+                                        backgroundColor: Color(0xFF7B40B5),
+                                      ),
+                                    );
+                                    setState(() {
+                                      widget.itemData['appraisalRequested'] = true;
+                                      widget.itemData['appraisalStatus'] = 'pending';
+                                    });
+                                  }
+                                },
                                 icon: const Icon(Icons.verified_outlined, size: 16),
-                                label: Text(
-                                  widget.itemData['appraisalRequested'] == true
-                                      ? 'Appraisal Requested (Pending Review)'
-                                      : 'Request Official Professional Appraisal',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                label: const Text(
+                                  'Request Official Professional Appraisal',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF7B40B5),
@@ -840,7 +1139,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   FutureBuilder<QuerySnapshot>(
                     future: FirebaseFirestore.instance
                         .collection('items')
-                        .where('category', isEqualTo: widget.itemData['category'])
+                        .where('category', isEqualTo: itemData['category'])
                         .where(FieldPath.documentId, isNotEqualTo: widget.itemId)
                         .limit(4)
                         .get(),
@@ -947,6 +1246,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           ],
         ),
       ),
+        );
+      },
     );
   }
 }
