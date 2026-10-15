@@ -197,7 +197,12 @@ class ItemCard extends StatelessWidget {
     final ownerId = itemData['ownerId'] as String? ?? '';
     final ownerName = itemData['ownerName'] ?? 'Lender';
     final category = itemData['category'] as String? ?? 'General';
-    final condition = itemData['condition'] as String? ?? 'Good';
+    final isCertified = itemData['appraisalStatus'] == 'certified';
+    final condition = isCertified
+        ? (itemData['conditionGrade'] as String? ?? itemData['condition'] as String? ?? 'Certified')
+        : ((itemData['appraisalStatus'] == 'in_review' || itemData['appraisalRequested'] == true)
+            ? 'Under Review'
+            : (itemData['conditionGrade'] as String? ?? 'Pending Appraisal'));
     final rating = (itemData['rating'] as num?)?.toDouble() ?? 4.8;
     final ribbonType = _getRibbonType();
 

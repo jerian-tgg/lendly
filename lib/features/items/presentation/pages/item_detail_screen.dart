@@ -120,7 +120,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         final title = itemData['name'] ?? itemData['title'] ?? 'Item Details';
         final description = itemData['description'] ?? 'No description provided.';
         final category = itemData['category'] ?? 'General';
-        final condition = itemData['condition'] ?? 'Like New';
         final priceNum = (itemData['price'] as num?)?.toDouble() ?? 0.0;
         final priceStr = '₱${priceNum.toStringAsFixed(0)}';
 
@@ -474,12 +473,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               const SizedBox(height: 3),
                               Text(
                                 isCertified
-                                    ? 'Rated: ${appraiserCondition ?? condition}'
+                                    ? 'Rated: ${appraiserCondition ?? 'Certified'}'
                                     : isUnderReview
                                         ? 'Review in progress'
                                         : isRejected
                                             ? 'Needs revision'
-                                            : 'Lender: $condition',
+                                            : 'Awaiting Appraisal',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -613,7 +612,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
-                                    appraiserCondition ?? condition,
+                                    appraiserCondition ?? 'Certified',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -790,13 +789,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Row(
+                          const Row(
                             children: [
-                              const Icon(Icons.info_outline, size: 13, color: Colors.grey),
-                              const SizedBox(width: 4),
+                              Icon(Icons.verified_outlined, size: 13, color: Color(0xFFD97706)),
+                              SizedBox(width: 4),
                               Text(
-                                'Lender declared condition: "$condition"',
-                                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                'Official condition will be rated by the appraiser upon review.',
+                                style: TextStyle(fontSize: 11, color: Colors.grey),
                               ),
                             ],
                           ),
@@ -860,7 +859,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
-                                            condition,
+                                            appraiserCondition ?? 'Pending Appraisal',
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
@@ -872,7 +871,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Self-reported condition by lender (Unappraised)',
+                                      'Official condition is evaluated and certified by an accredited appraiser.',
                                       style: TextStyle(fontSize: 11, color: Colors.grey[700]),
                                     ),
                                   ],

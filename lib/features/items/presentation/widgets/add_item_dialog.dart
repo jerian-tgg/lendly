@@ -29,7 +29,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
   final ImagePicker _picker = ImagePicker();
 
   DateTimeRange? _availability;
-  String _condition = 'Like New';
+  String _condition = 'Pending Appraisal';
   String _selectedCategory = 'Electronics';
   List<String> _imagePaths = [];
   bool _photoError = false;
@@ -47,13 +47,6 @@ class _AddItemDialogState extends State<AddItemDialog> {
     'Other',
   ];
 
-  final List<String> _conditions = [
-    'Like New',
-    'Good',
-    'Fair',
-    'Poor',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -62,7 +55,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
     _descController = TextEditingController(text: widget.initialData?['description'] ?? '');
     _priceController = TextEditingController(text: widget.initialData?['price']?.toString() ?? '');
     _quantityController = TextEditingController(text: widget.initialData?['quantity']?.toString() ?? '1');
-    _condition = widget.initialData?['condition'] ?? 'Like New';
+    _condition = widget.initialData?['conditionGrade'] ?? widget.initialData?['condition'] ?? 'Pending Appraisal';
     _selectedCategory = widget.initialData?['category'] ?? 'Electronics';
 
     String initialAddress = widget.initialData?['address']?.toString() ?? '';
@@ -594,7 +587,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                             maxLines: 2,
                             decoration: InputDecoration(
                               labelText: 'Description',
-                              hintText: 'Describe features, condition, included accessories...',
+                              hintText: 'Describe item features, included accessories, usage guidelines...',
                               prefixIcon: const Icon(Icons.description_outlined, color: Color(0xFF7B40B5), size: 20),
                               alignLabelWithHint: true,
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -604,7 +597,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
 
                           const SizedBox(height: 14),
 
-                          // SECTION 3: Category, Condition, Price, & Quantity (Adaptive Stacking!)
+                          // SECTION 3: Category, Price, & Quantity (Adaptive Stacking!)
                           if (isCompact) ...[
                             // Compact Vertical Layout (Guarantees NO Row Overflow on small screens!)
                             DropdownButtonFormField<String>(
@@ -625,24 +618,6 @@ class _AddItemDialogState extends State<AddItemDialog> {
                               onChanged: (value) => setState(() => _selectedCategory = value!),
                             ),
                             const SizedBox(height: 10),
-                            DropdownButtonFormField<String>(
-                              initialValue: _condition,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: 'Condition',
-                                prefixIcon: const Icon(Icons.stars_outlined, color: Color(0xFF7B40B5), size: 20),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              ),
-                              items: _conditions.map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value, style: const TextStyle(fontSize: 13)),
-                                );
-                              }).toList(),
-                              onChanged: (value) => setState(() => _condition = value!),
-                            ),
-                            const SizedBox(height: 10),
                             Row(
                               children: [
                                 Expanded(
@@ -676,11 +651,33 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.15)),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.verified_outlined, size: 16, color: Color(0xFF7B40B5)),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Official condition rating is evaluated and assigned by a certified appraiser.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ] else ...[
                             // Wide Screen Side-by-Side Rows
                             Row(
                               children: [
                                 Expanded(
+                                  flex: 5,
                                   child: DropdownButtonFormField<String>(
                                     initialValue: _selectedCategory,
                                     isExpanded: true,
@@ -701,31 +698,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    initialValue: _condition,
-                                    isExpanded: true,
-                                    decoration: InputDecoration(
-                                      labelText: 'Condition',
-                                      prefixIcon: const Icon(Icons.stars_outlined, color: Color(0xFF7B40B5), size: 20),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                    ),
-                                    items: _conditions.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value, style: const TextStyle(fontSize: 13)),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) => setState(() => _condition = value!),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 6,
+                                  flex: 4,
                                   child: TextFormField(
                                     controller: _priceController,
                                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -741,7 +714,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
-                                  flex: 4,
+                                  flex: 3,
                                   child: TextFormField(
                                     controller: _quantityController,
                                     keyboardType: TextInputType.number,
@@ -754,6 +727,27 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                   ),
                                 ),
                               ],
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.15)),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.verified_outlined, size: 16, color: Color(0xFF7B40B5)),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Official condition rating is evaluated and assigned by a certified appraiser.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
 

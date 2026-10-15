@@ -58,7 +58,7 @@ class Item {
       availableTo: data['availableTo'] != null
           ? (data['availableTo'] as Timestamp).toDate()
           : DateTime.now(),
-      condition: data['condition'] ?? 'Like New',
+      condition: data['condition'] ?? 'Pending Appraisal',
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
       ownerId: data['ownerId'] ?? '',
       ownerName: data['ownerName'] ?? 'Anonymous',
