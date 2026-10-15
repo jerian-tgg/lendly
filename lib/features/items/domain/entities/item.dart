@@ -15,6 +15,9 @@ class Item {
   final String ownerName;
   final DateTime createdAt;
   final bool isAvailable;
+  final String? location;
+  final double? latitude;
+  final double? longitude;
 
   Item({
     required this.id,
@@ -31,6 +34,9 @@ class Item {
     required this.ownerName,
     required this.createdAt,
     required this.isAvailable,
+    this.location,
+    this.latitude,
+    this.longitude,
   });
 
   factory Item.fromFirestore(DocumentSnapshot doc) {
@@ -56,6 +62,9 @@ class Item {
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
       isAvailable: data['isAvailable'] ?? false,
+      location: data['location'] is String ? data['location'] : null,
+      latitude: (data['latitude'] as num?)?.toDouble() ?? (data['lat'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble() ?? (data['lng'] as num?)?.toDouble(),
     );
   }
 
@@ -74,6 +83,9 @@ class Item {
       'ownerName': ownerName,
       'createdAt': Timestamp.fromDate(createdAt),
       'isAvailable': isAvailable,
+      if (location != null && location!.isNotEmpty) 'location': location,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     };
   }
 }

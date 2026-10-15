@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 
@@ -309,7 +310,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           const Icon(Icons.location_on, size: 14, color: Color(0xFF7B40B5)),
                           const SizedBox(width: 2),
                           Text(
-                            widget.itemData['location'] ?? 'Nearby (2.5 km)',
+                            LocationHelper.formatLocationWithDistance(
+                              locationData: widget.itemData['location'],
+                              distanceKm: (widget.itemData['distanceKm'] as num?)?.toDouble(),
+                            ),
                             style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                           ),
                         ],

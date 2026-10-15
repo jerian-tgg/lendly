@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
@@ -214,9 +215,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 final displayName = userData['username'] ??
                     '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
                 final nameStr = displayName.isNotEmpty ? displayName : 'Lendly User';
-                final location = userData['location'] is String && (userData['location'] as String).isNotEmpty
-                    ? userData['location']
-                    : 'Location not specified';
+                final location = LocationHelper.formatLocationDisplay(userData['location']);
                 final phone = userData['phone'] ?? '';
                 final profilePictureUrl = userData['photoURL'] ?? userData['profilePictureUrl'];
                 final imageUrl = profilePictureUrl is String ? profilePictureUrl : '';

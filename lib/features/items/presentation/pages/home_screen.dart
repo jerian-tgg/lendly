@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/features/chat/presentation/pages/conversation_screen.dart';
 import 'package:lendly/features/items/presentation/pages/borrowed_items_screen.dart';
@@ -206,6 +207,9 @@ class _ItemListScreenState extends State<ItemListScreen> {
   double _selectedRadiusKm = 25.0; // Geographical radius filter (5, 10, 25, 50, 100=Any)
   bool _isGridView = true; // Two-column marketplace layout toggle
 
+  GeoLocation _currentReferenceLocation = LocationHelper.defaultLocation;
+  final Map<String, GeoLocation> _ownerLocationsCache = {};
+
   final List<String> _categories = [
     'All',
     'Electronics',
@@ -218,6 +222,45 @@ class _ItemListScreenState extends State<ItemListScreen> {
   ];
 
   final List<double> _radiusOptions = [5.0, 10.0, 25.0, 50.0, 100.0];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserReferenceLocation();
+  }
+
+  Future<void> _loadUserReferenceLocation() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data();
+        final loc = LocationHelper.parseCoordinates(data?['location']);
+        if (loc != null) {
+          setState(() {
+            _currentReferenceLocation = loc;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _fetchAndCacheOwnerLocation(String ownerId) async {
+    if (_ownerLocationsCache.containsKey(ownerId)) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(ownerId).get();
+      if (doc.exists && mounted) {
+        final data = doc.data();
+        final loc = LocationHelper.parseCoordinates(data?['location']);
+        if (loc != null) {
+          setState(() {
+            _ownerLocationsCache[ownerId] = loc;
+          });
+        }
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -267,6 +310,60 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   ),
                   const Divider(),
                   const SizedBox(height: 10),
+
+                  // Reference Location Bar (Geographical Radius Center!)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9F5FE),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.my_location, size: 18, color: Color(0xFF7B40B5)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Reference Point / My Location', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600)),
+                              Text(
+                                _currentReferenceLocation.name ??
+                                    '${_currentReferenceLocation.latitude.toStringAsFixed(2)}, ${_currentReferenceLocation.longitude.toStringAsFixed(2)}',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuButton<GeoLocation>(
+                          icon: const Icon(Icons.swap_horiz, size: 20, color: Color(0xFF7B40B5)),
+                          tooltip: 'Change Reference Location',
+                          onSelected: (loc) {
+                            setModalState(() => _currentReferenceLocation = loc);
+                            setState(() => _currentReferenceLocation = loc);
+                          },
+                          itemBuilder: (context) {
+                            return LocationHelper.presetLocations.map((loc) {
+                              return PopupMenuItem<GeoLocation>(
+                                value: loc,
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.location_on, size: 14, color: Color(0xFF7B40B5)),
+                                    const SizedBox(width: 6),
+                                    Text(loc.name ?? '${loc.latitude}, ${loc.longitude}', style: const TextStyle(fontSize: 12)),
+                                  ],
+                                ),
+                              );
+                            }).toList();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
 
                   // Geographical Radius Filter (Feature 4!)
                   Row(
@@ -329,6 +426,13 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       );
                     }).toList(),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _selectedRadiusKm >= 100.0
+                        ? 'Showing items across all locations'
+                        : 'Filtering items within ${_selectedRadiusKm.toInt()} km of ${_currentReferenceLocation.name ?? 'current location'}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                  ),
 
                   const SizedBox(height: 16),
 
@@ -366,13 +470,13 @@ class _ItemListScreenState extends State<ItemListScreen> {
                           onPressed: () {
                             setModalState(() {
                               _selectedCategory = 'All';
-                              _selectedRadiusKm = 25.0;
+                              _selectedRadiusKm = 100.0;
                               _searchController.clear();
                               _searchQuery = '';
                             });
                             setState(() {
                               _selectedCategory = 'All';
-                              _selectedRadiusKm = 25.0;
+                              _selectedRadiusKm = 100.0;
                               _searchController.clear();
                               _searchQuery = '';
                             });
@@ -649,7 +753,10 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   if (_selectedRadiusKm < 100.0)
                     Chip(
                       avatar: const Icon(Icons.location_on, size: 12, color: Color(0xFF7B40B5)),
-                      label: Text('Radius: ${_selectedRadiusKm.toInt()} km', style: const TextStyle(fontSize: 10)),
+                      label: Text(
+                        'Radius: ${_selectedRadiusKm.toInt()} km (${_currentReferenceLocation.name?.split(' ').first ?? 'Custom'})',
+                        style: const TextStyle(fontSize: 10),
+                      ),
                       padding: EdgeInsets.zero,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       onDeleted: () => setState(() => _selectedRadiusKm = 100.0),
@@ -696,7 +803,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     ),
                     Text(
                       _selectedRadiusKm < 100.0
-                          ? 'Showing items within ${_selectedRadiusKm.toInt()} km'
+                          ? 'Showing items within ${_selectedRadiusKm.toInt()} km of ${_currentReferenceLocation.name ?? 'your location'}'
                           : 'Live items nearby',
                       style: TextStyle(
                         fontSize: 11,
@@ -801,19 +908,60 @@ class _ItemListScreenState extends State<ItemListScreen> {
                 final matchesCategory = _selectedCategory == 'All' ||
                     category == _selectedCategory.toLowerCase();
 
-                // Mode Matching
+                // Calculate Functional Geographical Distance (Haversine formula!)
+                GeoLocation? itemCoords = LocationHelper.extractItemCoordinates(data);
+                if (itemCoords == null && data['ownerId'] != null) {
+                  itemCoords = _ownerLocationsCache[data['ownerId']];
+                  if (itemCoords == null) {
+                    _fetchAndCacheOwnerLocation(data['ownerId']);
+                  }
+                }
+
+                final double distanceKm;
+                if (itemCoords != null) {
+                  distanceKm = LocationHelper.calculateDistance(
+                    _currentReferenceLocation.latitude,
+                    _currentReferenceLocation.longitude,
+                    itemCoords.latitude,
+                    itemCoords.longitude,
+                  );
+                } else {
+                  // Fallback for items without explicit coordinates
+                  distanceKm = (data['distanceKm'] as num?)?.toDouble() ??
+                      LocationHelper.calculateDistance(
+                        _currentReferenceLocation.latitude,
+                        _currentReferenceLocation.longitude,
+                        LocationHelper.defaultLocation.latitude,
+                        LocationHelper.defaultLocation.longitude,
+                      );
+                }
+
+                // Write computed distance and location to data map for ItemCard and ItemDetailScreen
+                data['distanceKm'] = distanceKm;
+                if (itemCoords?.name != null && (data['location'] == null || (data['location'] as String).isEmpty)) {
+                  data['location'] = itemCoords!.name;
+                }
+
+                // Geographical Radius Filter Matching (Feature 4!)
+                final matchesRadius = _selectedRadiusKm >= 100.0 || distanceKm <= _selectedRadiusKm;
+
+                // Mode Matching ('Nearby' tab filters to <= 25km or selected radius)
                 final matchesMode = _selectedMode == 'All' ||
                     (_selectedMode == 'Lend' && data['ownerId'] == user?.uid) ||
                     (_selectedMode == 'Borrow' && data['ownerId'] != user?.uid) ||
-                    (_selectedMode == 'Nearby');
-
-                // Geographical Radius Filter Matching (Feature 4!)
-                final distanceKm = (data['distanceKm'] as num?)?.toDouble() ??
-                    (doc.id.hashCode % 15 + 1.2);
-                final matchesRadius = _selectedRadiusKm >= 100.0 || distanceKm <= _selectedRadiusKm;
+                    (_selectedMode == 'Nearby' && distanceKm <= (_selectedRadiusKm < 25.0 ? _selectedRadiusKm : 25.0));
 
                 return matchesSearch && matchesCategory && matchesMode && matchesRadius;
               }).toList();
+
+              // Proximity Sorting: Sort by closest distance when in Nearby mode or active radius filter
+              if (_selectedMode == 'Nearby' || _selectedRadiusKm < 100.0) {
+                filteredDocs.sort((a, b) {
+                  final distA = ((a.data() as Map<String, dynamic>)['distanceKm'] as num?)?.toDouble() ?? double.infinity;
+                  final distB = ((b.data() as Map<String, dynamic>)['distanceKm'] as num?)?.toDouble() ?? double.infinity;
+                  return distA.compareTo(distB);
+                });
+              }
 
               if (filteredDocs.isEmpty) {
                 return Center(
@@ -827,26 +975,40 @@ class _ItemListScreenState extends State<ItemListScreen> {
                         Text(
                           _searchQuery.isNotEmpty
                               ? 'No items found matching "$_searchQuery"'
-                              : 'No items found within your selected filters.',
+                              : _selectedRadiusKm < 100.0
+                                  ? 'No items found within ${_selectedRadiusKm.toInt()} km of ${_currentReferenceLocation.name ?? 'your location'}.'
+                                  : 'No items found within your selected filters.',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.grey[700], fontSize: 15),
                         ),
                         const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _searchController.clear();
-                              _searchQuery = '';
-                              _selectedCategory = 'All';
-                              _selectedMode = 'All';
-                              _selectedRadiusKm = 100.0;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7B40B5),
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Reset All Filters'),
+                        Wrap(
+                          spacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            if (_selectedRadiusKm < 100.0)
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.zoom_out_map, size: 16),
+                                label: const Text('Expand to Any Distance'),
+                                onPressed: () => setState(() => _selectedRadiusKm = 100.0),
+                              ),
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _searchController.clear();
+                                  _searchQuery = '';
+                                  _selectedCategory = 'All';
+                                  _selectedMode = 'All';
+                                  _selectedRadiusKm = 100.0;
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF7B40B5),
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Reset All Filters'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -942,6 +1104,9 @@ class _ItemListScreenState extends State<ItemListScreen> {
         onTap: () {
           setState(() {
             _selectedMode = label;
+            if (label == 'Nearby' && _selectedRadiusKm >= 100.0) {
+              _selectedRadiusKm = 25.0; // Nearby defaults to 25 km radius
+            }
           });
         },
         child: Container(

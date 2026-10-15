@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
 import 'package:lendly/features/items/domain/entities/item.dart';
 
@@ -22,6 +24,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
   late TextEditingController _descController;
   late TextEditingController _priceController;
   late TextEditingController _quantityController;
+  late TextEditingController _locationController;
   final ImagePicker _picker = ImagePicker();
 
   DateTimeRange? _availability;
@@ -30,6 +33,8 @@ class _AddItemDialogState extends State<AddItemDialog> {
   List<String> _imagePaths = [];
   bool _photoError = false;
   bool _isSubmitting = false;
+  double? _itemLatitude;
+  double? _itemLongitude;
 
   final List<String> _categories = [
     'Electronics',
@@ -56,10 +61,16 @@ class _AddItemDialogState extends State<AddItemDialog> {
     _descController = TextEditingController(text: widget.initialData?['description'] ?? '');
     _priceController = TextEditingController(text: widget.initialData?['price']?.toString() ?? '');
     _quantityController = TextEditingController(text: widget.initialData?['quantity']?.toString() ?? '1');
+    _locationController = TextEditingController(text: widget.initialData?['location']?.toString() ?? '');
     _condition = widget.initialData?['condition'] ?? 'Like New';
     _selectedCategory = widget.initialData?['category'] ?? 'Electronics';
 
     if (widget.initialData != null) {
+      _itemLatitude = (widget.initialData!['latitude'] as num?)?.toDouble() ??
+          (widget.initialData!['lat'] as num?)?.toDouble();
+      _itemLongitude = (widget.initialData!['longitude'] as num?)?.toDouble() ??
+          (widget.initialData!['lng'] as num?)?.toDouble();
+
       final fromTimestamp = widget.initialData!['availableFrom'];
       final toTimestamp = widget.initialData!['availableTo'];
 
@@ -73,7 +84,32 @@ class _AddItemDialogState extends State<AddItemDialog> {
       if (images != null && images is List<dynamic>) {
         _imagePaths = List<String>.from(images);
       }
+    } else {
+      _fetchUserDefaultLocation();
     }
+  }
+
+  Future<void> _fetchUserDefaultLocation() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data();
+        final locData = data?['location'];
+        final coords = LocationHelper.parseCoordinates(locData);
+        if (coords != null) {
+          setState(() {
+            _itemLatitude = coords.latitude;
+            _itemLongitude = coords.longitude;
+            if (_locationController.text.isEmpty) {
+              _locationController.text = coords.name ??
+                  '${coords.latitude.toStringAsFixed(2)}, ${coords.longitude.toStringAsFixed(2)}';
+            }
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -82,6 +118,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
     _descController.dispose();
     _priceController.dispose();
     _quantityController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -176,6 +213,11 @@ class _AddItemDialogState extends State<AddItemDialog> {
       final user = FirebaseAuth.instance.currentUser!;
       final now = DateTime.now();
 
+      final locText = _locationController.text.trim();
+      final parsedLoc = LocationHelper.parseCoordinates(locText);
+      final finalLat = parsedLoc?.latitude ?? _itemLatitude;
+      final finalLng = parsedLoc?.longitude ?? _itemLongitude;
+
       final item = Item(
         id: widget.itemId ?? '',
         name: _nameController.text.trim(),
@@ -195,6 +237,9 @@ class _AddItemDialogState extends State<AddItemDialog> {
                 ? widget.initialData!['createdAt']
                 : (widget.initialData!['createdAt'] as dynamic).toDate()),
         isAvailable: true,
+        location: locText.isNotEmpty ? locText : (parsedLoc?.name ?? 'Nearby'),
+        latitude: finalLat,
+        longitude: finalLng,
       );
 
       if (widget.itemId != null) {
@@ -600,6 +645,55 @@ class _AddItemDialogState extends State<AddItemDialog> {
                             ],
                           ),
                         ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Item Location Input (Geographical Radius support!)
+                      TextFormField(
+                        controller: _locationController,
+                        decoration: InputDecoration(
+                          labelText: 'Item Location / City',
+                          hintText: 'e.g. Bacolod City or 10.67, 122.95',
+                          prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFF7B40B5)),
+                          suffixIcon: PopupMenuButton<GeoLocation>(
+                            icon: const Icon(Icons.arrow_drop_down_circle_outlined, color: Color(0xFF7B40B5)),
+                            tooltip: 'Select City Preset',
+                            onSelected: (loc) {
+                              setState(() {
+                                _locationController.text = loc.name ?? '${loc.latitude}, ${loc.longitude}';
+                                _itemLatitude = loc.latitude;
+                                _itemLongitude = loc.longitude;
+                              });
+                            },
+                            itemBuilder: (context) {
+                              return LocationHelper.presetLocations.map((loc) {
+                                return PopupMenuItem<GeoLocation>(
+                                  value: loc,
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.location_pin, size: 16, color: Color(0xFF7B40B5)),
+                                      const SizedBox(width: 8),
+                                      Text(loc.name ?? '${loc.latitude}, ${loc.longitude}', style: const TextStyle(fontSize: 12)),
+                                    ],
+                                  ),
+                                );
+                              }).toList();
+                            },
+                          ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF7B40B5), width: 2),
+                          ),
+                        ),
+                        onChanged: (val) {
+                          final coords = LocationHelper.parseCoordinates(val);
+                          if (coords != null) {
+                            _itemLatitude = coords.latitude;
+                            _itemLongitude = coords.longitude;
+                          }
+                        },
                       ),
                     ],
                   ),

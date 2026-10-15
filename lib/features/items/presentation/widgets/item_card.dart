@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
@@ -200,12 +201,12 @@ class ItemCard extends StatelessWidget {
     final rating = (itemData['rating'] as num?)?.toDouble() ?? 4.8;
     final ribbonType = _getRibbonType();
 
-    // Distance calculation/display
-    final distanceKm = (itemData['distanceKm'] as num?)?.toDouble() ??
-        (itemId.hashCode % 15 + 1.2);
-    final locationText = itemData['location'] is String && (itemData['location'] as String).isNotEmpty
-        ? itemData['location']
-        : '${distanceKm.toStringAsFixed(1)} km away';
+    // Distance calculation/display (Functional real-world distance from LocationHelper)
+    final distanceKm = (itemData['distanceKm'] as num?)?.toDouble();
+    final locationText = LocationHelper.formatLocationWithDistance(
+      locationData: itemData['location'],
+      distanceKm: distanceKm,
+    );
 
     return Container(
       decoration: BoxDecoration(
