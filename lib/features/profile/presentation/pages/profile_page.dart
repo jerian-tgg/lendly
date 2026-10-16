@@ -9,6 +9,8 @@ import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.
 import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/profile/presentation/pages/edit_profile.dart';
+import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
+import 'package:lendly/core/services/review_service.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String? userId; // If null, displays current logged-in user's profile
@@ -45,7 +47,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         itemId: '',
       );
 
-      if (mounted) {
+      if (context.mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -59,7 +61,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error opening chat: $e')),
         );
@@ -72,6 +74,19 @@ class _UserProfilePageState extends State<UserProfilePage> {
       context,
       MaterialPageRoute(
         builder: (_) => RegisterBusinessScreen(existingData: data),
+      ),
+    );
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  }
+
+  void _openReviewDialog(BuildContext context, String targetName) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => ReviewDialog(
+        revieweeId: _targetUserId,
+        targetName: targetName,
       ),
     );
     if (result == true && mounted) {
@@ -243,26 +258,41 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                   ),
                                 ),
                               ],
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Icon(Icons.star, size: 14, color: Colors.amber),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      '4.9 Verified Lender',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF7B40B5),
-                                      ),
+                              Builder(
+                                builder: (context) {
+                                  final userRating = (userData['rating'] as num?)?.toDouble() ?? 0.0;
+                                  final userReviewCount = (userData['reviewCount'] as num?)?.toInt() ?? 0;
+                                  final hasReviews = userRating > 0 && userReviewCount > 0;
+
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                  ],
-                                ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          hasReviews ? Icons.star_rounded : Icons.verified_user_outlined,
+                                          size: 14,
+                                          color: hasReviews ? Colors.amber[700] : const Color(0xFF7B40B5),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          hasReviews
+                                              ? '${userRating.toStringAsFixed(1)} ($userReviewCount ${userReviewCount == 1 ? 'review' : 'reviews'})'
+                                              : 'Verified Member',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF7B40B5),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -709,9 +739,27 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     const SizedBox(height: 24),
 
                     // Section 2: Reviews Received
-                    _buildSectionHeader(
-                      'Reviews & Ratings',
-                      Icons.rate_review_outlined,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildSectionHeader(
+                          'Reviews & Ratings',
+                          Icons.rate_review_outlined,
+                        ),
+                        if (!_isSelf)
+                          ElevatedButton.icon(
+                            onPressed: () => _openReviewDialog(context, nameStr),
+                            icon: const Icon(Icons.star_rounded, size: 16),
+                            label: const Text('Leave Review', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7B40B5),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     _buildUserReviewsList(_targetUserId),
@@ -874,10 +922,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: docs.length,
           itemBuilder: (context, index) {
+            final docId = docs[index].id;
             final review = docs[index].data() as Map<String, dynamic>;
             final ratingVal = (review['rating'] as num?)?.toDouble() ?? 5.0;
-            final comment = review['comment'] ?? review['reviewText'] ?? 'Great lender!';
+            final comment = review['comment'] ?? review['reviewText'] ?? 'Great experience!';
             final reviewerName = review['reviewerName'] ?? 'Verified Borrower';
+            final reviewerPhoto = review['reviewerPhotoUrl'] as String?;
+            final itemTitle = review['itemTitle'] as String?;
+            final currentUid = FirebaseAuth.instance.currentUser?.uid;
+            final isMyReview = currentUid != null && review['reviewerId'] == currentUid;
 
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
@@ -886,28 +939,85 @@ class _UserProfilePageState extends State<UserProfilePage> {
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: const Color(0xFFEFE8FA),
-                  child: Text(
-                    reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'U',
-                    style: const TextStyle(color: Color(0xFF7B40B5), fontWeight: FontWeight.bold),
-                  ),
+                  backgroundImage: (reviewerPhoto != null && reviewerPhoto.isNotEmpty)
+                      ? NetworkImage(reviewerPhoto)
+                      : null,
+                  child: (reviewerPhoto == null || reviewerPhoto.isEmpty)
+                      ? Text(
+                          reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'U',
+                          style: const TextStyle(color: Color(0xFF7B40B5), fontWeight: FontWeight.bold),
+                        )
+                      : null,
                 ),
                 title: Row(
                   children: [
                     ...List.generate(5, (starIdx) {
                       return Icon(
-                        starIdx < ratingVal.floor() ? Icons.star : Icons.star_border,
-                        size: 14,
+                        starIdx < ratingVal.floor() ? Icons.star_rounded : Icons.star_outline_rounded,
+                        size: 16,
                         color: Colors.amber[700],
                       );
                     }),
                     const SizedBox(width: 6),
-                    Text(
-                      reviewerName,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    Expanded(
+                      child: Text(
+                        reviewerName,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
-                subtitle: Text(comment, style: const TextStyle(fontSize: 12)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (itemTitle != null && itemTitle.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Item: "$itemTitle"',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                    const SizedBox(height: 2),
+                    Text(comment, style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+                trailing: isMyReview
+                    ? IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                        tooltip: 'Delete your review',
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Delete Review'),
+                              content: const Text('Are you sure you want to delete your review? The ratings will automatically update.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            await ReviewService().deleteReview(
+                              reviewId: docId,
+                              revieweeId: uid,
+                              itemId: review['itemId'],
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Review deleted and ratings recalculated.')),
+                              );
+                            }
+                          }
+                        },
+                      )
+                    : null,
               ),
             );
           },

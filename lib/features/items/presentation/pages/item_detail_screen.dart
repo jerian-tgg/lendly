@@ -8,6 +8,8 @@ import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 import 'package:lendly/features/appraisal/domain/models/appraisal_model.dart';
 import 'package:lendly/features/appraisal/presentation/widgets/appraisal_form_dialog.dart';
+import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
+import 'package:lendly/core/services/review_service.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final Map<String, dynamic> itemData;
@@ -51,6 +53,35 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AppraisalFormDialog(itemData: itemData, itemId: widget.itemId),
+    );
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  }
+
+  void _openReviewDialog(BuildContext context, String ownerId, String ownerName, String itemTitle) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to submit a review.')),
+      );
+      return;
+    }
+    if (currentUserId == ownerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You cannot review your own listing.')),
+      );
+      return;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => ReviewDialog(
+        revieweeId: ownerId,
+        targetName: ownerName,
+        itemId: widget.itemId,
+        itemTitle: itemTitle,
+      ),
     );
     if (result == true && mounted) {
       setState(() {});
@@ -162,7 +193,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         final appraiserCondition = (itemData['conditionGrade'] as String?) ??
             (itemData['appraisedCondition'] as String?);
 
-        final rating = (itemData['rating'] as num?)?.toDouble() ?? 4.8;
+        final ratingVal = (itemData['rating'] as num?)?.toDouble() ?? 0.0;
+        final reviewCount = (itemData['reviewCount'] as num?)?.toInt() ?? 0;
+        final hasReviews = ratingVal > 0 && reviewCount > 0;
         final isAvailable = itemData['isAvailable'] ?? true;
         final ownerId = itemData['ownerId'] as String? ?? '';
         final ownerName = itemData['ownerName'] ?? 'Lender';
@@ -346,22 +379,34 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   // Rating Row & Location
                   Row(
                     children: [
-                      ...List.generate(5, (index) {
-                        return Icon(
-                          index < rating.floor() ? Icons.star : Icons.star_half,
-                          size: 18,
-                          color: Colors.amber[700],
-                        );
-                      }),
-                      const SizedBox(width: 6),
-                      Text(
-                        '$rating',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                      Text(
-                        ' (12 reviews)',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                      ),
+                      if (hasReviews) ...[
+                        ...List.generate(5, (index) {
+                          final starVal = index + 1;
+                          if (ratingVal >= starVal) {
+                            return const Icon(Icons.star, size: 18, color: Colors.amber);
+                          } else if (ratingVal >= starVal - 0.5) {
+                            return const Icon(Icons.star_half, size: 18, color: Colors.amber);
+                          } else {
+                            return Icon(Icons.star_border, size: 18, color: Colors.grey[400]);
+                          }
+                        }),
+                        const SizedBox(width: 6),
+                        Text(
+                          ratingVal.toStringAsFixed(1),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        Text(
+                          ' ($reviewCount ${reviewCount == 1 ? 'review' : 'reviews'})',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        ),
+                      ] else ...[
+                        ...List.generate(5, (_) => Icon(Icons.star_outline, size: 16, color: Colors.grey[400])),
+                        const SizedBox(width: 6),
+                        Text(
+                          'No reviews yet',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                        ),
+                      ],
                       const Spacer(),
                       Row(
                         children: [
@@ -1307,29 +1352,34 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   const SizedBox(height: 20),
 
                   // Owner Information Card (Tapping opens Lender Profile!)
-                  InkWell(
-                    onTap: () => _openOwnerProfile(context, ownerId),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
+                  FutureBuilder<DocumentSnapshot>(
+                    future: ownerId.isNotEmpty
+                        ? FirebaseFirestore.instance.collection('users').doc(ownerId).get()
+                        : null,
+                    builder: (context, snapshot) {
+                      String? photoUrl;
+                      double? ownerRating;
+                      int ownerReviews = 0;
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        final uData = snapshot.data!.data() as Map<String, dynamic>?;
+                        photoUrl = uData?['photoURL'] ?? uData?['profilePictureUrl'];
+                        ownerRating = (uData?['rating'] as num?)?.toDouble();
+                        ownerReviews = (uData?['reviewCount'] as num?)?.toInt() ?? 0;
+                      }
+
+                      return InkWell(
+                        onTap: () => _openOwnerProfile(context, ownerId),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          FutureBuilder<DocumentSnapshot>(
-                            future: ownerId.isNotEmpty
-                                ? FirebaseFirestore.instance.collection('users').doc(ownerId).get()
-                                : null,
-                            builder: (context, snapshot) {
-                              String? photoUrl;
-                              if (snapshot.hasData && snapshot.data!.exists) {
-                                final uData = snapshot.data!.data() as Map<String, dynamic>?;
-                                photoUrl = uData?['photoURL'] ?? uData?['profilePictureUrl'];
-                              }
-                              return CircleAvatar(
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
                                 radius: 22,
                                 backgroundColor: const Color(0xFFEFE8FA),
                                 backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
@@ -1338,51 +1388,64 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 child: (photoUrl == null || photoUrl.isEmpty)
                                     ? const Icon(Icons.person, color: Color(0xFF7B40B5))
                                     : null,
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      ownerName,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.verified, size: 12, color: Colors.blue),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'View Lender Profile • 100% Response',
-                                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!isOwner)
-                            OutlinedButton.icon(
-                              onPressed: () => _handleMessageOwner(context, ownerId, ownerName),
-                              icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                              label: const Text('Chat'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF7B40B5),
-                                side: const BorderSide(color: Color(0xFF7B40B5)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
-                            ),
-                        ],
-                      ),
-                    ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          ownerName,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        if (ownerReviews > 0 && ownerRating != null && ownerRating > 0) ...[
+                                          const Icon(Icons.star, size: 13, color: Colors.amber),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            '${ownerRating.toStringAsFixed(1)} ($ownerReviews) • ',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                        ],
+                                        const Icon(Icons.verified, size: 12, color: Colors.blue),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Lender Profile',
+                                          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (!isOwner)
+                                OutlinedButton.icon(
+                                  onPressed: () => _handleMessageOwner(context, ownerId, ownerName),
+                                  icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                                  label: const Text('Chat'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF7B40B5),
+                                    side: const BorderSide(color: Color(0xFF7B40B5)),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 24),
@@ -1470,6 +1533,314 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       ),
                     ),
                   ],
+
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+
+                  // RATINGS & REVIEWS SECTION
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Ratings & Reviews',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          if (reviewCount > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '$reviewCount',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF7B40B5),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (!isOwner)
+                        ElevatedButton.icon(
+                          onPressed: () => _openReviewDialog(context, ownerId, ownerName, title),
+                          icon: const Icon(Icons.rate_review_outlined, size: 16),
+                          label: const Text('Write Review', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF7B40B5),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            elevation: 0,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Rating Summary Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              hasReviews ? ratingVal.toStringAsFixed(1) : '—',
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D3748),
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: List.generate(5, (index) {
+                                final starVal = index + 1;
+                                if (ratingVal >= starVal) {
+                                  return const Icon(Icons.star, size: 16, color: Colors.amber);
+                                } else if (ratingVal >= starVal - 0.5) {
+                                  return const Icon(Icons.star_half, size: 16, color: Colors.amber);
+                                } else {
+                                  return Icon(Icons.star_border, size: 16, color: Colors.grey[400]);
+                                }
+                              }),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              hasReviews
+                                  ? '$reviewCount ${reviewCount == 1 ? 'review' : 'reviews'}'
+                                  : 'No reviews yet',
+                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 20),
+                        Container(height: 60, width: 1, color: Colors.grey.shade200),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                hasReviews ? 'Verified borrower ratings' : 'Be the first to review!',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                hasReviews
+                                    ? 'Reviews are submitted by verified borrowers and update real-time.'
+                                    : 'Borrowed this item? Share your feedback to help future borrowers.',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Reviews List Stream
+                  StreamBuilder<QuerySnapshot>(
+                    stream: ReviewService().getItemReviewsStream(widget.itemId),
+                    builder: (context, revSnapshot) {
+                      if (revSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7B40B5)),
+                          ),
+                        );
+                      }
+
+                      final docs = revSnapshot.data?.docs ?? [];
+                      if (docs.isEmpty) {
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.rate_review_outlined, size: 36, color: Colors.grey[400]),
+                              const SizedBox(height: 8),
+                              Text(
+                                'No reviews yet for this item',
+                                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700]),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                !isOwner
+                                    ? 'Have you borrowed this? Click "Write Review" above!'
+                                    : 'Borrowers will be able to review this item after borrowing.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return Column(
+                        children: docs.map((doc) {
+                          final rev = doc.data() as Map<String, dynamic>;
+                          final revRating = (rev['rating'] as num?)?.toDouble() ?? 5.0;
+                          final reviewerName = rev['reviewerName'] ?? 'Verified Borrower';
+                          final reviewerPhoto = rev['reviewerPhoto'] as String?;
+                          final comment = rev['comment'] ?? '';
+                          final reviewerId = rev['reviewerId'] ?? '';
+                          final reviewId = doc.id;
+                          DateTime? createdAt;
+                          if (rev['createdAt'] is Timestamp) {
+                            createdAt = (rev['createdAt'] as Timestamp).toDate();
+                          }
+
+                          final canDelete = reviewerId.isNotEmpty &&
+                              (reviewerId == currentUserId || isViewerAdmin);
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.grey.shade200),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.02),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                      backgroundImage: (reviewerPhoto != null && reviewerPhoto.isNotEmpty)
+                                          ? NetworkImage(reviewerPhoto)
+                                          : null,
+                                      child: (reviewerPhoto == null || reviewerPhoto.isEmpty)
+                                          ? Text(
+                                              reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : '?',
+                                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                                            )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            reviewerName,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                          ),
+                                          if (createdAt != null)
+                                            Text(
+                                              DateFormat('MMM d, yyyy').format(createdAt),
+                                              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    Row(
+                                      children: List.generate(5, (sIdx) {
+                                        return Icon(
+                                          sIdx < revRating ? Icons.star : Icons.star_border,
+                                          size: 14,
+                                          color: Colors.amber[700],
+                                        );
+                                      }),
+                                    ),
+                                    if (canDelete) ...[
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        tooltip: 'Delete review',
+                                        onPressed: () async {
+                                          final confirm = await showDialog<bool>(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text('Delete Review?'),
+                                              content: const Text('Are you sure you want to remove your review? The item rating will automatically update.'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(ctx, false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(ctx, true),
+                                                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirm == true) {
+                                            await ReviewService().deleteReview(
+                                              reviewId: reviewId,
+                                              itemId: widget.itemId,
+                                              revieweeId: ownerId,
+                                            );
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Review deleted and rating updated.')),
+                                              );
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                if (comment.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    comment,
+                                    style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.35),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
 
                   const SizedBox(height: 24),
                   const Divider(),
