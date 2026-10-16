@@ -6,6 +6,8 @@ import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
+import 'package:lendly/features/appraisal/domain/models/appraisal_model.dart';
+import 'package:lendly/features/appraisal/presentation/widgets/appraisal_form_dialog.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final Map<String, dynamic> itemData;
@@ -25,6 +27,35 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   int _currentImageIndex = 0;
+  Map<String, dynamic>? _currentUserProfile;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentUserProfile();
+  }
+
+  Future<void> _fetchCurrentUserProfile() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _currentUserProfile = doc.data();
+        });
+      }
+    }
+  }
+
+  void _openAppraisalDialog(BuildContext context, Map<String, dynamic> itemData) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AppraisalFormDialog(itemData: itemData, itemId: widget.itemId),
+    );
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  }
 
   Future<void> _pickDates(BuildContext context) async {
     final picked = await showDateRangePicker(
@@ -136,7 +167,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         final ownerId = itemData['ownerId'] as String? ?? '';
         final ownerName = itemData['ownerName'] ?? 'Lender';
         final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-        final isOwner = ownerId == currentUserId;
+        final isOwner = ownerId.isNotEmpty && ownerId == currentUserId;
+
+        final isViewerAppraiser = _currentUserProfile?['isAppraiser'] == true ||
+            _currentUserProfile?['businessVerificationStatus'] == 'approved';
+        final isViewerAdmin = _currentUserProfile?['isAdmin'] == true;
+        final isCertifyingAppraiser = itemData['certifiedByAppraiserId'] != null &&
+            itemData['certifiedByAppraiserId'] == currentUserId;
+        final canViewPrivateAppraisal = isOwner || isCertifyingAppraiser || isViewerAdmin;
+
+        final appraisalVal = (itemData['appraisalValue'] as num?)?.toDouble() ??
+            (itemData['appraisal'] as num?)?.toDouble();
+        final fnScore = itemData['functionScore'] is num ? (itemData['functionScore'] as num).toInt() : null;
+        final cosScore = itemData['cosmeticScore'] is num ? (itemData['cosmeticScore'] as num).toInt() : null;
 
         // Image list extraction
         List<String> imageUrls = [];
@@ -679,6 +722,272 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         ],
                       ),
                     ),
+
+                    // State 1B: Confidential Owner Valuation Section (Visible only to owner, certifying appraiser, admin)
+                    if (canViewPrivateAppraisal && (appraisalVal != null || fnScore != null)) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFAF5FF), Color(0xFFF3E8FF)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.35), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF7B40B5).withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.lock_person_rounded, color: Color(0xFF7B40B5), size: 20),
+                                ),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Confidential Valuation (Owner Only)',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF4A1A7E),
+                                        ),
+                                      ),
+                                      Text(
+                                        'Official appraisal assessment & condition scoring',
+                                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF7B40B5),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.lock, size: 10, color: Colors.white),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        'PRIVATE',
+                                        style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const Divider(height: 20),
+
+                            if (appraisalVal != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.2)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Estimated Replacement Value',
+                                            style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '₱${appraisalVal.toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.w900,
+                                              color: Color(0xFF059669),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF059669).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.shield_outlined, size: 14, color: Color(0xFF059669)),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Insured Value',
+                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+
+                            if (fnScore != null) ...[
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Row(
+                                    children: [
+                                      Icon(Icons.build_circle_outlined, size: 14, color: Color(0xFF7B40B5)),
+                                      SizedBox(width: 4),
+                                      Text('Function: 1-10', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                    ],
+                                  ),
+                                  Text(
+                                    '$fnScore / 10',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF7B40B5)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: LinearProgressIndicator(
+                                  value: fnScore / 10.0,
+                                  minHeight: 8,
+                                  backgroundColor: Colors.grey.shade200,
+                                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF7B40B5)),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                AppraisalModel.getFunctionRubric(fnScore),
+                                style: TextStyle(fontSize: 10, color: Colors.grey[700], fontStyle: FontStyle.italic),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+
+                            if (cosScore != null) ...[
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Row(
+                                    children: [
+                                      Icon(Icons.auto_awesome, size: 14, color: Color(0xFF0284C7)),
+                                      SizedBox(width: 4),
+                                      Text('Cosmetic: 1-10', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                    ],
+                                  ),
+                                  Text(
+                                    '$cosScore / 10',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0284C7)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: LinearProgressIndicator(
+                                  value: cosScore / 10.0,
+                                  minHeight: 8,
+                                  backgroundColor: Colors.grey.shade200,
+                                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0284C7)),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                AppraisalModel.getCosmeticRubric(cosScore),
+                                style: TextStyle(fontSize: 10, color: Colors.grey[700], fontStyle: FontStyle.italic),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+
+                            if (fnScore != null && cosScore != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Basis for condition: Function ($fnScore/10) + Cosmetic ($cosScore/10) → Condition: ${appraiserCondition ?? 'Certified'}',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF7B40B5)),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFBBF7D0)),
+                              ),
+                              child: const Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.shield_outlined, size: 16, color: Color(0xFF16A34A)),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '🔒 Confidential to Owner: This estimated valuation and 1-10 rating breakdown are hidden from public borrowers. General marketplace users only see your verified condition badge.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF15803D), height: 1.3),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Appraiser action button for certified item
+                    if (isViewerAppraiser || isViewerAdmin) ...[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _openAppraisalDialog(context, itemData),
+                          icon: const Icon(Icons.edit_note, color: Color(0xFF7B40B5)),
+                          label: const Text(
+                            'Update / Re-Appraise (Function & Cosmetic)',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF7B40B5)),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFF7B40B5)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ] else if (isUnderReview) ...[
                     // State 2: Currently Being Checked by Appraiser
                     Container(
@@ -822,6 +1131,25 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               ),
                             ),
                           ],
+                          if (isViewerAppraiser || isViewerAdmin) ...[
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _openAppraisalDialog(context, itemData),
+                                icon: const Icon(Icons.star_rate_rounded, color: Colors.white, size: 18),
+                                label: const Text(
+                                  'Appraise this Item (Function: 1-10, Cosmetic: 1-10)',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF7B40B5),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -915,6 +1243,25 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF7B40B5),
                                   side: const BorderSide(color: Color(0xFF7B40B5)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (isViewerAppraiser || isViewerAdmin) ...[
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _openAppraisalDialog(context, itemData),
+                                icon: const Icon(Icons.star_rate_rounded, color: Colors.white, size: 18),
+                                label: const Text(
+                                  'Appraise this Item (Function: 1-10, Cosmetic: 1-10)',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF7B40B5),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                               ),
