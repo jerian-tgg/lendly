@@ -5,6 +5,8 @@ import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
+import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.dart';
+import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/profile/presentation/pages/edit_profile.dart';
 
@@ -65,118 +67,32 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
   }
 
-  void _showRegisterAppraiserDialog(BuildContext context) {
-    final bNameController = TextEditingController();
-    final licController = TextEditingController();
-    String spec = 'Electronics & Technology';
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.verified_user, color: Color(0xFF7B40B5)),
-              SizedBox(width: 8),
-              Text('Appraiser Registration', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Upgrade your account to issue certified appraisals.', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: bNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Business / Agency Name',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: licController,
-                  decoration: InputDecoration(
-                    labelText: 'License / Accreditation No.',
-                    hintText: 'e.g. APP-2026-8891',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text('Primary Specialization', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
-                  initialValue: spec,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'Electronics & Technology', child: Text('Electronics & Tech', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Industrial Tools & Equipment', child: Text('Tools & Equipment', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Jewelry & Luxury Goods', child: Text('Jewelry & Luxury', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Vehicles & Transport', child: Text('Vehicles & Transport', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'General Merchandise', child: Text('General Merchandise', style: TextStyle(fontSize: 12))),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) spec = val;
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final bName = bNameController.text.trim();
-                final lic = licController.text.trim();
-                if (bName.isEmpty || lic.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill all required fields')),
-                  );
-                  return;
-                }
-
-                final uid = FirebaseAuth.instance.currentUser?.uid;
-                if (uid != null) {
-                  await FirebaseFirestore.instance.collection('users').doc(uid).set({
-                    'isAppraiser': true,
-                    'isBusiness': true,
-                    'accountType': 'appraiser',
-                    'businessName': bName,
-                    'licenseNumber': lic,
-                    'specialization': spec,
-                  }, SetOptions(merge: true));
-
-                  if (context.mounted) {
-                    Navigator.pop(dialogCtx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Registration successful! You are now a Professional Appraiser.'),
-                        backgroundColor: Color(0xFF7B40B5),
-                      ),
-                    );
-                    setState(() {});
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7B40B5),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Submit & Register'),
-            ),
-          ],
-        );
-      },
+  void _openBusinessRegistration(BuildContext context, [Map<String, dynamic>? data]) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RegisterBusinessScreen(existingData: data),
+      ),
     );
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _toggleAdminMode(bool currentIsAdmin) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      'isAdmin': !currentIsAdmin,
+    }, SetOptions(merge: true));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(!currentIsAdmin ? '👑 Admin privileges enabled!' : 'Admin privileges disabled.'),
+          backgroundColor: const Color(0xFF7B40B5),
+        ),
+      );
+    }
   }
 
   @override
@@ -191,6 +107,20 @@ class _UserProfilePageState extends State<UserProfilePage> {
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black87),
+        actions: [
+          if (_isSelf) ...[
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFF7B40B5)),
+              tooltip: 'Admin Verification Dashboard',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                );
+              },
+            ),
+          ],
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -288,6 +218,31 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              if (userData['isAdmin'] == true) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2D1457),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.shield, size: 13, color: Colors.amber),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Administrator',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
@@ -383,9 +338,88 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
                     const SizedBox(height: 16),
 
-                    // Appraiser Portal / Registration Section
+                    // Appraiser Portal / Business Registration Section
                     if (_isSelf) ...[
-                      if (userData['isAppraiser'] == true) ...[
+                      // Admin quick-access card if user has admin privileges
+                      if (userData['isAdmin'] == true) ...[
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2D1457), Color(0xFF4A154B)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.purple.withValues(alpha: 0.2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.admin_panel_settings, color: Colors.amber, size: 22),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Administrator Controls',
+                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                        ),
+                                        Text(
+                                          'Review & manually verify submitted BIR permits & documents',
+                                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.verified_user, color: Color(0xFF2D1457), size: 18),
+                                  label: const Text(
+                                    'Open Admin Verification Dashboard',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D1457)),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // 1. Approved / Verified Appraiser
+                      if (userData['isAppraiser'] == true || userData['businessVerificationStatus'] == 'approved') ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
@@ -422,7 +456,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                                         ),
                                         Text(
-                                          'Lic #: ${userData['licenseNumber'] ?? 'APP-2026-REG'}',
+                                          'Lic / TIN #: ${userData['licenseNumber'] ?? 'APP-2026-REG'} • Verified',
                                           style: const TextStyle(color: Colors.white70, fontSize: 12),
                                         ),
                                       ],
@@ -455,7 +489,144 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             ],
                           ),
                         ),
-                      ] else ...[
+                      ]
+                      // 2. Pending Verification
+                      else if (userData['businessVerificationStatus'] == 'pending') ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.amber.shade400, width: 1.5),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.hourglass_top_rounded, color: Colors.amber.shade900, size: 26),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Verification Under Review',
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.amber.shade900),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${userData['businessName'] ?? 'Business'} • TIN: ${userData['licenseNumber'] ?? 'Pending'}',
+                                          style: TextStyle(fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.shade200,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      'Pending Admin',
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Your BIR permits and registration papers are currently being manually reviewed by our admin team. You will be notified once verified.',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.3),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _openBusinessRegistration(context, userData),
+                                  icon: const Icon(Icons.edit_document, size: 16),
+                                  label: const Text('View / Update Submitted Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.amber.shade900,
+                                    side: BorderSide(color: Colors.amber.shade700),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ]
+                      // 3. Rejected Verification
+                      else if (userData['businessVerificationStatus'] == 'rejected') ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.red.shade300, width: 1.5),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 26),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Application Rejected',
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.redAccent),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Action required to verify your business credentials',
+                                          style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.red.shade100),
+                                ),
+                                child: Text(
+                                  'Reason from Admin: "${userData['businessRejectionReason'] ?? 'Document requirements not met.'}"',
+                                  style: const TextStyle(fontSize: 12, color: Colors.redAccent, fontStyle: FontStyle.italic),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _openBusinessRegistration(context, userData),
+                                  icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
+                                  label: const Text('Resubmit BIR Permits & Update Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.redAccent,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ]
+                      // 4. Not Registered Yet
+                      else ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
@@ -466,25 +637,34 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.business_center, color: Color(0xFF7B40B5), size: 30),
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.business_center, color: Color(0xFF7B40B5), size: 26),
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'Register as Appraiser',
+                                      'Register as Business / Appraiser',
                                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF7B40B5)),
                                     ),
+                                    const SizedBox(height: 2),
                                     Text(
-                                      'Issue official valuation certificates & build lender trust',
+                                      'Submit BIR permits & registration papers for verified badge',
                                       style: TextStyle(fontSize: 11, color: Colors.grey[700]),
                                     ),
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               ElevatedButton(
-                                onPressed: () => _showRegisterAppraiserDialog(context),
+                                onPressed: () => _openBusinessRegistration(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF7B40B5),
                                   foregroundColor: Colors.white,
@@ -496,6 +676,24 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           ),
                         ),
                       ],
+
+                      // Test helper toggle for developer/tester
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () => _toggleAdminMode(userData['isAdmin'] == true),
+                          icon: Icon(
+                            userData['isAdmin'] == true ? Icons.admin_panel_settings : Icons.admin_panel_settings_outlined,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          label: Text(
+                            userData['isAdmin'] == true ? 'Admin Mode (Active)' : 'Enable Admin Mode',
+                            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                          ),
+                        ),
+                      ),
                     ],
 
                     const SizedBox(height: 20),

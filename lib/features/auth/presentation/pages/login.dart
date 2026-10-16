@@ -47,54 +47,120 @@ class _LoginPageState extends State<LoginPage> {
   void _togglePasswordView() => setState(() => _obscureText = !_obscureText);
 
   Future<void> _login() async {
+    final rawEmail = emailController.text.trim();
+    final rawPassword = passwordController.text.trim();
+
+    if (rawEmail.isEmpty || rawPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email and password.')),
+      );
+      return;
+    }
+
+    // Direct support for credentials: email: admin, password: admin
+    final isAdminCredentials = (rawEmail.toLowerCase() == 'admin' ||
+            rawEmail.toLowerCase() == FirebaseAuthService.defaultAdminEmail) &&
+        (rawPassword.toLowerCase() == 'admin' ||
+            rawPassword == FirebaseAuthService.defaultAdminPassword);
+
+    if (isAdminCredentials) {
+      await _loginAsAdmin();
+      return;
+    }
+
+    final effectiveEmail = rawEmail.toLowerCase() == 'admin'
+        ? FirebaseAuthService.defaultAdminEmail
+        : rawEmail;
+
     setState(() => isLoading = true);
     try {
       final user = await _authService.login(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+        email: effectiveEmail,
+        password: rawPassword,
       );
 
       if (user != null) {
         await user.reload();
         final refreshedUser = FirebaseAuth.instance.currentUser;
+        final isAdminEmail = refreshedUser?.email?.toLowerCase() == FirebaseAuthService.defaultAdminEmail;
 
-        if (refreshedUser != null && refreshedUser.emailVerified) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
+        if (refreshedUser != null && (refreshedUser.emailVerified || isAdminEmail)) {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please verify your email first. Check your inbox.'),
-            ),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please verify your email first. Check your inbox.'),
+              ),
+            );
+          }
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login failed: ${e.toString()}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Login failed: ${e.toString()}")),
+        );
+      }
     }
-    setState(() => isLoading = false);
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
   }
 
-  Future<void> _signInWithGoogle() async {
+  Future<void> _loginAsAdmin() async {
     setState(() => isLoading = true);
     try {
-      final user = await _authService.signInWithGoogle();
-      if (user != null) {
+      final user = await _authService.signInOrCreateAdmin();
+      if (user != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('👑 Signed in as Administrator (admin / admin)'),
+            backgroundColor: Color(0xFF7B40B5),
+          ),
+        );
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Google sign-in failed: ${e.toString()}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Admin sign-in failed: ${e.toString()}")),
+        );
+      }
     }
-    setState(() => isLoading = false);
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => isLoading = true);
+    try {
+      final user = await _authService.signInWithGoogle();
+      if (user != null && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Google sign-in failed: ${e.toString()}")),
+        );
+      }
+    }
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -147,7 +213,7 @@ class _LoginPageState extends State<LoginPage> {
                         : const Text('Login', style: TextStyle(color: Colors.white)),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
                 SizedBox(
                   width: double.infinity,

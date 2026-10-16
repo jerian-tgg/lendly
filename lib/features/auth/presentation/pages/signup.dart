@@ -226,6 +226,27 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 if (_isAppraiser) ...[
                   const Divider(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline, size: 18, color: Color(0xFF7B40B5)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Manual Verification: You will submit photos of your BIR permits or business registration papers from your profile for admin verification before appraiser status is activated.',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF5A2A94), height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   _buildTextFormField(
                     controller: _businessNameController,
                     hint: 'Business / Agency Name',

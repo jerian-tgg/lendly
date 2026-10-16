@@ -9,6 +9,8 @@ import 'package:lendly/features/items/presentation/pages/search_screen.dart';
 import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart';
 import 'package:lendly/features/items/presentation/widgets/item_card.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
+import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.dart';
+import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -111,6 +113,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               actions: [
+                // Admin dashboard button for quick access
+                StreamBuilder<DocumentSnapshot>(
+                  stream: user != null
+                      ? FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots()
+                      : null,
+                  builder: (context, snapshot) {
+                    final data = snapshot.data?.data() as Map<String, dynamic>?;
+                    final isAdmin = data?['isAdmin'] == true ||
+                        user?.email?.toLowerCase() == FirebaseAuthService.defaultAdminEmail;
+                    if (isAdmin) {
+                      return IconButton(
+                        icon: const Icon(Icons.admin_panel_settings, color: Color(0xFF7B40B5)),
+                        tooltip: 'Admin Verification Dashboard',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                          );
+                        },
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+
                 // Notification bell icon
                 IconButton(
                   icon: const Icon(Icons.notifications_none_outlined, color: Colors.black54),

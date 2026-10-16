@@ -7,6 +7,9 @@ class FirebaseAuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
+  static const String defaultAdminEmail = 'admin@lendly.com';
+  static const String defaultAdminPassword = 'AdminPassword123!';
+
   // Sign Up with Email and Password
   Future<User?> signUp({
     required String email,
@@ -27,28 +30,37 @@ class FirebaseAuthService {
       User? user = result.user;
 
       if (user != null) {
-        // Send email verification
-        await user.sendEmailVerification();
+        final bool isSystemAdmin = email.trim().toLowerCase() == defaultAdminEmail;
+
+        // Send email verification (unless system admin)
+        if (!isSystemAdmin) {
+          await user.sendEmailVerification();
+        }
 
         // Add user details to Firestore
         await _firestore.collection('users').doc(user.uid).set({
-          'firstName': firstName,  // Save first name
-          'lastName': lastName,    // Save last name
+          'firstName': firstName,
+          'lastName': lastName,
+          'username': isSystemAdmin ? 'admin' : '$firstName$lastName'.toLowerCase(),
           'email': user.email,
-          'photoURL': 'https://...', // Placeholder, update later
-          'isVerified': false,
-          'isAppraiser': isAppraiser,
+          'photoURL': '',
+          'isVerified': isSystemAdmin,
+          'isAdmin': isSystemAdmin,
+          'role': isSystemAdmin ? 'admin' : 'user',
+          'isAppraiser': false,
           'isBusiness': isAppraiser,
-          'accountType': isAppraiser ? 'appraiser' : 'standard',
+          'accountType': isSystemAdmin ? 'admin' : (isAppraiser ? 'appraiser' : 'standard'),
+          'businessVerificationStatus': 'none',
           'businessName': businessName ?? '',
           'licenseNumber': licenseNumber ?? '',
           'specialization': specialization ?? '',
           'joinedAt': FieldValue.serverTimestamp(),
           'location': {
-            'lat': 10.123,
-            'lng': 122.345,
+            'lat': 14.5547,
+            'lng': 121.0244,
+            'name': 'Makati, Metro Manila',
           },
-          'birthdate': Timestamp.fromDate(birthdate), // Birthdate
+          'birthdate': Timestamp.fromDate(birthdate),
         });
       }
 
@@ -68,7 +80,77 @@ class FirebaseAuthService {
         email: email,
         password: password,
       );
-      return result.user;
+
+      final user = result.user;
+      if (user != null && email.trim().toLowerCase() == defaultAdminEmail) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'isAdmin': true,
+          'role': 'admin',
+        }, SetOptions(merge: true));
+      }
+
+      return user;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(e.message);
+    }
+  }
+
+  // Sign in as Admin or automatically initialize the Admin account if it does not exist
+  Future<User?> signInOrCreateAdmin({
+    String email = defaultAdminEmail,
+    String password = defaultAdminPassword,
+  }) async {
+    try {
+      // 1. Try signing in first
+      try {
+        final result = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        if (result.user != null) {
+          await _firestore.collection('users').doc(result.user!.uid).set({
+            'isAdmin': true,
+            'role': 'admin',
+          }, SetOptions(merge: true));
+          return result.user;
+        }
+      } on FirebaseAuthException catch (e) {
+        if (e.code != 'user-not-found' && e.code != 'invalid-credential' && e.code != 'wrong-password') {
+          rethrow;
+        }
+      }
+
+      // 2. If admin doesn't exist yet, create it
+      final result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = result.user;
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'firstName': 'Lendly',
+          'lastName': 'Admin',
+          'username': 'admin',
+          'email': user.email,
+          'photoURL': '',
+          'isAdmin': true,
+          'role': 'admin',
+          'isVerified': true,
+          'isAppraiser': false,
+          'isBusiness': false,
+          'accountType': 'admin',
+          'joinedAt': FieldValue.serverTimestamp(),
+          'location': {
+            'lat': 14.5547,
+            'lng': 121.0244,
+            'name': 'Makati, Metro Manila',
+          },
+          'birthdate': Timestamp.fromDate(DateTime(1995, 1, 1)),
+        }, SetOptions(merge: true));
+      }
+
+      return user;
     } on FirebaseAuthException catch (e) {
       throw Exception(e.message);
     }
