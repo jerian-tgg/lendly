@@ -97,13 +97,21 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Future<void> _toggleAdminMode(bool currentIsAdmin) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
+    final newStatus = !currentIsAdmin;
     await FirebaseFirestore.instance.collection('users').doc(uid).set({
-      'isAdmin': !currentIsAdmin,
+      'isAdmin': newStatus,
+      'isAppraiser': newStatus,
+      'isBusiness': newStatus,
+      'businessVerificationStatus': newStatus ? 'approved' : 'none',
+      'businessName': newStatus ? 'Lendly Official Appraisal & Verification' : '',
+      'licenseNumber': newStatus ? 'BIR-PRC-APPRAISER-001' : '',
+      'specialization': newStatus ? 'General Equipment, Electronics, Cameras & Tools' : '',
+      'accountType': newStatus ? 'appraiser' : 'standard',
     }, SetOptions(merge: true));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(!currentIsAdmin ? '👑 Admin privileges enabled!' : 'Admin privileges disabled.'),
+          content: Text(newStatus ? '👑 Admin & Appraiser privileges enabled!' : 'Admin privileges disabled.'),
           backgroundColor: const Color(0xFF7B40B5),
         ),
       );
@@ -252,6 +260,34 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              if (userData['isAppraiser'] == true ||
+                                  userData['businessVerificationStatus'] == 'approved' ||
+                                  userData['isAdmin'] == true) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF7B40B5).withValues(alpha: 0.15),
+                                    border: Border.all(color: const Color(0xFF7B40B5)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.verified, size: 13, color: Color(0xFF7B40B5)),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Certified Appraiser',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF7B40B5),
                                         ),
                                       ),
                                     ],
@@ -448,8 +484,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ),
                       ],
 
-                      // 1. Approved / Verified Appraiser
-                      if (userData['isAppraiser'] == true || userData['businessVerificationStatus'] == 'approved') ...[
+                      // 1. Approved / Verified Appraiser (Admins are also certified appraisers)
+                      if (userData['isAppraiser'] == true ||
+                          userData['businessVerificationStatus'] == 'approved' ||
+                          userData['isAdmin'] == true) ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),

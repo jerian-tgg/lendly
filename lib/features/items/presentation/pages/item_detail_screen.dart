@@ -202,9 +202,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
         final isOwner = ownerId.isNotEmpty && ownerId == currentUserId;
 
-        final isViewerAppraiser = _currentUserProfile?['isAppraiser'] == true ||
-            _currentUserProfile?['businessVerificationStatus'] == 'approved';
         final isViewerAdmin = _currentUserProfile?['isAdmin'] == true;
+        final isViewerAppraiser = _currentUserProfile?['isAppraiser'] == true ||
+            _currentUserProfile?['businessVerificationStatus'] == 'approved' ||
+            isViewerAdmin;
         final isCertifyingAppraiser = itemData['certifiedByAppraiserId'] != null &&
             itemData['certifiedByAppraiserId'] == currentUserId;
         final canViewPrivateAppraisal = isOwner || isCertifyingAppraiser || isViewerAdmin;
