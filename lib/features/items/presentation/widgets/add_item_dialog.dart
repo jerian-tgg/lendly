@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
 import 'package:lendly/features/items/domain/entities/item.dart';
 
@@ -22,14 +24,18 @@ class _AddItemDialogState extends State<AddItemDialog> {
   late TextEditingController _descController;
   late TextEditingController _priceController;
   late TextEditingController _quantityController;
+  late TextEditingController _addressController;
+  late TextEditingController _cityController;
   final ImagePicker _picker = ImagePicker();
 
   DateTimeRange? _availability;
-  String _condition = 'Like New';
+  String _condition = 'Pending Appraisal';
   String _selectedCategory = 'Electronics';
   List<String> _imagePaths = [];
   bool _photoError = false;
   bool _isSubmitting = false;
+  double? _itemLatitude;
+  double? _itemLongitude;
 
   final List<String> _categories = [
     'Electronics',
@@ -41,13 +47,6 @@ class _AddItemDialogState extends State<AddItemDialog> {
     'Other',
   ];
 
-  final List<String> _conditions = [
-    'Like New',
-    'Good',
-    'Fair',
-    'Poor',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -56,10 +55,33 @@ class _AddItemDialogState extends State<AddItemDialog> {
     _descController = TextEditingController(text: widget.initialData?['description'] ?? '');
     _priceController = TextEditingController(text: widget.initialData?['price']?.toString() ?? '');
     _quantityController = TextEditingController(text: widget.initialData?['quantity']?.toString() ?? '1');
-    _condition = widget.initialData?['condition'] ?? 'Like New';
+    _condition = widget.initialData?['conditionGrade'] ?? widget.initialData?['condition'] ?? 'Pending Appraisal';
     _selectedCategory = widget.initialData?['category'] ?? 'Electronics';
 
+    String initialAddress = widget.initialData?['address']?.toString() ?? '';
+    String initialCity = widget.initialData?['city']?.toString() ?? '';
+
+    // If address or city not split yet, parse from composite location
+    if (initialAddress.isEmpty && initialCity.isEmpty && widget.initialData?['location'] != null) {
+      final rawLoc = widget.initialData!['location'].toString();
+      if (rawLoc.contains(',')) {
+        final lastComma = rawLoc.lastIndexOf(',');
+        initialAddress = rawLoc.substring(0, lastComma).trim();
+        initialCity = rawLoc.substring(lastComma + 1).trim();
+      } else {
+        initialCity = rawLoc;
+      }
+    }
+
+    _addressController = TextEditingController(text: initialAddress);
+    _cityController = TextEditingController(text: initialCity);
+
     if (widget.initialData != null) {
+      _itemLatitude = (widget.initialData!['latitude'] as num?)?.toDouble() ??
+          (widget.initialData!['lat'] as num?)?.toDouble();
+      _itemLongitude = (widget.initialData!['longitude'] as num?)?.toDouble() ??
+          (widget.initialData!['lng'] as num?)?.toDouble();
+
       final fromTimestamp = widget.initialData!['availableFrom'];
       final toTimestamp = widget.initialData!['availableTo'];
 
@@ -73,7 +95,59 @@ class _AddItemDialogState extends State<AddItemDialog> {
       if (images != null && images is List<dynamic>) {
         _imagePaths = List<String>.from(images);
       }
+    } else {
+      _fetchUserDefaultLocation();
     }
+  }
+
+  Future<void> _fetchUserDefaultLocation() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data();
+        final locData = data?['location'];
+        final coords = LocationHelper.parseCoordinates(locData);
+        if (coords != null) {
+          setState(() {
+            _itemLatitude = coords.latitude;
+            _itemLongitude = coords.longitude;
+            if (_cityController.text.isEmpty) {
+              _cityController.text = coords.name ??
+                  '${coords.latitude.toStringAsFixed(2)}, ${coords.longitude.toStringAsFixed(2)}';
+            }
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _useProfileLocation() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data();
+        final locData = data?['location'];
+        final coords = LocationHelper.parseCoordinates(locData);
+        if (coords != null) {
+          setState(() {
+            _itemLatitude = coords.latitude;
+            _itemLongitude = coords.longitude;
+            _cityController.text = coords.name ??
+                '${coords.latitude.toStringAsFixed(2)}, ${coords.longitude.toStringAsFixed(2)}';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('📍 Loaded location from profile: ${_cityController.text}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -82,6 +156,8 @@ class _AddItemDialogState extends State<AddItemDialog> {
     _descController.dispose();
     _priceController.dispose();
     _quantityController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
     super.dispose();
   }
 
@@ -182,6 +258,22 @@ class _AddItemDialogState extends State<AddItemDialog> {
       }
       final now = DateTime.now();
 
+      final address = _addressController.text.trim();
+      final city = _cityController.text.trim();
+      String fullLocation = '';
+      if (address.isNotEmpty && city.isNotEmpty) {
+        fullLocation = '$address, $city';
+      } else if (address.isNotEmpty) {
+        fullLocation = address;
+      } else if (city.isNotEmpty) {
+        fullLocation = city;
+      }
+
+      final parsedFromCity = LocationHelper.parseCoordinates(city);
+      final parsedFromFull = LocationHelper.parseCoordinates(fullLocation);
+      final finalLat = parsedFromCity?.latitude ?? parsedFromFull?.latitude ?? _itemLatitude;
+      final finalLng = parsedFromCity?.longitude ?? parsedFromFull?.longitude ?? _itemLongitude;
+
       final item = Item(
         id: widget.itemId ?? '',
         name: _nameController.text.trim(),
@@ -201,6 +293,11 @@ class _AddItemDialogState extends State<AddItemDialog> {
                 ? widget.initialData!['createdAt']
                 : (widget.initialData!['createdAt'] as dynamic).toDate()),
         isAvailable: true,
+        location: fullLocation.isNotEmpty ? fullLocation : (parsedFromCity?.name ?? 'Nearby'),
+        address: address,
+        city: city,
+        latitude: finalLat,
+        longitude: finalLng,
       );
 
       if (widget.itemId != null) {
@@ -216,7 +313,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🎉 Item added successfully with camera verification!')),
+            const SnackBar(content: Text('🎉 Item listed successfully with camera verification & location!')),
           );
         }
       }
@@ -238,19 +335,25 @@ class _AddItemDialogState extends State<AddItemDialog> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.itemId != null;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxDialogHeight = screenHeight * 0.90;
 
     return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      elevation: 8,
+      clipBehavior: Clip.antiAlias,
       backgroundColor: Colors.white,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
+        constraints: BoxConstraints(
+          maxWidth: 540,
+          maxHeight: maxDialogHeight,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Redesigned Header Banner
+            // 1. Premium Header Banner
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
@@ -270,7 +373,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                     child: const Icon(
                       Icons.camera_enhance_rounded,
                       color: Colors.white,
-                      size: 24,
+                      size: 22,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -282,241 +385,236 @@ class _AddItemDialogState extends State<AddItemDialog> {
                           isEditing ? 'Edit Item' : 'Add New Item',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 2),
                         const Text(
-                          'Camera verification required',
+                          'Live camera photo & pickup location required',
                           style: TextStyle(
                             color: Colors.white70,
-                            fontSize: 12,
+                            fontSize: 11,
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
 
-            // Scrollable Form Body
+            // 2. Responsive Scrollable Form Body (No Overflow!)
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Camera-Only Required Image Upload Box
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _photoError ? Colors.red.shade50 : const Color(0xFFF9F5FE),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _photoError ? Colors.redAccent : const Color(0xFF7B40B5).withValues(alpha: 0.4),
-                            width: _photoError ? 2 : 1.5,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < 440;
+
+                  return SingleChildScrollView(
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // SECTION 1: Camera-Only Photo Capture Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: _photoError ? Colors.red.shade50 : const Color(0xFFF9F5FE),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: _photoError ? Colors.redAccent : const Color(0xFF7B40B5).withValues(alpha: 0.35),
+                                width: _photoError ? 2 : 1.2,
+                              ),
+                            ),
+                            child: Column(
                               children: [
-                                const Icon(Icons.camera_alt_rounded, color: Color(0xFF7B40B5), size: 20),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'Item Photos (Camera Only)',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Color(0xFF7B40B5),
-                                  ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.camera_alt_rounded, color: Color(0xFF7B40B5), size: 18),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'Item Photos (Camera Only)',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: Color(0xFF7B40B5),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.redAccent,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'REQUIRED',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.redAccent,
-                                    borderRadius: BorderRadius.circular(8),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Snap live photos using camera to verify physical condition.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Thumbnails list
+                                if (_imagePaths.isNotEmpty) ...[
+                                  SizedBox(
+                                    height: 84,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: _imagePaths.length,
+                                      itemBuilder: (context, index) {
+                                        final path = _imagePaths[index];
+                                        final isNetwork = path.startsWith('http');
+                                        return Container(
+                                          margin: const EdgeInsets.only(right: 8),
+                                          child: Stack(
+                                            children: [
+                                              ClipRRect(
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: isNetwork
+                                                    ? Image.network(path, width: 76, height: 76, fit: BoxFit.cover)
+                                                    : Image.file(File(path), width: 76, height: 76, fit: BoxFit.cover),
+                                              ),
+                                              Positioned(
+                                                top: 2,
+                                                right: 2,
+                                                child: InkWell(
+                                                  onTap: () => _removePhoto(index),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(3),
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.black87,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Icon(Icons.close, size: 12, color: Colors.white),
+                                                  ),
+                                                ),
+                                              ),
+                                              Positioned(
+                                                bottom: 3,
+                                                left: 3,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(2),
+                                                  decoration: const BoxDecoration(
+                                                    color: Colors.black87,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(Icons.camera_alt, size: 10, color: Colors.amber),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
-                                  child: const Text(
-                                    'REQUIRED',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
+                                  const SizedBox(height: 8),
+                                ],
+
+                                // Snap Photo Button
+                                ElevatedButton.icon(
+                                  onPressed: _takeCameraPhoto,
+                                  icon: const Icon(Icons.photo_camera_rounded, size: 16),
+                                  label: Text(
+                                    _imagePaths.isEmpty ? 'Take Photo with Camera' : 'Snap Another Photo',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF7B40B5),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
                                   ),
                                 ),
+
+                                if (_photoError) ...[
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    '⚠️ At least 1 live camera photo is required to submit.',
+                                    style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Please snap a live photo using your camera to verify your item.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                            ),
-                            const SizedBox(height: 12),
 
-                            // Camera Photo Thumbnails List
-                            if (_imagePaths.isNotEmpty)
-                              SizedBox(
-                                height: 90,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: _imagePaths.length,
-                                  itemBuilder: (context, index) {
-                                    final path = _imagePaths[index];
-                                    final isNetwork = path.startsWith('http');
-                                    return Container(
-                                      margin: const EdgeInsets.only(right: 10),
-                                      child: Stack(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: isNetwork
-                                                ? Image.network(
-                                                    path,
-                                                    width: 80,
-                                                    height: 80,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (_, _, _) => Container(
-                                                      width: 80,
-                                                      height: 80,
-                                                      color: Colors.grey[200],
-                                                      child: const Icon(Icons.broken_image, size: 24, color: Colors.grey),
-                                                    ),
-                                                  )
-                                                : Image.file(File(path), width: 80, height: 80, fit: BoxFit.cover),
-                                          ),
-                                          Positioned(
-                                            top: 2,
-                                            right: 2,
-                                            child: InkWell(
-                                              onTap: () => _removePhoto(index),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(3),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.black.withValues(alpha: 0.7),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: const Icon(Icons.close, size: 14, color: Colors.white),
-                                              ),
-                                            ),
-                                          ),
-                                          Positioned(
-                                            bottom: 2,
-                                            left: 2,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                              decoration: BoxDecoration(
-                                                color: Colors.black.withValues(alpha: 0.6),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: const Row(
-                                                children: [
-                                                  Icon(Icons.camera_alt, size: 9, color: Colors.amber),
-                                                  SizedBox(width: 2),
-                                                  Text('Camera', style: TextStyle(color: Colors.white, fontSize: 8)),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-
-                            const SizedBox(height: 8),
-
-                            // Take Photo Button (Camera only!)
-                            ElevatedButton.icon(
-                              onPressed: _takeCameraPhoto,
-                              icon: const Icon(Icons.photo_camera_rounded, size: 18),
-                              label: Text(_imagePaths.isEmpty ? 'Take Photo with Camera' : 'Snap Additional Photo'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF7B40B5),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                            ),
-
-                            if (_photoError) ...[
-                              const SizedBox(height: 6),
-                              const Text(
-                                '⚠️ You must take at least 1 photo using the camera before submitting.',
-                                style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      // Item Name Input
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Item Name',
-                          hintText: 'e.g. Sony DSLR Camera',
-                          prefixIcon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF7B40B5)),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF7B40B5), width: 2),
                           ),
-                        ),
-                        validator: (value) => (value == null || value.trim().isEmpty) ? 'Item name is required' : null,
-                      ),
 
-                      const SizedBox(height: 14),
+                          const SizedBox(height: 16),
 
-                      // Description Input
-                      TextFormField(
-                        controller: _descController,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          labelText: 'Description',
-                          hintText: 'Describe your item features, condition, guidelines...',
-                          prefixIcon: const Icon(Icons.description_outlined, color: Color(0xFF7B40B5)),
-                          alignLabelWithHint: true,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF7B40B5), width: 2),
+                          // SECTION 2: General Information
+                          const Text(
+                            'Item Details',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
                           ),
-                        ),
-                      ),
+                          const SizedBox(height: 8),
 
-                      const SizedBox(height: 14),
+                          // Item Name Input
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              labelText: 'Item Name',
+                              hintText: 'e.g. Sony Alpha A7 III Camera',
+                              prefixIcon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF7B40B5), size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            ),
+                            validator: (value) => (value == null || value.trim().isEmpty) ? 'Item name is required' : null,
+                          ),
 
-                      // Category & Price Inputs (Row)
-                      Row(
-                        children: [
-                          // Category Dropdown
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
+                          const SizedBox(height: 12),
+
+                          // Description Input
+                          TextFormField(
+                            controller: _descController,
+                            maxLines: 2,
+                            decoration: InputDecoration(
+                              labelText: 'Description',
+                              hintText: 'Describe item features, included accessories, usage guidelines...',
+                              prefixIcon: const Icon(Icons.description_outlined, color: Color(0xFF7B40B5), size: 20),
+                              alignLabelWithHint: true,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // SECTION 3: Category, Price, & Quantity (Adaptive Stacking!)
+                          if (isCompact) ...[
+                            // Compact Vertical Layout (Guarantees NO Row Overflow on small screens!)
+                            DropdownButtonFormField<String>(
                               initialValue: _selectedCategory,
+                              isExpanded: true,
                               decoration: InputDecoration(
                                 labelText: 'Category',
-                                prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF7B40B5)),
+                                prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF7B40B5), size: 20),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               ),
                               items: _categories.map((String value) {
                                 return DropdownMenuItem<String>(
@@ -526,107 +624,389 @@ class _AddItemDialogState extends State<AddItemDialog> {
                               }).toList(),
                               onChanged: (value) => setState(() => _selectedCategory = value!),
                             ),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          // Price Input
-                          Expanded(
-                            child: TextFormField(
-                              controller: _priceController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: InputDecoration(
-                                labelText: 'Price / Day',
-                                prefixText: '₱ ',
-                                prefixIcon: const Icon(Icons.payments_outlined, color: Color(0xFF7B40B5)),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              validator: (value) => (value == null || value.trim().isEmpty) ? 'Price required' : null,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Quantity & Condition Inputs
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _quantityController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'Quantity',
-                                prefixIcon: const Icon(Icons.inventory_2_outlined, color: Color(0xFF7B40B5)),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _condition,
-                              decoration: InputDecoration(
-                                labelText: 'Condition',
-                                prefixIcon: const Icon(Icons.stars_outlined, color: Color(0xFF7B40B5)),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              items: _conditions.map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value, style: const TextStyle(fontSize: 13)),
-                                );
-                              }).toList(),
-                              onChanged: (value) => setState(() => _condition = value!),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Availability Range Button
-                      InkWell(
-                        onTap: _selectDates,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade400),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calendar_month_outlined, color: Color(0xFF7B40B5)),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  _availability != null
-                                      ? 'Availability: ${DateFormat('MMM d').format(_availability!.start)} - ${DateFormat('MMM d').format(_availability!.end)}'
-                                      : 'Select Available Date Range (Optional)',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: _availability != null ? Colors.black87 : Colors.grey[600],
-                                    fontWeight: _availability != null ? FontWeight.bold : FontWeight.normal,
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 6,
+                                  child: TextFormField(
+                                    controller: _priceController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(
+                                      labelText: 'Price / Day',
+                                      prefixText: '₱ ',
+                                      prefixIcon: const Icon(Icons.payments_outlined, color: Color(0xFF7B40B5), size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                    validator: (value) => (value == null || value.trim().isEmpty) ? 'Price required' : null,
                                   ),
                                 ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  flex: 4,
+                                  child: TextFormField(
+                                    controller: _quantityController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      labelText: 'Qty',
+                                      prefixIcon: const Icon(Icons.inventory_2_outlined, color: Color(0xFF7B40B5), size: 18),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.15)),
                               ),
-                              const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
-                            ],
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.verified_outlined, size: 16, color: Color(0xFF7B40B5)),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Official condition rating is evaluated and assigned by a certified appraiser.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else ...[
+                            // Wide Screen Side-by-Side Rows
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 5,
+                                  child: DropdownButtonFormField<String>(
+                                    initialValue: _selectedCategory,
+                                    isExpanded: true,
+                                    decoration: InputDecoration(
+                                      labelText: 'Category',
+                                      prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF7B40B5), size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                    items: _categories.map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value, style: const TextStyle(fontSize: 13)),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) => setState(() => _selectedCategory = value!),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  flex: 4,
+                                  child: TextFormField(
+                                    controller: _priceController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(
+                                      labelText: 'Price / Day',
+                                      prefixText: '₱ ',
+                                      prefixIcon: const Icon(Icons.payments_outlined, color: Color(0xFF7B40B5), size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                    validator: (value) => (value == null || value.trim().isEmpty) ? 'Price required' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  flex: 3,
+                                  child: TextFormField(
+                                    controller: _quantityController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      labelText: 'Qty',
+                                      prefixIcon: const Icon(Icons.inventory_2_outlined, color: Color(0xFF7B40B5), size: 18),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.15)),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.verified_outlined, size: 16, color: Color(0xFF7B40B5)),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Official condition rating is evaluated and assigned by a certified appraiser.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 14),
+
+                          // Available Dates Button
+                          InkWell(
+                            onTap: _selectDates,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade400),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.calendar_month_outlined, color: Color(0xFF7B40B5), size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _availability != null
+                                          ? 'Availability: ${DateFormat('MMM d').format(_availability!.start)} - ${DateFormat('MMM d').format(_availability!.end)}'
+                                          : 'Select Available Dates (Optional)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: _availability != null ? Colors.black87 : Colors.grey[600],
+                                        fontWeight: _availability != null ? FontWeight.bold : FontWeight.normal,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+
+                          const SizedBox(height: 18),
+
+                          // SECTION 4: Dedicated Item Location & Address Card (User Request Highlight!)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9F5FE),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(Icons.location_on, color: Color(0xFF7B40B5), size: 18),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Item Pickup Location & Address',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: Color(0xFF7B40B5),
+                                            ),
+                                          ),
+                                          Text(
+                                            'Used for marketplace search & radius distance',
+                                            style: TextStyle(fontSize: 10, color: Colors.grey),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Quick Autofill / Preset Buttons
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  children: [
+                                    InkWell(
+                                      onTap: _useProfileLocation,
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.4)),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.person_pin_circle_outlined, size: 13, color: Color(0xFF7B40B5)),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Use Profile Address',
+                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    PopupMenuButton<GeoLocation>(
+                                      tooltip: 'Choose Preset City',
+                                      onSelected: (loc) {
+                                        setState(() {
+                                          _cityController.text = loc.name ?? '${loc.latitude}, ${loc.longitude}';
+                                          _itemLatitude = loc.latitude;
+                                          _itemLongitude = loc.longitude;
+                                        });
+                                      },
+                                      itemBuilder: (context) {
+                                        return LocationHelper.presetLocations.map((loc) {
+                                          return PopupMenuItem<GeoLocation>(
+                                            value: loc,
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.location_city, size: 14, color: Color(0xFF7B40B5)),
+                                                const SizedBox(width: 6),
+                                                Text(loc.name ?? '${loc.latitude}, ${loc.longitude}', style: const TextStyle(fontSize: 12)),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList();
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: Colors.grey.shade300),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.map_outlined, size: 13, color: Colors.grey),
+                                            SizedBox(width: 4),
+                                            Text('Choose City', style: TextStyle(fontSize: 11, color: Colors.black87)),
+                                            Icon(Icons.arrow_drop_down, size: 14, color: Colors.grey),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                // Street Address / Landmark Input
+                                TextFormField(
+                                  controller: _addressController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Street Address / Pickup Landmark',
+                                    hintText: 'e.g. Unit 4B, Sunset Blvd, Brgy. Mandalagan',
+                                    prefixIcon: const Icon(Icons.home_outlined, color: Color(0xFF7B40B5), size: 18),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                                  ),
+                                  validator: (val) {
+                                    if ((val == null || val.trim().isEmpty) && _cityController.text.trim().isEmpty) {
+                                      return 'Please provide street address or city for pickup';
+                                    }
+                                    return null;
+                                  },
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // City / Province Input
+                                TextFormField(
+                                  controller: _cityController,
+                                  decoration: InputDecoration(
+                                    labelText: 'City / Municipality / Province',
+                                    hintText: 'e.g. Bacolod City, Negros Occidental',
+                                    prefixIcon: const Icon(Icons.location_city_outlined, color: Color(0xFF7B40B5), size: 18),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                                  ),
+                                  onChanged: (val) {
+                                    final coords = LocationHelper.parseCoordinates(val);
+                                    if (coords != null) {
+                                      setState(() {
+                                        _itemLatitude = coords.latitude;
+                                        _itemLongitude = coords.longitude;
+                                      });
+                                    }
+                                  },
+                                ),
+
+                                // Live Geographical Coordinates Detection Badge
+                                if (_itemLatitude != null && _itemLongitude != null) ...[
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.green.shade200),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.check_circle_outline, color: Colors.green, size: 14),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            'GPS Coordinates: ${_itemLatitude!.toStringAsFixed(3)}, ${_itemLongitude!.toStringAsFixed(3)} (Radius Search Ready)',
+                                            style: TextStyle(fontSize: 10, color: Colors.green.shade800, fontWeight: FontWeight.w500),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
 
-            // Form Footer Buttons
+            // 3. Pinned Action Footer
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.grey[50],
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
@@ -639,28 +1019,29 @@ class _AddItemDialogState extends State<AddItemDialog> {
                     onPressed: _isSubmitting ? null : () => Navigator.pop(context),
                     child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
                     onPressed: _isSubmitting ? null : _submitForm,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Icon(isEditing ? Icons.save_outlined : Icons.add_circle_outline, size: 16),
+                    label: Text(
+                      isEditing ? 'Update Item' : 'List Item',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF7B40B5),
                       foregroundColor: Colors.white,
-                      elevation: 2,
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                      elevation: 1,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : Text(
-                            isEditing ? 'Update Item' : 'Add Item',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
                   ),
                 ],
               ),

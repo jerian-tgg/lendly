@@ -48,23 +48,46 @@ class _LoginPageState extends State<LoginPage> {
   void _togglePasswordView() => setState(() => _obscureText = !_obscureText);
 
   Future<void> _login() async {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
+    final rawEmail = emailController.text.trim();
+    final rawPassword = passwordController.text.trim();
+
+    if (rawEmail.isEmpty || rawPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email and password.')),
+      );
+      return;
+    }
+
+    // Direct support for credentials: email: admin, password: admin
+    final isAdminCredentials = (rawEmail.toLowerCase() == 'admin' ||
+            rawEmail.toLowerCase() == FirebaseAuthService.defaultAdminEmail) &&
+        (rawPassword.toLowerCase() == 'admin' ||
+            rawPassword == FirebaseAuthService.defaultAdminPassword);
+
+    if (isAdminCredentials) {
+      await _loginAsAdmin();
+      return;
+    }
+
+    final effectiveEmail = rawEmail.toLowerCase() == 'admin'
+        ? FirebaseAuthService.defaultAdminEmail
+        : rawEmail;
 
     setState(() => isLoading = true);
     try {
       final user = await _authService.login(
-        email: email,
-        password: password,
+        email: effectiveEmail,
+        password: rawPassword,
       );
 
       if (user != null) {
         await user.reload();
         final refreshedUser = FirebaseAuth.instance.currentUser;
+        final isAdminEmail = refreshedUser?.email?.toLowerCase() == FirebaseAuthService.defaultAdminEmail;
 
         if (!mounted) return;
 
-        if (refreshedUser != null && refreshedUser.emailVerified) {
+        if (refreshedUser != null && (refreshedUser.emailVerified || isAdminEmail)) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -82,6 +105,34 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Login failed: ${e.toString()}")),
       );
+    }
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _loginAsAdmin() async {
+    setState(() => isLoading = true);
+    try {
+      final user = await _authService.signInOrCreateAdmin();
+      if (user != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('👑 Signed in as Administrator (admin / admin)'),
+            backgroundColor: Color(0xFF7B40B5),
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Admin sign-in failed: ${e.toString()}")),
+        );
+      }
     }
     if (mounted) {
       setState(() => isLoading = false);
@@ -151,6 +202,7 @@ class _LoginPageState extends State<LoginPage> {
                         : const Text('Login', style: TextStyle(color: Colors.white)),
                   ),
                 ),
+
                 const SizedBox(height: 24),
 
                 RichText(

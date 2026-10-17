@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
@@ -188,7 +189,11 @@ class ItemCard extends StatelessWidget {
     if (itemData['isFeatured'] == true) return RibbonType.featured;
     if (itemData['isNew'] == true || itemData['ribbon'] == 'NEW') return RibbonType.newArrival;
     if (itemData['isPopular'] == true || itemData['ribbon'] == 'POPULAR') return RibbonType.popular;
-    if ((itemData['rating'] as num?) != null && (itemData['rating'] as num) >= 4.8) return RibbonType.topRated;
+    if ((itemData['rating'] as num?) != null &&
+        (itemData['rating'] as num) >= 4.5 &&
+        ((itemData['reviewCount'] as num?) ?? 0) >= 2) {
+      return RibbonType.topRated;
+    }
     return null;
   }
 
@@ -197,16 +202,22 @@ class ItemCard extends StatelessWidget {
     final ownerId = itemData['ownerId'] as String? ?? '';
     final ownerName = itemData['ownerName'] ?? 'Lender';
     final category = itemData['category'] as String? ?? 'General';
-    final condition = itemData['condition'] as String? ?? 'Good';
-    final rating = (itemData['rating'] as num?)?.toDouble() ?? 4.8;
+    final isCertified = itemData['appraisalStatus'] == 'certified';
+    final condition = isCertified
+        ? (itemData['conditionGrade'] as String? ?? itemData['condition'] as String? ?? 'Certified')
+        : ((itemData['appraisalStatus'] == 'in_review' || itemData['appraisalRequested'] == true)
+            ? 'Under Review'
+            : (itemData['conditionGrade'] as String? ?? 'Pending Appraisal'));
+    final ratingVal = (itemData['rating'] as num?)?.toDouble() ?? 0.0;
+    final reviewCount = (itemData['reviewCount'] as num?)?.toInt() ?? 0;
     final ribbonType = _getRibbonType();
 
-    // Distance calculation/display
-    final distanceKm = (itemData['distanceKm'] as num?)?.toDouble() ??
-        (itemId.hashCode % 15 + 1.2);
-    final locationText = itemData['location'] is String && (itemData['location'] as String).isNotEmpty
-        ? itemData['location']
-        : '${distanceKm.toStringAsFixed(1)} km away';
+    // Distance calculation/display (Functional real-world distance from LocationHelper)
+    final distanceKm = (itemData['distanceKm'] as num?)?.toDouble();
+    final locationText = LocationHelper.formatLocationWithDistance(
+      locationData: itemData['location'],
+      distanceKm: distanceKm,
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -478,22 +489,28 @@ class ItemCard extends StatelessWidget {
                         // Star Rating Row
                         Row(
                           children: [
-                            Icon(Icons.star, size: 12, color: Colors.amber[700]),
+                            Icon(
+                              reviewCount > 0 ? Icons.star_rounded : Icons.star_outline_rounded,
+                              size: 13,
+                              color: reviewCount > 0 ? Colors.amber[700] : Colors.grey.shade400,
+                            ),
                             const SizedBox(width: 2),
                             Text(
-                              '$rating',
-                              style: const TextStyle(
+                              reviewCount > 0 ? ratingVal.toStringAsFixed(1) : 'New',
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 10,
+                                color: reviewCount > 0 ? Colors.black87 : Colors.grey[600],
                               ),
                             ),
-                            Text(
-                              ' (12)',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
+                            if (reviewCount > 0)
+                              Text(
+                                ' ($reviewCount)',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
                               ),
-                            ),
                           ],
                         ),
 

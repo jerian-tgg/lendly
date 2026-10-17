@@ -7,6 +7,9 @@ class FirebaseAuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
+  static const String defaultAdminEmail = 'admin@lendly.com';
+  static const String defaultAdminPassword = 'AdminPassword123!';
+
   // Sign Up with Email and Password
   Future<User?> signUp({
     required String email,
@@ -43,8 +46,12 @@ class FirebaseAuthService {
       User? user = result.user;
 
       if (user != null) {
-        // Send email verification
-        await user.sendEmailVerification();
+        final bool isSystemAdmin = email.trim().toLowerCase() == defaultAdminEmail;
+
+        // Send email verification (unless system admin)
+        if (!isSystemAdmin) {
+          await user.sendEmailVerification();
+        }
 
         // Add user details to Firestore
         await _firestore.collection('users').doc(user.uid).set({
@@ -54,6 +61,7 @@ class FirebaseAuthService {
           'lastName': lastName,
           'suffix': suffix,
           'displayName': '$firstName $lastName'.trim(),
+          'username': isSystemAdmin ? 'admin' : '$firstName$lastName'.toLowerCase(),
 
           // ── Personal ──
           'birthdate': Timestamp.fromDate(birthdate),
@@ -88,20 +96,24 @@ class FirebaseAuthService {
 
           // ── Account ──
           'photoURL': '',
-          'isVerified': false,
-          'isAppraiser': isAppraiser,
-          'isBusiness': isAppraiser,
-          'accountType': isAppraiser ? 'appraiser' : 'standard',
-          'businessName': businessName ?? '',
-          'licenseNumber': licenseNumber ?? '',
-          'specialization': specialization ?? '',
+          'isVerified': isSystemAdmin,
+          'isAdmin': isSystemAdmin,
+          'role': isSystemAdmin ? 'admin' : 'user',
+          'isAppraiser': isSystemAdmin ? true : isAppraiser,
+          'isBusiness': isSystemAdmin ? true : isAppraiser,
+          'accountType': isSystemAdmin ? 'appraiser' : (isAppraiser ? 'appraiser' : 'standard'),
+          'businessVerificationStatus': isSystemAdmin ? 'approved' : 'none',
+          'businessName': isSystemAdmin ? 'Lendly Official Appraisal & Verification' : (businessName ?? ''),
+          'licenseNumber': isSystemAdmin ? 'BIR-PRC-APPRAISER-001' : (licenseNumber ?? ''),
+          'specialization': isSystemAdmin ? 'General Equipment, Electronics, Cameras & Tools' : (specialization ?? ''),
           'joinedAt': FieldValue.serverTimestamp(),
 
-          // ── Location (default lat/lng/geohash — updated when user grants GPS permission) ──
+          // ── Location ──
           'location': {
-            'lat': 0.0,
-            'lng': 0.0,
-            'geohash': '', // populated when geo-radius feature is activated
+            'lat': 14.5547,
+            'lng': 121.0244,
+            'name': city.isNotEmpty ? city : 'Makati, Metro Manila',
+            'geohash': '',
           },
         });
       }
@@ -127,7 +139,8 @@ class FirebaseAuthService {
       // Check if the user has been blocked by an admin (skip for admins)
       if (user != null &&
           user.email != 'palenciajerjer28@gmail.com' &&
-          user.email != 'admin-portal@lendly.internal') {
+          user.email != 'admin-portal@lendly.internal' &&
+          user.email != defaultAdminEmail) {
         final doc = await _firestore.collection('users').doc(user.uid).get();
         if (doc.exists && doc.data()?['isBlocked'] == true) {
           await _auth.signOut(); // Sign them back out immediately
@@ -135,6 +148,92 @@ class FirebaseAuthService {
             'Your account has been blocked. Please contact support.'
           );
         }
+      }
+
+      if (user != null && email.trim().toLowerCase() == defaultAdminEmail) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'isAdmin': true,
+          'role': 'admin',
+          'isAppraiser': true,
+          'isBusiness': true,
+          'businessVerificationStatus': 'approved',
+          'businessName': 'Lendly Official Appraisal & Verification',
+          'licenseNumber': 'BIR-PRC-APPRAISER-001',
+          'specialization': 'General Equipment, Electronics, Cameras & Tools',
+          'accountType': 'appraiser',
+        }, SetOptions(merge: true));
+      }
+
+      return user;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(e.message);
+    }
+  }
+
+  // Sign in as Admin or automatically initialize the Admin account if it does not exist
+  Future<User?> signInOrCreateAdmin({
+    String email = defaultAdminEmail,
+    String password = defaultAdminPassword,
+  }) async {
+    try {
+      // 1. Try signing in first
+      try {
+        final result = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        if (result.user != null) {
+          await _firestore.collection('users').doc(result.user!.uid).set({
+            'isAdmin': true,
+            'role': 'admin',
+            'isAppraiser': true,
+            'isBusiness': true,
+            'businessVerificationStatus': 'approved',
+            'businessName': 'Lendly Official Appraisal & Verification',
+            'licenseNumber': 'BIR-PRC-APPRAISER-001',
+            'specialization': 'General Equipment, Electronics, Cameras & Tools',
+            'accountType': 'appraiser',
+          }, SetOptions(merge: true));
+          return result.user;
+        }
+      } on FirebaseAuthException catch (e) {
+        if (e.code != 'user-not-found' && e.code != 'invalid-credential' && e.code != 'wrong-password') {
+          rethrow;
+        }
+      }
+
+      // 2. If admin doesn't exist yet, create it
+      final result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = result.user;
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'firstName': 'Lendly',
+          'lastName': 'Admin',
+          'username': 'admin',
+          'email': user.email,
+          'photoURL': '',
+          'isAdmin': true,
+          'role': 'admin',
+          'isVerified': true,
+          'isAppraiser': true,
+          'isBusiness': true,
+          'accountType': 'appraiser',
+          'businessVerificationStatus': 'approved',
+          'businessName': 'Lendly Official Appraisal & Verification',
+          'licenseNumber': 'BIR-PRC-APPRAISER-001',
+          'specialization': 'General Equipment, Electronics, Cameras & Tools',
+          'joinedAt': FieldValue.serverTimestamp(),
+          'location': {
+            'lat': 14.5547,
+            'lng': 121.0244,
+            'name': 'Makati, Metro Manila',
+          },
+          'birthdate': Timestamp.fromDate(DateTime(1995, 1, 1)),
+        }, SetOptions(merge: true));
       }
 
       return user;

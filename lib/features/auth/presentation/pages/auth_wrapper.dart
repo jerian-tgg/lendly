@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/features/items/presentation/pages/home_screen.dart';
 
@@ -15,7 +16,8 @@ class AuthWrapper extends StatelessWidget {
           final user = snapshot.data;
 
           if (user != null) {
-            if (!user.emailVerified) {
+            final isAdmin = user.email?.toLowerCase() == FirebaseAuthService.defaultAdminEmail;
+            if (!user.emailVerified && !isAdmin) {
               return LoginPage(
                 initialEmail: user.email,
                 showVerificationMessage: true,

@@ -15,6 +15,11 @@ class Item {
   final String ownerName;
   final DateTime createdAt;
   final bool isAvailable;
+  final String? location;
+  final double? latitude;
+  final double? longitude;
+  final String? address;
+  final String? city;
 
   Item({
     required this.id,
@@ -31,6 +36,11 @@ class Item {
     required this.ownerName,
     required this.createdAt,
     required this.isAvailable,
+    this.location,
+    this.latitude,
+    this.longitude,
+    this.address,
+    this.city,
   });
 
   factory Item.fromFirestore(DocumentSnapshot doc) {
@@ -48,7 +58,7 @@ class Item {
       availableTo: data['availableTo'] != null
           ? (data['availableTo'] as Timestamp).toDate()
           : DateTime.now(),
-      condition: data['condition'] ?? 'Like New',
+      condition: data['condition'] ?? 'Pending Appraisal',
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
       ownerId: data['ownerId'] ?? '',
       ownerName: data['ownerName'] ?? 'Anonymous',
@@ -56,6 +66,11 @@ class Item {
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
       isAvailable: data['isAvailable'] ?? false,
+      location: data['location'] is String ? data['location'] : null,
+      latitude: (data['latitude'] as num?)?.toDouble() ?? (data['lat'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble() ?? (data['lng'] as num?)?.toDouble(),
+      address: data['address'] is String ? data['address'] : null,
+      city: data['city'] is String ? data['city'] : null,
     );
   }
 
@@ -74,6 +89,11 @@ class Item {
       'ownerName': ownerName,
       'createdAt': Timestamp.fromDate(createdAt),
       'isAvailable': isAvailable,
+      if (location != null && location!.isNotEmpty) 'location': location,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (address != null && address!.isNotEmpty) 'address': address,
+      if (city != null && city!.isNotEmpty) 'city': city,
     };
   }
 }

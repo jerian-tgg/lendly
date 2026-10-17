@@ -5,14 +5,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lendly/core/services/didit/didit_verification_service.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
+import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.dart';
+import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/pages/report_screen.dart';
 import 'package:lendly/features/profile/data/datasources/firebase_user_service.dart';
 import 'package:lendly/features/profile/presentation/pages/edit_profile.dart';
 import 'package:lendly/features/profile/presentation/widgets/personal_qr_code_card.dart';
 import 'package:lendly/core/utils/image_utils.dart';
+import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
+import 'package:lendly/core/services/review_service.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String? userId; // If null, displays current logged-in user's profile
@@ -258,7 +263,7 @@ class _UserProfilePageState extends State<UserProfilePage>
         itemId: '',
       );
 
-      if (mounted) {
+      if (context.mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -273,9 +278,9 @@ class _UserProfilePageState extends State<UserProfilePage>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error opening chat: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening chat: $e')),
+        );
       }
     }
   }
@@ -366,175 +371,53 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
-  void _showRegisterAppraiserDialog(BuildContext context) {
-    final bNameController = TextEditingController();
-    final licController = TextEditingController();
-    String spec = 'Electronics & Technology';
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.verified_user, color: Color(0xFF7B40B5)),
-              SizedBox(width: 8),
-              Text(
-                'Appraiser Registration',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Upgrade your account to issue certified appraisals.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: bNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Business / Agency Name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: licController,
-                  decoration: InputDecoration(
-                    labelText: 'License / Accreditation No.',
-                    hintText: 'e.g. APP-2026-8891',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Primary Specialization',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
-                  initialValue: spec,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'Electronics & Technology',
-                      child: Text(
-                        'Electronics & Tech',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Industrial Tools & Equipment',
-                      child: Text(
-                        'Tools & Equipment',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Jewelry & Luxury Goods',
-                      child: Text(
-                        'Jewelry & Luxury',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Vehicles & Transport',
-                      child: Text(
-                        'Vehicles & Transport',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'General Merchandise',
-                      child: Text(
-                        'General Merchandise',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) spec = val;
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final bName = bNameController.text.trim();
-                final lic = licController.text.trim();
-                if (bName.isEmpty || lic.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please fill all required fields'),
-                    ),
-                  );
-                  return;
-                }
-
-                final uid = FirebaseAuth.instance.currentUser?.uid;
-                if (uid != null) {
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(uid)
-                      .set({
-                        'isAppraiser': true,
-                        'isBusiness': true,
-                        'accountType': 'appraiser',
-                        'businessName': bName,
-                        'licenseNumber': lic,
-                        'specialization': spec,
-                      }, SetOptions(merge: true));
-
-                  if (context.mounted) {
-                    Navigator.pop(dialogCtx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Registration successful! You are now a Professional Appraiser.',
-                        ),
-                        backgroundColor: Color(0xFF7B40B5),
-                      ),
-                    );
-                    setState(() {});
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7B40B5),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Submit & Register'),
-            ),
-          ],
-        );
-      },
+  void _openBusinessRegistration(BuildContext context, [Map<String, dynamic>? data]) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RegisterBusinessScreen(existingData: data),
+      ),
     );
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  }
+
+  void _openReviewDialog(BuildContext context, String targetName) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => ReviewDialog(
+        revieweeId: _targetUserId,
+        targetName: targetName,
+      ),
+    );
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _toggleAdminMode(bool currentIsAdmin) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final newStatus = !currentIsAdmin;
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      'isAdmin': newStatus,
+      'isAppraiser': newStatus,
+      'isBusiness': newStatus,
+      'businessVerificationStatus': newStatus ? 'approved' : 'none',
+      'businessName': newStatus ? 'Lendly Official Appraisal & Verification' : '',
+      'licenseNumber': newStatus ? 'BIR-PRC-APPRAISER-001' : '',
+      'specialization': newStatus ? 'General Equipment, Electronics, Cameras & Tools' : '',
+      'accountType': newStatus ? 'appraiser' : 'standard',
+    }, SetOptions(merge: true));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(newStatus ? '👑 Admin & Appraiser privileges enabled!' : 'Admin privileges disabled.'),
+          backgroundColor: const Color(0xFF7B40B5),
+        ),
+      );
+    }
   }
 
   @override
@@ -568,6 +451,18 @@ class _UserProfilePageState extends State<UserProfilePage>
                 ),
               ),
             ),
+          if (_isSelf) ...[
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFF7B40B5)),
+              tooltip: 'Admin Verification Dashboard',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                );
+              },
+            ),
+          ],
         ],
       ),
       body: SingleChildScrollView(
@@ -597,32 +492,19 @@ class _UserProfilePageState extends State<UserProfilePage>
                   userData = snapshot.data!.data() as Map<String, dynamic>;
                 }
 
-                final displayName =
-                    userData['username'] ??
-                    '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'
-                        .trim();
-                final nameStr = displayName.isNotEmpty
-                    ? displayName
-                    : 'Lendly User';
-                // Show city from address (human-readable); lat/lng lives in location map for geo queries
-                final locationLabel = () {
+                final displayName = userData['username'] ??
+                    '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
+                final nameStr = displayName.isNotEmpty ? displayName : 'Lendly User';
+                // Show city from address (human-readable); or formatted location via LocationHelper
+                final location = () {
                   final addr = userData['address'];
                   if (addr is Map) {
                     final city = addr['city']?.toString() ?? '';
                     final province = addr['province']?.toString() ?? '';
                     if (city.isNotEmpty) return '$city${province.isNotEmpty ? ', $province' : ''}';
                   }
-                  final loc = userData['location'];
-                  if (loc is Map) {
-                    final lat = loc['lat'];
-                    final lng = loc['lng'];
-                    if (lat != null && lng != null && (lat != 0.0 || lng != 0.0)) {
-                      return '$lat, $lng';
-                    }
-                  }
-                  return 'Location not specified';
+                  return LocationHelper.formatLocationDisplay(userData['location']);
                 }();
-                final location = locationLabel;
                 final phone = userData['phone'] ?? '';
                 final profilePictureUrl =
                     userData['photoURL'] ?? userData['profilePictureUrl'];
@@ -715,8 +597,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 6,
                       children: [
                         if (isVerified)
                           _buildVerifiedBadge()
@@ -746,33 +630,90 @@ class _UserProfilePageState extends State<UserProfilePage>
                               ],
                             ),
                           ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF7B40B5,
-                            ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.star, size: 14, color: Colors.amber),
-                              const SizedBox(width: 4),
-                              Text(
-                                isVerified ? '4.9 Verified Lender' : '4.9 Member',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF7B40B5),
+                        if (userData['isAdmin'] == true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2D1457),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.shield, size: 13, color: Colors.amber),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Administrator',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                        if (userData['isAppraiser'] == true ||
+                            userData['businessVerificationStatus'] == 'approved' ||
+                            userData['isAdmin'] == true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7B40B5).withValues(alpha: 0.15),
+                              border: Border.all(color: const Color(0xFF7B40B5)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified, size: 13, color: Color(0xFF7B40B5)),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Certified Appraiser',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF7B40B5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        Builder(
+                          builder: (context) {
+                            final userRating = (userData['rating'] as num?)?.toDouble() ?? 0.0;
+                            final userReviewCount = (userData['reviewCount'] as num?)?.toInt() ?? 0;
+                            final hasReviews = userRating > 0 && userReviewCount > 0;
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    hasReviews ? Icons.star_rounded : Icons.verified_user_outlined,
+                                    size: 14,
+                                    color: hasReviews ? Colors.amber[700] : const Color(0xFF7B40B5),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    hasReviews
+                                        ? '${userRating.toStringAsFixed(1)} ($userReviewCount ${userReviewCount == 1 ? 'review' : 'reviews'})'
+                                        : 'Verified Member',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF7B40B5),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -962,9 +903,90 @@ class _UserProfilePageState extends State<UserProfilePage>
 
                     const SizedBox(height: 16),
 
-                    // Appraiser Portal / Registration Section
+                    // Appraiser Portal / Business Registration Section
                     if (_isSelf) ...[
-                      if (userData['isAppraiser'] == true) ...[
+                      // Admin quick-access card if user has admin privileges
+                      if (userData['isAdmin'] == true) ...[
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2D1457), Color(0xFF4A154B)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.purple.withValues(alpha: 0.2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.admin_panel_settings, color: Colors.amber, size: 22),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Administrator Controls',
+                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                        ),
+                                        Text(
+                                          'Review & manually verify submitted BIR permits & documents',
+                                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.verified_user, color: Color(0xFF2D1457), size: 18),
+                                  label: const Text(
+                                    'Open Admin Verification Dashboard',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D1457)),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // 1. Approved / Verified Appraiser (Admins are also certified appraisers)
+                      if (userData['isAppraiser'] == true ||
+                          userData['businessVerificationStatus'] == 'approved' ||
+                          userData['isAdmin'] == true) ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
@@ -1015,11 +1037,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                                           ),
                                         ),
                                         Text(
-                                          'Lic #: ${userData['licenseNumber'] ?? 'APP-2026-REG'}',
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12,
-                                          ),
+                                          'Lic / TIN #: ${userData['licenseNumber'] ?? 'APP-2026-REG'} • Verified',
+                                          style: const TextStyle(color: Colors.white70, fontSize: 12),
                                         ),
                                       ],
                                     ),
@@ -1064,7 +1083,144 @@ class _UserProfilePageState extends State<UserProfilePage>
                             ],
                           ),
                         ),
-                      ] else ...[
+                      ]
+                      // 2. Pending Verification
+                      else if (userData['businessVerificationStatus'] == 'pending') ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.amber.shade400, width: 1.5),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.hourglass_top_rounded, color: Colors.amber.shade900, size: 26),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Verification Under Review',
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.amber.shade900),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${userData['businessName'] ?? 'Business'} • TIN: ${userData['licenseNumber'] ?? 'Pending'}',
+                                          style: TextStyle(fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.shade200,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      'Pending Admin',
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Your BIR permits and registration papers are currently being manually reviewed by our admin team. You will be notified once verified.',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.3),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _openBusinessRegistration(context, userData),
+                                  icon: const Icon(Icons.edit_document, size: 16),
+                                  label: const Text('View / Update Submitted Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.amber.shade900,
+                                    side: BorderSide(color: Colors.amber.shade700),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ]
+                      // 3. Rejected Verification
+                      else if (userData['businessVerificationStatus'] == 'rejected') ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.red.shade300, width: 1.5),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 26),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Application Rejected',
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.redAccent),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Action required to verify your business credentials',
+                                          style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.red.shade100),
+                                ),
+                                child: Text(
+                                  'Reason from Admin: "${userData['businessRejectionReason'] ?? 'Document requirements not met.'}"',
+                                  style: const TextStyle(fontSize: 12, color: Colors.redAccent, fontStyle: FontStyle.italic),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _openBusinessRegistration(context, userData),
+                                  icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
+                                  label: const Text('Resubmit BIR Permits & Update Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.redAccent,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ]
+                      // 4. Not Registered Yet
+                      else ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
@@ -1081,10 +1237,13 @@ class _UserProfilePageState extends State<UserProfilePage>
                           ),
                           child: Row(
                             children: [
-                              const Icon(
-                                Icons.business_center,
-                                color: Color(0xFF7B40B5),
-                                size: 30,
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.business_center, color: Color(0xFF7B40B5), size: 26),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -1092,26 +1251,20 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'Register as Appraiser',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                        color: Color(0xFF7B40B5),
-                                      ),
+                                      'Register as Business / Appraiser',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF7B40B5)),
                                     ),
+                                    const SizedBox(height: 2),
                                     Text(
-                                      'Issue official valuation certificates & build lender trust',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey[700],
-                                      ),
+                                      'Submit BIR permits & registration papers for verified badge',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey[700]),
                                     ),
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               ElevatedButton(
-                                onPressed: () =>
-                                    _showRegisterAppraiserDialog(context),
+                                onPressed: () => _openBusinessRegistration(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF7B40B5),
                                   foregroundColor: Colors.white,
@@ -1131,6 +1284,24 @@ class _UserProfilePageState extends State<UserProfilePage>
                           ),
                         ),
                       ],
+
+                      // Test helper toggle for developer/tester
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () => _toggleAdminMode(userData['isAdmin'] == true),
+                          icon: Icon(
+                            userData['isAdmin'] == true ? Icons.admin_panel_settings : Icons.admin_panel_settings_outlined,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          label: Text(
+                            userData['isAdmin'] == true ? 'Admin Mode (Active)' : 'Enable Admin Mode',
+                            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                          ),
+                        ),
+                      ),
                     ],
 
                     const SizedBox(height: 20),
@@ -1146,9 +1317,27 @@ class _UserProfilePageState extends State<UserProfilePage>
                     const SizedBox(height: 24),
 
                     // Section 2: Reviews Received
-                    _buildSectionHeader(
-                      'Reviews & Ratings',
-                      Icons.rate_review_outlined,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildSectionHeader(
+                          'Reviews & Ratings',
+                          Icons.rate_review_outlined,
+                        ),
+                        if (!_isSelf)
+                          ElevatedButton.icon(
+                            onPressed: () => _openReviewDialog(context, nameStr),
+                            icon: const Icon(Icons.star_rounded, size: 16),
+                            label: const Text('Leave Review', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7B40B5),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     _buildUserReviewsList(_targetUserId),
@@ -1339,11 +1528,15 @@ class _UserProfilePageState extends State<UserProfilePage>
           physics: const NeverScrollableScrollPhysics(),
           itemCount: docs.length,
           itemBuilder: (context, index) {
+            final docId = docs[index].id;
             final review = docs[index].data() as Map<String, dynamic>;
             final ratingVal = (review['rating'] as num?)?.toDouble() ?? 5.0;
-            final comment =
-                review['comment'] ?? review['reviewText'] ?? 'Great lender!';
+            final comment = review['comment'] ?? review['reviewText'] ?? 'Great experience!';
             final reviewerName = review['reviewerName'] ?? 'Verified Borrower';
+            final reviewerPhoto = review['reviewerPhotoUrl'] as String?;
+            final itemTitle = review['itemTitle'] as String?;
+            final currentUid = FirebaseAuth.instance.currentUser?.uid;
+            final isMyReview = currentUid != null && review['reviewerId'] == currentUid;
 
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
@@ -1354,38 +1547,85 @@ class _UserProfilePageState extends State<UserProfilePage>
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: const Color(0xFFEFE8FA),
-                  child: Text(
-                    reviewerName.isNotEmpty
-                        ? reviewerName[0].toUpperCase()
-                        : 'U',
-                    style: const TextStyle(
-                      color: Color(0xFF7B40B5),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  backgroundImage: isValidImageUrl(reviewerPhoto)
+                      ? NetworkImage(reviewerPhoto!)
+                      : null,
+                  child: !isValidImageUrl(reviewerPhoto)
+                      ? Text(
+                          reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'U',
+                          style: const TextStyle(color: Color(0xFF7B40B5), fontWeight: FontWeight.bold),
+                        )
+                      : null,
                 ),
                 title: Row(
                   children: [
                     ...List.generate(5, (starIdx) {
                       return Icon(
-                        starIdx < ratingVal.floor()
-                            ? Icons.star
-                            : Icons.star_border,
-                        size: 14,
+                        starIdx < ratingVal.floor() ? Icons.star_rounded : Icons.star_outline_rounded,
+                        size: 16,
                         color: Colors.amber[700],
                       );
                     }),
                     const SizedBox(width: 6),
-                    Text(
-                      reviewerName,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        reviewerName,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                subtitle: Text(comment, style: const TextStyle(fontSize: 12)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (itemTitle != null && itemTitle.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Item: "$itemTitle"',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                    const SizedBox(height: 2),
+                    Text(comment, style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+                trailing: isMyReview
+                    ? IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                        tooltip: 'Delete your review',
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Delete Review'),
+                              content: const Text('Are you sure you want to delete your review? The ratings will automatically update.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            await ReviewService().deleteReview(
+                              reviewId: docId,
+                              revieweeId: uid,
+                              itemId: review['itemId'],
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Review deleted and ratings recalculated.')),
+                              );
+                            }
+                          }
+                        },
+                      )
+                    : null,
               ),
             );
           },

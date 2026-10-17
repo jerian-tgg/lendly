@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lendly/core/services/cloudinary/cloudinary_service.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/profile/data/datasources/firebase_user_service.dart';
 import 'package:lendly/core/utils/image_utils.dart';
 
@@ -37,12 +38,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _emailController.text = data['email'] ?? '';
       _phoneController.text = data['phone'] ?? '';
 
-      if (data['location'] is Map) {
-        final loc = data['location'] as Map;
-        final lat = loc['lat'];
-        final lng = loc['lng'];
-        if (lat != null && lng != null) {
-          _locationController.text = '$lat, $lng';
+      if (data['location'] != null) {
+        if (data['location'] is Map) {
+          final lat = data['location']['lat'] ?? data['location']['latitude'];
+          final lng = data['location']['lng'] ?? data['location']['longitude'];
+          final name = data['location']['name'];
+          _locationController.text = name ?? (lat != null && lng != null ? '$lat, $lng' : '');
+        } else if (data['location'] is String) {
+          _locationController.text = data['location'];
         }
       }
       _uploadedImageUrl = data['profilePictureUrl'];
@@ -70,22 +73,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
     setState(() => _isLoading = true);
 
     try {
-      // Parse "lat, lng" text input into a geo-ready map
+      // Parse location text (supports "lat, lng" and city names via LocationHelper)
       final locationText = _locationController.text.trim();
-      final locationParts = locationText.split(',');
-      Map<String, dynamic>? locationMap;
-
-      if (locationParts.length == 2) {
-        final lat = double.tryParse(locationParts[0].trim());
-        final lng = double.tryParse(locationParts[1].trim());
-        if (lat != null && lng != null) {
-          locationMap = {
-            'lat': lat,
-            'lng': lng,
-            'geohash': '', // will be computed when geo-radius feature is activated
-          };
-        }
-      }
+      final parsed = LocationHelper.parseCoordinates(locationText);
+      final Map<String, dynamic>? locationMap = parsed != null
+          ? {
+              'lat': parsed.latitude,
+              'lng': parsed.longitude,
+              if (parsed.name != null) 'name': parsed.name,
+              'geohash': '',
+            }
+          : null;
 
       await FirebaseUserService().updateUserProfile(
         firstName: _firstNameController.text.trim(),
@@ -93,7 +91,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         username: _usernameController.text.trim(),
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
-        location: locationMap, // null if input was blank/invalid — won't overwrite existing coords
+        location: locationMap,
         photoURL: _uploadedImageUrl,
       );
 
@@ -205,7 +203,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     const SizedBox(height: 12),
                     _buildPhoneField(),
                     const SizedBox(height: 12),
-                    _buildTextField(label: "Location (lat, lng)", controller: _locationController),
+                    _buildLocationField(),
                     const SizedBox(height: 30),
                     SizedBox(
                       width: double.infinity,
@@ -253,6 +251,42 @@ class _EditProfilePageState extends State<EditProfilePage> {
         TextFormField(
           controller: controller,
           decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Location / City (lat, lng or City Name)", style: TextStyle(fontSize: 14)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _locationController,
+          decoration: InputDecoration(
+            hintText: 'e.g. Bacolod City or 10.67, 122.95',
+            prefixIcon: const Icon(Icons.location_on_outlined, color: Colors.blueAccent),
+            suffixIcon: PopupMenuButton<GeoLocation>(
+              icon: const Icon(Icons.arrow_drop_down_circle_outlined, color: Colors.blueAccent),
+              tooltip: 'Choose Preset City',
+              onSelected: (loc) {
+                setState(() {
+                  _locationController.text = loc.name ?? '${loc.latitude}, ${loc.longitude}';
+                });
+              },
+              itemBuilder: (context) {
+                return LocationHelper.presetLocations.map((loc) {
+                  return PopupMenuItem<GeoLocation>(
+                    value: loc,
+                    child: Text(loc.name ?? '${loc.latitude}, ${loc.longitude}', style: const TextStyle(fontSize: 12)),
+                  );
+                }).toList();
+              },
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
