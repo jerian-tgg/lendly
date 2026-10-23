@@ -293,12 +293,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       backgroundColor: const Color(0xFFF7FAFC),
       appBar: AppBar(
         title: const Text(
-          'Admin Verification Dashboard',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
+          'Appraiser Applications',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
         ),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black87),
+        backgroundColor: const Color(0xFF007799),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<List<BusinessApplication>>(
         stream: _repository.streamAllApplications(),

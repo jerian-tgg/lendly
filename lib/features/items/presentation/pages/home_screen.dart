@@ -10,7 +10,6 @@ import 'package:lendly/features/items/presentation/widgets/add_item_dialog.dart'
 import 'package:lendly/features/items/presentation/widgets/item_card.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 import 'package:lendly/core/utils/image_utils.dart';
-import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
 import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
 
@@ -170,37 +169,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         : null,
                     builder: (context, snapshot) {
                       final data = snapshot.data?.data() as Map<String, dynamic>?;
-                      final isAdmin = data?['isAdmin'] == true ||
-                          user?.email?.toLowerCase() == FirebaseAuthService.defaultAdminEmail;
-                      final isAppraiser = data?['isAppraiser'] == true ||
-                          data?['businessVerificationStatus'] == 'approved' ||
-                          isAdmin;
+                      final isAppraiser = data?['isAppraiser'] == true &&
+                          data?['businessVerificationStatus'] == 'approved';
+
+                      if (!isAppraiser) {
+                        return const SizedBox.shrink();
+                      }
 
                       return Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (isAppraiser)
-                            IconButton(
-                              icon: const Icon(Icons.assessment_outlined, color: Color(0xFF7B40B5)),
-                              tooltip: 'Professional Appraisal Portal',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const AppraisalDashboard()),
-                                );
-                              },
-                            ),
-                          if (isAdmin)
-                            IconButton(
-                              icon: const Icon(Icons.admin_panel_settings, color: Color(0xFF7B40B5)),
-                              tooltip: 'Admin Verification Dashboard',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-                                );
-                              },
-                            ),
+                          IconButton(
+                            icon: const Icon(Icons.assessment_outlined, color: Color(0xFF7B40B5)),
+                            tooltip: 'Professional Appraisal Portal',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const AppraisalDashboard()),
+                              );
+                            },
+                          ),
                         ],
                       );
                     },

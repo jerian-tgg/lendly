@@ -8,7 +8,6 @@ import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
-import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.dart';
 import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/pages/report_screen.dart';
@@ -396,30 +395,6 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
   }
 
-  Future<void> _toggleAdminMode(bool currentIsAdmin) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    final newStatus = !currentIsAdmin;
-    await FirebaseFirestore.instance.collection('users').doc(uid).set({
-      'isAdmin': newStatus,
-      'isAppraiser': newStatus,
-      'isBusiness': newStatus,
-      'businessVerificationStatus': newStatus ? 'approved' : 'none',
-      'businessName': newStatus ? 'Lendly Official Appraisal & Verification' : '',
-      'licenseNumber': newStatus ? 'BIR-PRC-APPRAISER-001' : '',
-      'specialization': newStatus ? 'General Equipment, Electronics, Cameras & Tools' : '',
-      'accountType': newStatus ? 'appraiser' : 'standard',
-    }, SetOptions(merge: true));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(newStatus ? '👑 Admin & Appraiser privileges enabled!' : 'Admin privileges disabled.'),
-          backgroundColor: const Color(0xFF7B40B5),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -451,18 +426,6 @@ class _UserProfilePageState extends State<UserProfilePage>
                 ),
               ),
             ),
-          if (_isSelf) ...[
-            IconButton(
-              icon: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFF7B40B5)),
-              tooltip: 'Admin Verification Dashboard',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-                );
-              },
-            ),
-          ],
         ],
       ),
       body: SingleChildScrollView(
@@ -903,90 +866,11 @@ class _UserProfilePageState extends State<UserProfilePage>
 
                     const SizedBox(height: 16),
 
-                    // Appraiser Portal / Business Registration Section
+                    // Appraiser Portal / Application Section
                     if (_isSelf) ...[
-                      // Admin quick-access card if user has admin privileges
-                      if (userData['isAdmin'] == true) ...[
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF2D1457), Color(0xFF4A154B)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.purple.withValues(alpha: 0.2),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.admin_panel_settings, color: Colors.amber, size: 22),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Administrator Controls',
-                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                                        ),
-                                        Text(
-                                          'Review & manually verify submitted BIR permits & documents',
-                                          style: TextStyle(color: Colors.white70, fontSize: 11),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.verified_user, color: Color(0xFF2D1457), size: 18),
-                                  label: const Text(
-                                    'Open Admin Verification Dashboard',
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D1457)),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-
-                      // 1. Approved / Verified Appraiser (Admins are also certified appraisers)
-                      if (userData['isAppraiser'] == true ||
-                          userData['businessVerificationStatus'] == 'approved' ||
-                          userData['isAdmin'] == true) ...[
+                      // 1. Approved / Verified Appraiser
+                      if (userData['isAppraiser'] == true &&
+                          userData['businessVerificationStatus'] == 'approved') ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
@@ -1251,12 +1135,12 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'Register as Business / Appraiser',
+                                      'Apply as an Appraiser',
                                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF7B40B5)),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Submit BIR permits & registration papers for verified badge',
+                                      'Submit credentials & documents to become a verified appraiser',
                                       style: TextStyle(fontSize: 11, color: Colors.grey[700]),
                                     ),
                                   ],
@@ -1273,7 +1157,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   ),
                                 ),
                                 child: const Text(
-                                  'Apply',
+                                  'Apply as an Appraiser',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
@@ -1284,24 +1168,6 @@ class _UserProfilePageState extends State<UserProfilePage>
                           ),
                         ),
                       ],
-
-                      // Test helper toggle for developer/tester
-                      const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () => _toggleAdminMode(userData['isAdmin'] == true),
-                          icon: Icon(
-                            userData['isAdmin'] == true ? Icons.admin_panel_settings : Icons.admin_panel_settings_outlined,
-                            size: 14,
-                            color: Colors.grey[600],
-                          ),
-                          label: Text(
-                            userData['isAdmin'] == true ? 'Admin Mode (Active)' : 'Enable Admin Mode',
-                            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                          ),
-                        ),
-                      ),
                     ],
 
                     const SizedBox(height: 20),

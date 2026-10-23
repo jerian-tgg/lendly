@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_reports_page.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_user_management_page.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
@@ -27,14 +28,14 @@ class AdminDashboardPage extends StatelessWidget {
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => LoginPage()),
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
                 );
               }
             },
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,7 +61,7 @@ class AdminDashboardPage extends StatelessWidget {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) => AdminUserManagementPage()),
+                    builder: (_) => const AdminUserManagementPage()),
               ),
             ),
             const SizedBox(height: 12),
@@ -73,6 +74,18 @@ class AdminDashboardPage extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (_) => const AdminReportsPage()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _DashboardCard(
+              icon: Icons.assignment_turned_in_rounded,
+              title: 'Appraiser Applications',
+              subtitle: 'Review submitted documents, accept or reject appraisers',
+              color: const Color(0xFF7B40B5),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AdminDashboardScreen()),
               ),
             ),
           ],

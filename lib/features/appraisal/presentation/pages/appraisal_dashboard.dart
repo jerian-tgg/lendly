@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lendly/features/appraisal/presentation/widgets/appraisal_form_dialog.dart';
 import 'package:lendly/features/appraisal/domain/models/appraisal_model.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
+import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
 
 class AppraisalDashboard extends StatefulWidget {
   const AppraisalDashboard({super.key});
@@ -74,7 +75,77 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
             ? FirebaseFirestore.instance.collection('users').doc(uid).get()
             : null,
         builder: (context, userSnapshot) {
+          if (userSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+            );
+          }
+
           final userData = (userSnapshot.data?.data() as Map<String, dynamic>?) ?? {};
+          final isVerifiedAppraiser = userData['isAppraiser'] == true &&
+              userData['businessVerificationStatus'] == 'approved';
+
+          if (!isVerifiedAppraiser) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.lock_outline_rounded,
+                        size: 64,
+                        color: Color(0xFF7B40B5),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Appraiser Dashboard Restricted',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'The Appraiser Dashboard is only visible to users who applied and are verified as an appraiser by the administrator.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RegisterBusinessScreen(existingData: userData),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.assignment_turned_in, color: Colors.white, size: 18),
+                      label: const Text(
+                        'Apply as an Appraiser',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7B40B5),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           final businessName = userData['businessName'] is String && (userData['businessName'] as String).isNotEmpty
               ? userData['businessName']
               : 'Certified Valuation Agency';

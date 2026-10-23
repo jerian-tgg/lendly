@@ -99,13 +99,13 @@ class FirebaseAuthService {
           'isVerified': isSystemAdmin,
           'isAdmin': isSystemAdmin,
           'role': isSystemAdmin ? 'admin' : 'user',
-          'isAppraiser': isSystemAdmin ? true : isAppraiser,
-          'isBusiness': isSystemAdmin ? true : isAppraiser,
-          'accountType': isSystemAdmin ? 'appraiser' : (isAppraiser ? 'appraiser' : 'standard'),
-          'businessVerificationStatus': isSystemAdmin ? 'approved' : 'none',
-          'businessName': isSystemAdmin ? 'Lendly Official Appraisal & Verification' : (businessName ?? ''),
-          'licenseNumber': isSystemAdmin ? 'BIR-PRC-APPRAISER-001' : (licenseNumber ?? ''),
-          'specialization': isSystemAdmin ? 'General Equipment, Electronics, Cameras & Tools' : (specialization ?? ''),
+          'isAppraiser': isAppraiser,
+          'isBusiness': isAppraiser,
+          'accountType': isAppraiser ? 'appraiser' : 'standard',
+          'businessVerificationStatus': 'none',
+          'businessName': businessName ?? '',
+          'licenseNumber': licenseNumber ?? '',
+          'specialization': specialization ?? '',
           'joinedAt': FieldValue.serverTimestamp(),
 
           // ── Location ──
@@ -154,13 +154,6 @@ class FirebaseAuthService {
         await _firestore.collection('users').doc(user.uid).set({
           'isAdmin': true,
           'role': 'admin',
-          'isAppraiser': true,
-          'isBusiness': true,
-          'businessVerificationStatus': 'approved',
-          'businessName': 'Lendly Official Appraisal & Verification',
-          'licenseNumber': 'BIR-PRC-APPRAISER-001',
-          'specialization': 'General Equipment, Electronics, Cameras & Tools',
-          'accountType': 'appraiser',
         }, SetOptions(merge: true));
       }
 
@@ -186,13 +179,6 @@ class FirebaseAuthService {
           await _firestore.collection('users').doc(result.user!.uid).set({
             'isAdmin': true,
             'role': 'admin',
-            'isAppraiser': true,
-            'isBusiness': true,
-            'businessVerificationStatus': 'approved',
-            'businessName': 'Lendly Official Appraisal & Verification',
-            'licenseNumber': 'BIR-PRC-APPRAISER-001',
-            'specialization': 'General Equipment, Electronics, Cameras & Tools',
-            'accountType': 'appraiser',
           }, SetOptions(merge: true));
           return result.user;
         }
@@ -219,13 +205,10 @@ class FirebaseAuthService {
           'isAdmin': true,
           'role': 'admin',
           'isVerified': true,
-          'isAppraiser': true,
-          'isBusiness': true,
-          'accountType': 'appraiser',
-          'businessVerificationStatus': 'approved',
-          'businessName': 'Lendly Official Appraisal & Verification',
-          'licenseNumber': 'BIR-PRC-APPRAISER-001',
-          'specialization': 'General Equipment, Electronics, Cameras & Tools',
+          'isAppraiser': false,
+          'isBusiness': false,
+          'accountType': 'standard',
+          'businessVerificationStatus': 'none',
           'joinedAt': FieldValue.serverTimestamp(),
           'location': {
             'lat': 14.5547,

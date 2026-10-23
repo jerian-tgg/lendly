@@ -319,7 +319,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
       backgroundColor: const Color(0xFFF7FAFC),
       appBar: AppBar(
         title: const Text(
-          'Register as Business / Appraiser',
+          'Apply as an Appraiser',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
         ),
         backgroundColor: Colors.white,
