@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lendly/core/services/trust_score_service.dart';
 
 class ReviewService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -96,6 +97,10 @@ class ReviewService {
     // 2. Update user rating and count in Firestore
     if (revieweeId.isNotEmpty) {
       await recomputeUserRating(revieweeId);
+      // Trigger trust score recalculation asynchronously
+      try {
+        TrustScoreService().recalculateTrustScore(userId: revieweeId);
+      } catch (_) {}
     }
   }
 
@@ -123,6 +128,10 @@ class ReviewService {
     }
     if (revieweeId.isNotEmpty) {
       await recomputeUserRating(revieweeId);
+      // Trigger trust score recalculation asynchronously
+      try {
+        TrustScoreService().recalculateTrustScore(userId: revieweeId);
+      } catch (_) {}
     }
   }
 

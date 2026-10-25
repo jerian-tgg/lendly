@@ -25,13 +25,21 @@ service cloud.firestore {
       // Full access for administrators
       allow write: if isAdmin();
 
-      // Users can write their own document
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Users can write their own document, but CANNOT modify trust score fields.
+      // Trust score is computed server-side by Cloud Functions only.
+      allow create: if request.auth != null && request.auth.uid == userId
+        && !('trustScore' in request.resource.data)
+        && !('trustScoreStats' in request.resource.data);
       allow update: if request.auth != null &&
-        (request.auth.uid == userId ||
-         // Any authenticated session can update the isBlocked field (admin use)
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isBlocked']));
+        (
+          (request.auth.uid == userId &&
+           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trustScore', 'trustScoreStats']))
+          ||
+          // Any authenticated session can update the isBlocked field (admin use)
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isBlocked'])
+        );
     }
+
 
     // ── Reviews collection ──────────────────────────────────────────────────
     match /reviews/{reviewId} {

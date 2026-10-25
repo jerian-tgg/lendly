@@ -311,3 +311,238 @@ exports.diditWebhook = functions.https.onRequest(
     },
 );
 
+// ═══════════════════════════════════════════════════════════════════════════
+// TRUST SCORE SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Core trust score calculation logic.
+ * Reads reviews and conversations from Firestore, computes the weighted score,
+ * and writes the result to the user document.
+ *
+ * Formula:
+ *   TrustScore = (BayesianRatingPct × 0.60) + (ReliabilityPct × 0.30)
+ *                + (ExperienceScore × 0.10)
+ *
+ * Bayesian Average: (C × M + N × R) / (C + N)
+ *   C = 5 (prior weight), M = 4.0 (prior mean),
+ *   N = number of ratings, R = actual average
+ *
+ * Reliability: completedTransactions / eligibleTransactions × 100
+ *   Eligible = approved conversations not denied through no fault of user.
+ *
+ * Experience: min(completedTransactions / 20, 1) × 100
+ *
+ * @param {string} userId – The UID to recalculate.
+ * @return {object} The computed trust score and stats.
+ */
+async function computeTrustScore(userId) {
+  const db = admin.firestore();
+
+  // ── 1. Fetch all reviews where this user is the reviewee ──
+  const reviewsSnap = await db
+      .collection("reviews")
+      .where("revieweeId", "==", userId)
+      .get();
+
+  const ratings = [];
+  reviewsSnap.forEach((doc) => {
+    const r = doc.data().rating;
+    if (typeof r === "number" && r > 0 && r <= 5) {
+      ratings.push(r);
+    }
+  });
+
+  const totalRatings = ratings.length;
+  const actualAvg = totalRatings > 0 ?
+    ratings.reduce((a, b) => a + b, 0) / totalRatings : 0;
+
+  // Bayesian average
+  const priorWeight = 5;
+  const priorMean = 4.0;
+  const bayesianRating =
+    (priorWeight * priorMean + totalRatings * actualAvg) /
+    (priorWeight + totalRatings);
+  const bayesianPct = (bayesianRating / 5) * 100;
+
+  // ── 2. Fetch conversations where this user is a participant ──
+  const convosSnap = await db
+      .collection("conversations")
+      .where("participants", "array-contains", userId)
+      .where("approved", "==", true)
+      .get();
+
+  let completedAsLender = 0;
+  let eligibleAsLender = 0;
+  let completedAsBorrower = 0;
+  let eligibleAsBorrower = 0;
+
+  convosSnap.forEach((doc) => {
+    const d = doc.data();
+    const isLender = d.itemOwnerId === userId || d.ownerId === userId;
+    const isDenied = d.denied === true;
+
+    const isCompleted = d.isPaid === true &&
+      d.isReceived === true &&
+      d.isReturned === true &&
+      d.isReturnConfirmed === true;
+
+    if (isLender) {
+      // Lender approved then denied → counts against lender reliability
+      eligibleAsLender++;
+      if (isCompleted) {
+        completedAsLender++;
+      }
+    } else {
+      // Borrower: if lender denied, not borrower's fault → exclude
+      if (!isDenied) {
+        eligibleAsBorrower++;
+        if (isCompleted) {
+          completedAsBorrower++;
+        }
+      }
+    }
+  });
+
+  const completedTransactions = completedAsLender + completedAsBorrower;
+  const eligibleTransactions = eligibleAsLender + eligibleAsBorrower;
+
+  // Reliability percentage (default 100% for users with no transactions)
+  const reliabilityPct = eligibleTransactions > 0 ?
+    (completedTransactions / eligibleTransactions) * 100 : 100;
+
+  // Experience score: min(completed / 20, 1) × 100
+  const experienceScore = Math.min(completedTransactions / 20, 1) * 100;
+
+  // ── 3. Weighted final score ──
+  const rawScore = (bayesianPct * 0.60) +
+    (reliabilityPct * 0.30) +
+    (experienceScore * 0.10);
+
+  const trustScore = Math.max(0, Math.min(100, Math.round(rawScore)));
+
+  const stats = {
+    bayesianRating: Math.round(bayesianRating * 100) / 100,
+    totalRatings,
+    averageRating: Math.round(actualAvg * 100) / 100,
+    completedTransactions,
+    totalEligibleTransactions: eligibleTransactions,
+    completedAsLender,
+    eligibleAsLender,
+    completedAsBorrower,
+    eligibleAsBorrower,
+    reliabilityPercentage: Math.round(reliabilityPct * 100) / 100,
+    experienceScore: Math.round(experienceScore * 100) / 100,
+    lastCalculatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  // ── 4. Write to Firestore ──
+  await db.collection("users").doc(userId).set({
+    trustScore,
+    trustScoreStats: stats,
+  }, {merge: true});
+
+  return {trustScore, stats};
+}
+
+/**
+ * HTTPS Callable: recalculateTrustScore
+ * Allows an authenticated user to trigger recalculation of their own score,
+ * or an admin to recalculate any user's score.
+ */
+exports.recalculateTrustScore = functions.https.onCall(
+    async (data, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+            "unauthenticated",
+            "Must be logged in.",
+        );
+      }
+
+      let targetUserId = context.auth.uid;
+      if (data && data.userId) {
+        const callerEmail = context.auth.token.email || "";
+        const adminCheck = callerEmail === "admin-portal@lendly.internal" ||
+          callerEmail === "palenciajerjer28@gmail.com";
+        if (data.userId !== context.auth.uid && !adminCheck) {
+          throw new functions.https.HttpsError(
+              "permission-denied",
+              "Cannot recalculate another user's trust score.",
+          );
+        }
+        targetUserId = data.userId;
+      }
+
+      try {
+        const result = await computeTrustScore(targetUserId);
+        return result;
+      } catch (error) {
+        console.error("Error computing trust score:", error);
+        throw new functions.https.HttpsError("internal", error.message);
+      }
+    },
+);
+
+/**
+ * Firestore Trigger: When a conversation document is updated and reaches
+ * a terminal state (completed or denied), recalculate trust scores for
+ * all participants.
+ */
+exports.onConversationStatusChange = functions.firestore
+    .document("conversations/{convoId}")
+    .onUpdate(async (change) => {
+      const before = change.before.data();
+      const after = change.after.data();
+
+      const wasCompleted = before.isPaid === true &&
+        before.isReceived === true &&
+        before.isReturned === true &&
+        before.isReturnConfirmed === true;
+
+      const nowCompleted = after.isPaid === true &&
+        after.isReceived === true &&
+        after.isReturned === true &&
+        after.isReturnConfirmed === true;
+
+      const deniedChanged = before.denied !== after.denied;
+
+      if (!deniedChanged && wasCompleted === nowCompleted) {
+        return null;
+      }
+
+      const participants = after.participants || [];
+      const promises = participants.map((uid) => {
+        return computeTrustScore(uid).catch((err) => {
+          console.error(`Trust score recalc error for ${uid}:`, err);
+        });
+      });
+
+      return Promise.all(promises);
+    });
+
+/**
+ * Firestore Trigger: When a review is created, updated, or deleted,
+ * recalculate the trust score for the affected reviewee(s).
+ */
+exports.onReviewWrite = functions.firestore
+    .document("reviews/{reviewId}")
+    .onWrite(async (change) => {
+      const affectedUserIds = new Set();
+
+      if (change.before.exists) {
+        const d = change.before.data();
+        if (d.revieweeId) affectedUserIds.add(d.revieweeId);
+      }
+      if (change.after.exists) {
+        const d = change.after.data();
+        if (d.revieweeId) affectedUserIds.add(d.revieweeId);
+      }
+
+      const promises = [...affectedUserIds].map((uid) => {
+        return computeTrustScore(uid).catch((err) => {
+          console.error(`Trust score recalc error for ${uid}:`, err);
+        });
+      });
+
+      return Promise.all(promises);
+    });

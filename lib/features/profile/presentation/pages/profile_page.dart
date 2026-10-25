@@ -17,6 +17,7 @@ import 'package:lendly/features/profile/presentation/widgets/personal_qr_code_ca
 import 'package:lendly/core/utils/image_utils.dart';
 import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
 import 'package:lendly/core/services/review_service.dart';
+import 'package:lendly/features/profile/presentation/widgets/trust_score_card.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String? userId; // If null, displays current logged-in user's profile
@@ -678,6 +679,38 @@ class _UserProfilePageState extends State<UserProfilePage>
                             );
                           },
                         ),
+                        Builder(
+                          builder: (context) {
+                            final score = (userData['trustScore'] as num?)?.toInt();
+                            if (score == null) return const SizedBox.shrink();
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.verified_user_rounded,
+                                    size: 13,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Trust Score: $score',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
 
@@ -861,6 +894,15 @@ class _UserProfilePageState extends State<UserProfilePage>
                       userId: _targetUserId,
                       userName: nameStr,
                       userEmail: (userData['email'] as String?) ?? '',
+                      isSelf: _isSelf,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Trust Score Card
+                    TrustScoreCard(
+                      userData: userData,
+                      userId: _targetUserId,
                       isSelf: _isSelf,
                     ),
 
