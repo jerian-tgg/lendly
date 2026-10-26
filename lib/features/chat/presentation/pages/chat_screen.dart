@@ -8,6 +8,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:lendly/core/utils/image_utils.dart';
 import 'package:lendly/features/chat/presentation/pages/qr_handoff_screen.dart';
+import 'package:lendly/features/items/presentation/pages/electronic_contract_page.dart';
 
 class ChatScreen extends StatefulWidget {
   final String convoId;
@@ -185,6 +186,61 @@ class _ChatScreenState extends State<ChatScreen> {
     Fluttertoast.showToast(msg: 'Request denied.');
   }
 
+  /// Opens the ElectronicContractPage after fetching item and user data from Firestore.
+  Future<void> _openContractPage(Map<String, dynamic> convoData) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final itemId = convoData['itemId'] as String? ?? '';
+    final lenderId   = convoData['ownerId'] ?? convoData['lenderId'] ?? '';
+    final borrowerId = convoData['participants']?.firstWhere(
+      (id) => id != lenderId,
+      orElse: () => '',
+    ) ?? '';
+
+    // Fetch item data
+    Map<String, dynamic> itemData = {};
+    if (itemId.isNotEmpty) {
+      final snap = await FirebaseFirestore.instance.collection('items').doc(itemId).get();
+      itemData = snap.data() as Map<String, dynamic>? ?? {};
+    }
+
+    // Fetch lender and borrower user docs
+    Future<Map<String, dynamic>> fetchUser(String uid) async {
+      if (uid.isEmpty) return {};
+      final snap = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      return snap.data() as Map<String, dynamic>? ?? {};
+    }
+
+    final lenderDoc   = await fetchUser(lenderId);
+    final borrowerDoc = await fetchUser(borrowerId);
+
+    String _displayName(Map<String, dynamic> doc, String fallback) =>
+        doc['displayName'] ?? doc['name'] ?? doc['username'] ?? fallback;
+    String _email(Map<String, dynamic> doc, String fallback) =>
+        doc['email'] ?? fallback;
+
+    final isLender = currentUser.uid == lenderId;
+
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ElectronicContractPage(
+          convoId:       widget.convoId,
+          currentUserId: currentUser.uid,
+          isLender:      isLender,
+          convoData:     convoData,
+          itemData:      itemData,
+          lenderName:    _displayName(lenderDoc, 'Lender'),
+          lenderEmail:   _email(lenderDoc, ''),
+          borrowerName:  _displayName(borrowerDoc, 'Borrower'),
+          borrowerEmail: _email(borrowerDoc, ''),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openQrScreen(String action, Map<String, dynamic> convoData) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
@@ -326,6 +382,12 @@ class _ChatScreenState extends State<ChatScreen> {
           final isReturnConfirmed = convoData['isReturnConfirmed'] == true;
           final isFullyDone =
               isPaid && isReceived && isReturned && isReturnConfirmed;
+          // Contract state
+          final contractSigned     = convoData['contractSigned']         == true;
+          final lenderSigned       = convoData['contractLenderSigned']   == true;
+          final borrowerSigned     = convoData['contractBorrowerSigned'] == true;
+          final iHaveSigned        = isOwner ? lenderSigned : borrowerSigned;
+          final contractPdfUrl     = convoData['contractPdfUrl'] as String?;
 
           return Column(
             children: [
@@ -417,8 +479,18 @@ class _ChatScreenState extends State<ChatScreen> {
                   onDeny: _denyRequest,
                 ),
 
-              // QR handoff/return buttons → open real QR scanner
-              if (isApproved && !isFullyDone)
+              // Contract signing panel — shown after approval until both sign
+              if (isApproved && !isFullyDone && !contractSigned)
+                _ContractSigningPanel(
+                  contractSigned:  contractSigned,
+                  lenderSigned:    lenderSigned,
+                  borrowerSigned:  borrowerSigned,
+                  iHaveSigned:     iHaveSigned,
+                  onOpenContract:  () => _openContractPage(convoData),
+                ),
+
+              // QR handoff/return buttons → only after contract is signed
+              if (isApproved && !isFullyDone && contractSigned)
                 _QrActionPanel(
                   isOwner: isOwner,
                   isPaid: isPaid,
@@ -1181,6 +1253,184 @@ class _DeniedBar extends StatelessWidget {
                   fontSize: 12,
                   color: Color(0xFFB00020),
                   fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Contract Signing Panel
+// ────────────────────────────────────────────────────────────────────────────
+
+class _ContractSigningPanel extends StatelessWidget {
+  final bool contractSigned;
+  final bool lenderSigned;
+  final bool borrowerSigned;
+  final bool iHaveSigned;
+  final VoidCallback onOpenContract;
+
+  const _ContractSigningPanel({
+    required this.contractSigned,
+    required this.lenderSigned,
+    required this.borrowerSigned,
+    required this.iHaveSigned,
+    required this.onOpenContract,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: iHaveSigned
+              ? Colors.orange.withValues(alpha: 0.5)
+              : const Color(0xFF7B40B5).withValues(alpha: 0.4),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.description_outlined,
+                  color: Color(0xFF7B40B5),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Electronic Contract Required',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    Text(
+                      'Both parties must sign before proceeding',
+                      style: TextStyle(fontSize: 10, color: Colors.black45),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE7F6),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'RA 8792',
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7B40B5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Signature status chips
+          Row(
+            children: [
+              _SigChip(label: 'Lender', signed: lenderSigned),
+              const SizedBox(width: 8),
+              _SigChip(label: 'Borrower', signed: borrowerSigned),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onOpenContract,
+              icon: Icon(
+                iHaveSigned ? Icons.hourglass_top_outlined : Icons.draw_outlined,
+                size: 16,
+                color: Colors.white,
+              ),
+              label: Text(
+                iHaveSigned ? 'View Contract (Waiting for other party)' : 'Review & Sign Contract',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: iHaveSigned ? Colors.orange : const Color(0xFF7B40B5),
+                padding: const EdgeInsets.symmetric(vertical: 11),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SigChip extends StatelessWidget {
+  final String label;
+  final bool signed;
+  const _SigChip({required this.label, required this.signed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: signed ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: signed
+              ? const Color(0xFF4CAF50).withValues(alpha: 0.5)
+              : Colors.grey.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            signed ? Icons.check_circle_outline : Icons.radio_button_unchecked,
+            size: 12,
+            color: signed ? const Color(0xFF2E7D32) : Colors.grey,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: signed ? const Color(0xFF2E7D32) : Colors.grey,
             ),
           ),
         ],
