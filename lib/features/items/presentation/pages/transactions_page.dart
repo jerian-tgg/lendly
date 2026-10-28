@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -510,6 +510,10 @@ class _TransactionCard extends StatelessWidget {
         final isLenderRole = convo['ownerId'] == currentUserId ||
             convo['lenderId'] == currentUserId;
 
+        // Contract state
+        final contractSigned = convo['contractSigned'] == true;
+        final contractPdfUrl = convo['contractPdfUrl'] as String?;
+
         return Container(
           margin: const EdgeInsets.only(bottom: 14),
           decoration: BoxDecoration(
@@ -576,6 +580,14 @@ class _TransactionCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: _ProgressStepper(step: step),
+              ),
+              // Contract badge
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+                child: _ContractBadge(
+                  signed: contractSigned,
+                  pdfUrl: contractPdfUrl,
+                ),
               ),
               if (returnDue != null) ...[
                 const SizedBox(height: 10),
@@ -648,6 +660,7 @@ class _TransactionCard extends StatelessWidget {
     final isReceived = convo['isReceived'] == true;
     final isReturned = convo['isReturned'] == true;
     final isReturnConfirmed = convo['isReturnConfirmed'] == true;
+    final contractSigned = convo['contractSigned'] == true;
 
     Future<void> update(Map<String, dynamic> data) =>
         FirebaseFirestore.instance
@@ -656,6 +669,15 @@ class _TransactionCard extends StatelessWidget {
             .update(data);
 
     if (!isPaid) {
+      // Block payment until contract is signed by both parties
+      if (!contractSigned) {
+        return _ActionButton(
+          label: 'Sign Contract First',
+          color: Colors.grey.shade400,
+          icon: Icons.lock_outline,
+          onTap: () {},
+        );
+      }
       return _ActionButton(
         label: 'Mark Paid',
         color: const Color(0xFF2ECC71),
@@ -1058,6 +1080,68 @@ class _ActionButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+}
+
+// ── Contract Badge ─────────────────────────────────────────────────────────
+
+class _ContractBadge extends StatelessWidget {
+  final bool signed;
+  final String? pdfUrl;
+  const _ContractBadge({required this.signed, this.pdfUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: signed ? const Color(0xFFE8F5E9) : const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: signed
+              ? const Color(0xFF4CAF50).withValues(alpha: 0.5)
+              : Colors.orange.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            signed ? Icons.verified_outlined : Icons.description_outlined,
+            size: 14,
+            color: signed ? const Color(0xFF2E7D32) : Colors.orange,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              signed
+                  ? 'Electronic Contract Signed (RA 8792)'
+                  : 'Awaiting Contract Signatures',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: signed ? const Color(0xFF2E7D32) : Colors.orange.shade800,
+              ),
+            ),
+          ),
+          if (signed && pdfUrl != null)
+            const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.picture_as_pdf_outlined, size: 12, color: Color(0xFF2E7D32)),
+                SizedBox(width: 3),
+                Text(
+                  'PDF',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E7D32),
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
