@@ -1,6 +1,6 @@
 require("dotenv").config(); // Loads .env variables
 
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 
@@ -16,13 +16,21 @@ const DIDIT_WORKFLOW_ID = "99c79fd1-9b53-4c2d-a1b7-341b4a893c3b";
 exports.createPaymentIntent = functions.https.onCall(
     async (data, context) => {
       const amount = data.amount;
-      const currency = data.currency;
+      const currency = data.currency || "php";
 
       try {
-        const paymentIntent = await stripe.paymentIntents.create({
+        const params = {
           amount: amount,
           currency: currency,
-        });
+        };
+        if (context.auth) {
+          params.metadata = {
+            userId: context.auth.uid,
+            orcAmount: String(Math.round(amount / 100)),
+            type: "cash_in",
+          };
+        }
+        const paymentIntent = await stripe.paymentIntents.create(params);
 
         return {
           clientSecret: paymentIntent.client_secret,
@@ -30,6 +38,210 @@ exports.createPaymentIntent = functions.https.onCall(
       } catch (error) {
         console.error("Stripe error:", error);
         throw new functions.https.HttpsError("internal", error.message);
+      }
+    },
+);
+
+/**
+ * Creates a Stripe Checkout Session and PaymentIntent for ORC Cash-In in PHP.
+ * Rate: ₱1 = 1 ORC.
+ */
+exports.createStripeCashInSession = functions.https.onCall(
+    async (data, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+            "unauthenticated",
+            "User must be logged in to cash in.",
+        );
+      }
+
+      const rawAmount = Number(data && data.amount);
+      if (!rawAmount || isNaN(rawAmount) || rawAmount < 20) {
+        throw new functions.https.HttpsError(
+            "invalid-argument",
+            "Minimum cash-in amount is ₱20 PHP.",
+        );
+      }
+
+      const uid = context.auth.uid;
+      const amountInCentavos = Math.round(rawAmount * 100);
+
+      try {
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          mode: "payment",
+          line_items: [
+            {
+              price_data: {
+                currency: "php",
+                product_data: {
+                  name: `${rawAmount} ORC Credits`,
+                  description: "Lendly ORC Wallet Cash-In (₱1 = 1 ORC)",
+                },
+                unit_amount: amountInCentavos,
+              },
+              quantity: 1,
+            },
+          ],
+          client_reference_id: uid,
+          metadata: {
+            userId: uid,
+            orcAmount: String(rawAmount),
+            type: "cash_in",
+          },
+          success_url: (data && data.successUrl) ||
+            "https://lendly.app/wallet/success?session_id={CHECKOUT_SESSION_ID}",
+          cancel_url: (data && data.cancelUrl) ||
+            "https://lendly.app/wallet/cancel",
+        });
+
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amountInCentavos,
+          currency: "php",
+          metadata: {
+            userId: uid,
+            orcAmount: String(rawAmount),
+            type: "cash_in",
+          },
+        });
+
+        return {
+          sessionId: session.id,
+          sessionUrl: session.url,
+          clientSecret: paymentIntent.client_secret,
+          amount: rawAmount,
+        };
+      } catch (error) {
+        console.error("Error creating cash-in session:", error);
+        throw new functions.https.HttpsError("internal", error.message);
+      }
+    },
+);
+
+/**
+ * Stripe Webhook endpoint.
+ * Validates Stripe signature and credits ORC idempotently.
+ */
+exports.stripeWebhook = functions.https.onRequest(
+    async (req, res) => {
+      if (req.method === "GET") {
+        return res.status(200).send("Stripe webhook endpoint is active.");
+      }
+      if (req.method !== "POST") {
+        return res.status(405).send("Method Not Allowed");
+      }
+
+      const sig = req.headers["stripe-signature"];
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+      let event;
+      try {
+        if (webhookSecret) {
+          event = stripe.webhooks.constructEvent(
+              req.rawBody,
+              sig,
+              webhookSecret,
+          );
+        } else {
+          console.warn("STRIPE_WEBHOOK_SECRET missing; parsing body directly.");
+          event = typeof req.body === "string" ?
+            JSON.parse(req.body) : req.body;
+        }
+      } catch (err) {
+        console.error("Stripe webhook signature error:", err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+
+      const eventId = event && event.id;
+      if (!eventId) {
+        return res.status(400).send("Missing event ID");
+      }
+
+      const db = admin.firestore();
+      const eventRef = db.collection("stripe_events").doc(eventId);
+
+      try {
+        let userId = null;
+        let orcAmount = 0;
+        let referenceId = eventId;
+
+        if (event.type === "checkout.session.completed") {
+          const session = event.data.object;
+          userId = (session.metadata && session.metadata.userId) ||
+            session.client_reference_id;
+          orcAmount = session.metadata && session.metadata.orcAmount ?
+            Number(session.metadata.orcAmount) :
+            (session.amount_total ? Math.round(session.amount_total / 100) : 0);
+          referenceId = session.id || eventId;
+        } else if (event.type === "payment_intent.succeeded") {
+          const pi = event.data.object;
+          userId = pi.metadata && pi.metadata.userId;
+          orcAmount = pi.metadata && pi.metadata.orcAmount ?
+            Number(pi.metadata.orcAmount) :
+            (pi.amount ? Math.round(pi.amount / 100) : 0);
+          referenceId = pi.id || eventId;
+        }
+
+        if (!userId || orcAmount <= 0) {
+          return res.status(200).json({received: true, ignored: true});
+        }
+
+        await db.runTransaction(async (t) => {
+          const eventDoc = await t.get(eventRef);
+          if (eventDoc.exists && eventDoc.data().processed) {
+            return;
+          }
+
+          const walletRef = db.collection("wallets").doc(userId);
+          const walletDoc = await t.get(walletRef);
+
+          const currentAvailable = walletDoc.exists ?
+            (walletDoc.data().availableBalance || 0) : 0;
+          const currentCashedIn = walletDoc.exists ?
+            (walletDoc.data().totalCashedIn || 0) : 0;
+
+          const newAvailable = currentAvailable + orcAmount;
+          const newCashedIn = currentCashedIn + orcAmount;
+
+          t.set(walletRef, {
+            availableBalance: newAvailable,
+            totalCashedIn: newCashedIn,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }, {merge: true});
+
+          t.set(db.collection("users").doc(userId), {
+            balance: newAvailable,
+          }, {merge: true});
+
+          const txRef = walletRef.collection("transactions").doc();
+          t.set(txRef, {
+            id: txRef.id,
+            type: "cash_in",
+            amount: orcAmount,
+            referenceId: referenceId,
+            description: `Stripe Cash-in (₱${orcAmount} = ${orcAmount} ORC)`,
+            status: "completed",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          t.set(eventRef, {
+            processed: true,
+            eventType: event.type,
+            userId: userId,
+            orcAmount: orcAmount,
+            referenceId: referenceId,
+            processedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+
+        return res.status(200).json({
+          received: true,
+          credited: orcAmount,
+          userId: userId,
+        });
+      } catch (err) {
+        console.error("Error processing Stripe webhook:", err);
+        return res.status(500).send("Internal processing error");
       }
     },
 );
@@ -488,6 +700,454 @@ exports.recalculateTrustScore = functions.https.onCall(
  * a terminal state (completed or denied), recalculate trust scores for
  * all participants.
  */
+/**
+ * Helper to atomically settle escrow for a completed rental.
+ * Releases escrow: 10% commission to admin wallet, 90% to lender's available.
+ *
+ * @param {admin.firestore.Transaction} t Firestore transaction
+ * @param {admin.firestore.Firestore} db Firestore instance
+ * @param {admin.firestore.DocumentSnapshot} convoDoc Conversation doc
+ * @return {Promise<object|null>} Settlement details or null
+ */
+async function settleEscrowTransaction(t, db, convoDoc) {
+  const convoData = convoDoc.data();
+  if (!convoData || convoData.escrowStatus !== "held") {
+    return null;
+  }
+
+  const convoId = convoDoc.id;
+  const total = Number(convoData.escrowAmount) || 0;
+  const borrowerId = convoData.borrowerId;
+  const lenderId = convoData.itemOwnerId || convoData.ownerId;
+
+  if (total <= 0 || !borrowerId || !lenderId) {
+    t.update(convoDoc.ref, {
+      escrowStatus: "settled",
+      settledAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return null;
+  }
+
+  // 10% commission to admin, 90% to lender
+  const adminCommission = Math.round(total * 0.10 * 100) / 100;
+  const lenderEarnings = Math.round((total - adminCommission) * 100) / 100;
+
+  // 1. Borrower: release escrow balance
+  const borrowerWalletRef = db.collection("wallets").doc(borrowerId);
+  const borrowerWalletDoc = await t.get(borrowerWalletRef);
+  const borrowerEscrow = borrowerWalletDoc.exists ?
+    (borrowerWalletDoc.data().escrowBalance || 0) : 0;
+  t.set(borrowerWalletRef, {
+    escrowBalance: Math.max(0, borrowerEscrow - total),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, {merge: true});
+
+  const borrowerTxRef = borrowerWalletRef.collection("transactions").doc();
+  t.set(borrowerTxRef, {
+    id: borrowerTxRef.id,
+    type: "rental_payment",
+    amount: -total,
+    referenceId: convoId,
+    description: `Rental completed — escrow released (₱${total} ORC)`,
+    status: "completed",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // 2. Lender: credit 90% earnings to available balance
+  const lenderWalletRef = db.collection("wallets").doc(lenderId);
+  const lenderWalletDoc = await t.get(lenderWalletRef);
+  const lenderAvailable = lenderWalletDoc.exists ?
+    (lenderWalletDoc.data().availableBalance || 0) : 0;
+  const lenderTotalEarned = lenderWalletDoc.exists ?
+    (lenderWalletDoc.data().totalEarned || 0) : 0;
+
+  const newLenderAvailable = lenderAvailable + lenderEarnings;
+  t.set(lenderWalletRef, {
+    availableBalance: newLenderAvailable,
+    totalEarned: lenderTotalEarned + lenderEarnings,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, {merge: true});
+
+  t.set(db.collection("users").doc(lenderId), {
+    balance: newLenderAvailable,
+  }, {merge: true});
+
+  const lenderTxRef = lenderWalletRef.collection("transactions").doc();
+  t.set(lenderTxRef, {
+    id: lenderTxRef.id,
+    type: "rental_earning",
+    amount: lenderEarnings,
+    referenceId: convoId,
+    description: `Rental earnings (90% of ₱${total} ORC)`,
+    status: "completed",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // 3. Admin wallet: credit 10% commission
+  const adminWalletRef = db.collection("admin_wallet").doc("main");
+  const adminWalletDoc = await t.get(adminWalletRef);
+  const adminBalance = adminWalletDoc.exists ?
+    (adminWalletDoc.data().balance || 0) : 0;
+  const totalCommission = adminWalletDoc.exists ?
+    (adminWalletDoc.data().totalCommission || 0) : 0;
+
+  t.set(adminWalletRef, {
+    balance: adminBalance + adminCommission,
+    totalCommission: totalCommission + adminCommission,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, {merge: true});
+
+  const commRef = adminWalletRef.collection("commissions").doc(convoId);
+  t.set(commRef, {
+    rentalId: convoId,
+    amount: adminCommission,
+    grossAmount: total,
+    lenderId: lenderId,
+    borrowerId: borrowerId,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // 4. Update conversation
+  t.update(convoDoc.ref, {
+    escrowStatus: "settled",
+    settledAt: admin.firestore.FieldValue.serverTimestamp(),
+    adminCommission: adminCommission,
+    lenderEarnings: lenderEarnings,
+    isSettled: true,
+  });
+
+  return {adminCommission, lenderEarnings, total};
+}
+
+/**
+ * Helper to atomically refund escrow to borrower.
+ * Guards against double refunds by checking escrowStatus === "held".
+ *
+ * @param {admin.firestore.Transaction} t Firestore transaction
+ * @param {admin.firestore.Firestore} db Firestore instance
+ * @param {admin.firestore.DocumentSnapshot} convoDoc Conversation doc
+ * @param {string} reason Cancellation / refund reason
+ * @return {Promise<number>} Refunded amount
+ */
+async function refundEscrowTransaction(t, db, convoDoc, reason) {
+  const convoData = convoDoc.data();
+  if (!convoData || convoData.escrowStatus !== "held") {
+    return 0;
+  }
+
+  const convoId = convoDoc.id;
+  const total = Number(convoData.escrowAmount) || 0;
+  const borrowerId = convoData.borrowerId;
+
+  if (total > 0 && borrowerId) {
+    const borrowerWalletRef = db.collection("wallets").doc(borrowerId);
+    const borrowerWalletDoc = await t.get(borrowerWalletRef);
+
+    const currentAvailable = borrowerWalletDoc.exists ?
+      (borrowerWalletDoc.data().availableBalance || 0) : 0;
+    const currentEscrow = borrowerWalletDoc.exists ?
+      (borrowerWalletDoc.data().escrowBalance || 0) : 0;
+
+    const newAvailable = currentAvailable + total;
+    t.set(borrowerWalletRef, {
+      availableBalance: newAvailable,
+      escrowBalance: Math.max(0, currentEscrow - total),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, {merge: true});
+
+    t.set(db.collection("users").doc(borrowerId), {
+      balance: newAvailable,
+    }, {merge: true});
+
+    const txRef = borrowerWalletRef.collection("transactions").doc();
+    t.set(txRef, {
+      id: txRef.id,
+      type: "rental_refund",
+      amount: total,
+      referenceId: convoId,
+      description: `Refund for rental (${reason || "Rental cancelled"})`,
+      status: "completed",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  t.update(convoDoc.ref, {
+    escrowStatus: "refunded",
+    refundedAt: admin.firestore.FieldValue.serverTimestamp(),
+    refundReason: reason || "Cancelled",
+  });
+
+  return total;
+}
+
+/**
+ * Accepts a rental request and escrows the required ORC from borrower.
+ */
+exports.acceptRentalRequest = functions.https.onCall(
+    async (data, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+            "unauthenticated",
+            "Must be logged in to accept borrow requests.",
+        );
+      }
+
+      const convoId = data && data.convoId;
+      if (!convoId) {
+        throw new functions.https.HttpsError(
+            "invalid-argument",
+            "convoId is required.",
+        );
+      }
+
+      const db = admin.firestore();
+      const convoRef = db.collection("conversations").doc(convoId);
+
+      return db.runTransaction(async (t) => {
+        const convoDoc = await t.get(convoRef);
+        if (!convoDoc.exists) {
+          throw new functions.https.HttpsError(
+              "not-found",
+              "Conversation does not exist.",
+          );
+        }
+
+        const convoData = convoDoc.data();
+        const lenderId = convoData.itemOwnerId || convoData.ownerId;
+        const borrowerId = convoData.borrowerId;
+
+        if (context.auth.uid !== lenderId) {
+          throw new functions.https.HttpsError(
+              "permission-denied",
+              "Only the item owner can accept this request.",
+          );
+        }
+
+        if (convoData.approved === true) {
+          throw new functions.https.HttpsError(
+              "failed-precondition",
+              "This request has already been accepted.",
+          );
+        }
+
+        if (convoData.denied === true) {
+          throw new functions.https.HttpsError(
+              "failed-precondition",
+              "This request has been denied.",
+          );
+        }
+
+        // Calculate total = agreed price * duration
+        let total = 0;
+        if (typeof convoData.totalPrice === "number" &&
+            convoData.totalPrice > 0) {
+          total = convoData.totalPrice;
+        } else {
+          const days = Number(convoData.totalDays) || 1;
+          const price = Number(convoData.price) || 0;
+          total = price * days;
+        }
+
+        if (!borrowerId) {
+          throw new functions.https.HttpsError(
+              "failed-precondition",
+              "Conversation is missing borrower information.",
+          );
+        }
+
+        const borrowerWalletRef = db.collection("wallets").doc(borrowerId);
+        const borrowerWalletDoc = await t.get(borrowerWalletRef);
+
+        const currentAvailable = borrowerWalletDoc.exists ?
+          (borrowerWalletDoc.data().availableBalance || 0) : 0;
+        const currentEscrow = borrowerWalletDoc.exists ?
+          (borrowerWalletDoc.data().escrowBalance || 0) : 0;
+
+        if (currentAvailable < total) {
+          throw new functions.https.HttpsError(
+              "failed-precondition",
+              `Borrower has insufficient ORC balance ` +
+              `(Available: ₱${currentAvailable}, Required: ₱${total}).`,
+          );
+        }
+
+        if (total > 0) {
+          t.set(borrowerWalletRef, {
+            availableBalance: currentAvailable - total,
+            escrowBalance: currentEscrow + total,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }, {merge: true});
+
+          t.set(db.collection("users").doc(borrowerId), {
+            balance: currentAvailable - total,
+          }, {merge: true});
+
+          const txRef = borrowerWalletRef.collection("transactions").doc();
+          const desc = convoData.lastMessageText || "Item";
+          t.set(txRef, {
+            id: txRef.id,
+            type: "rental_escrow",
+            amount: -total,
+            referenceId: convoId,
+            description: `Escrow hold for rental (${desc})`,
+            status: "held",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+
+        t.update(convoRef, {
+          approved: true,
+          denied: false,
+          escrowAmount: total,
+          escrowStatus: total > 0 ? "held" : "none",
+          acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return {
+          success: true,
+          convoId,
+          escrowAmount: total,
+        };
+      });
+    },
+);
+
+/**
+ * Callable endpoint to cancel a rental and refund any escrow to the borrower.
+ */
+exports.cancelOrRefundRental = functions.https.onCall(
+    async (data, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+            "unauthenticated",
+            "Must be logged in to cancel rental.",
+        );
+      }
+
+      const convoId = data && data.convoId;
+      if (!convoId) {
+        throw new functions.https.HttpsError(
+            "invalid-argument",
+            "convoId is required.",
+        );
+      }
+
+      const db = admin.firestore();
+      const convoRef = db.collection("conversations").doc(convoId);
+
+      return db.runTransaction(async (t) => {
+        const convoDoc = await t.get(convoRef);
+        if (!convoDoc.exists) {
+          throw new functions.https.HttpsError(
+              "not-found",
+              "Conversation not found.",
+          );
+        }
+
+        const convoData = convoDoc.data();
+        const uid = context.auth.uid;
+        const isParticipant = (convoData.participants || []).includes(uid) ||
+          convoData.borrowerId === uid ||
+          convoData.itemOwnerId === uid ||
+          convoData.ownerId === uid;
+
+        const callerEmail = context.auth.token.email || "";
+        const isAdminUser = callerEmail === "admin-portal@lendly.internal" ||
+          callerEmail === "palenciajerjer28@gmail.com";
+
+        if (!isParticipant && !isAdminUser) {
+          throw new functions.https.HttpsError(
+              "permission-denied",
+              "Unauthorized to cancel this rental.",
+          );
+        }
+
+        const refundedAmount = await refundEscrowTransaction(
+            t,
+            db,
+            convoDoc,
+            data.reason || "Rental cancelled",
+        );
+
+        t.update(convoRef, {
+          denied: true,
+          approved: false,
+          cancelled: true,
+          cancelReason: data.reason || "Rental cancelled",
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return {success: true, refundedAmount};
+      });
+    },
+);
+
+/**
+ * Callable endpoint to mark a rental as completed and settle escrow.
+ */
+exports.completeRental = functions.https.onCall(
+    async (data, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+            "unauthenticated",
+            "Must be logged in.",
+        );
+      }
+
+      const convoId = data && data.convoId;
+      if (!convoId) {
+        throw new functions.https.HttpsError(
+            "invalid-argument",
+            "convoId is required.",
+        );
+      }
+
+      const db = admin.firestore();
+      const convoRef = db.collection("conversations").doc(convoId);
+
+      return db.runTransaction(async (t) => {
+        const convoDoc = await t.get(convoRef);
+        if (!convoDoc.exists) {
+          throw new functions.https.HttpsError(
+              "not-found",
+              "Conversation not found.",
+          );
+        }
+
+        const convoData = convoDoc.data();
+        const lenderId = convoData.itemOwnerId || convoData.ownerId;
+        const callerEmail = context.auth.token.email || "";
+        const isAdminUser = callerEmail === "admin-portal@lendly.internal" ||
+          callerEmail === "palenciajerjer28@gmail.com";
+
+        if (context.auth.uid !== lenderId && !isAdminUser) {
+          throw new functions.https.HttpsError(
+              "permission-denied",
+              "Only the lender or admin can complete rental.",
+          );
+        }
+
+        t.update(convoRef, {
+          isPaid: true,
+          isReceived: true,
+          isReturned: true,
+          isReturnConfirmed: true,
+          returnConfirmedAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        const settlement = await settleEscrowTransaction(t, db, convoDoc);
+        return {success: true, settlement};
+      });
+    },
+);
+
+/**
+ * Firestore Trigger: When a conversation document is updated and reaches
+ * a terminal state (completed or denied), recalculate trust scores for
+ * all participants, and settle/refund escrow.
+ */
 exports.onConversationStatusChange = functions.firestore
     .document("conversations/{convoId}")
     .onUpdate(async (change) => {
@@ -505,6 +1165,38 @@ exports.onConversationStatusChange = functions.firestore
         after.isReturnConfirmed === true;
 
       const deniedChanged = before.denied !== after.denied;
+
+      // ── Settle Escrow if completed ──────────────────────────
+      if (!wasCompleted && nowCompleted && after.escrowStatus === "held") {
+        await admin.firestore().runTransaction(async (t) => {
+          const freshConvoDoc = await t.get(change.after.ref);
+          await settleEscrowTransaction(t, admin.firestore(), freshConvoDoc);
+        }).catch((err) => {
+          console.error(
+              `Escrow settlement error for convo ${change.after.id}:`,
+              err,
+          );
+        });
+      }
+
+      // ── Refund Escrow if denied after being approved ────────
+      if (after.denied === true && before.denied !== true &&
+          after.escrowStatus === "held") {
+        await admin.firestore().runTransaction(async (t) => {
+          const freshConvoDoc = await t.get(change.after.ref);
+          await refundEscrowTransaction(
+              t,
+              admin.firestore(),
+              freshConvoDoc,
+              "Lender denied rental request",
+          );
+        }).catch((err) => {
+          console.error(
+              `Escrow refund error for convo ${change.after.id}:`,
+              err,
+          );
+        });
+      }
 
       if (!deniedChanged && wasCompleted === nowCompleted) {
         return null;

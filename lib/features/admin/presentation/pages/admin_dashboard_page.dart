@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_reports_page.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_user_management_page.dart';
+import 'package:lendly/features/admin/presentation/pages/admin_wallet_page.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 
 class AdminDashboardPage extends StatelessWidget {
-  const AdminDashboardPage({Key? key}) : super(key: key);
+  const AdminDashboardPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +89,18 @@ class AdminDashboardPage extends StatelessWidget {
                     builder: (_) => const AdminDashboardScreen()),
               ),
             ),
+            const SizedBox(height: 12),
+            _DashboardCard(
+              icon: Icons.account_balance_wallet_rounded,
+              title: 'Admin Wallet & Revenue',
+              subtitle: 'Track platform commission (10%), wallet balance, and settlements',
+              color: const Color(0xFF27AE60),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AdminWalletPage()),
+              ),
+            ),
           ],
         ),
       ),
@@ -128,7 +141,7 @@ class _DashboardCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 28),

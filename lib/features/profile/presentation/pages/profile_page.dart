@@ -18,6 +18,7 @@ import 'package:lendly/core/utils/image_utils.dart';
 import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
 import 'package:lendly/core/services/review_service.dart';
 import 'package:lendly/features/profile/presentation/widgets/trust_score_card.dart';
+import 'package:lendly/features/wallet/presentation/pages/orc_wallet_screen.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String? userId; // If null, displays current logged-in user's profile
@@ -742,7 +743,31 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const OrcWalletScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
+                            label: const Text('ORC Wallet'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2ECC71),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
                                 vertical: 12,
                               ),
                             ),

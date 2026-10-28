@@ -27,6 +27,9 @@ class AuthWrapper extends StatelessWidget {
           }
           return const LoginPage();
         }
+        if (snapshot.hasError) {
+          return const LoginPage();
+        }
         return const Scaffold(
           body: Center(
             child: CircularProgressIndicator(),

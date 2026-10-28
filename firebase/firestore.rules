@@ -25,15 +25,16 @@ service cloud.firestore {
       // Full access for administrators
       allow write: if isAdmin();
 
-      // Users can write their own document, but CANNOT modify trust score fields.
-      // Trust score is computed server-side by Cloud Functions only.
+      // Users can write their own document, but CANNOT modify trust score or balance fields.
+      // Trust score and wallet balances are computed server-side by Cloud Functions only.
       allow create: if request.auth != null && request.auth.uid == userId
         && !('trustScore' in request.resource.data)
-        && !('trustScoreStats' in request.resource.data);
+        && !('trustScoreStats' in request.resource.data)
+        && !('balance' in request.resource.data);
       allow update: if request.auth != null &&
         (
           (request.auth.uid == userId &&
-           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trustScore', 'trustScoreStats']))
+           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trustScore', 'trustScoreStats', 'balance']))
           ||
           // Any authenticated session can update the isBlocked field (admin use)
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isBlocked'])
@@ -64,9 +65,39 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // ── ORC Wallets & Transactions (Read-only for owner/admin, Cloud Functions write only)
+    match /wallets/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if false;
+
+      match /transactions/{txId} {
+        allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+        allow write: if false;
+      }
+    }
+
+    // ── Admin Wallet (Read-only for Admins, Cloud Functions write only) ────────
+    match /admin_wallet/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+
+      match /commissions/{commId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
+    }
+
+    // ── Stripe Processed Events (Internal server only) ───────────────────────
+    match /stripe_events/{eventId} {
+      allow read, write: if false;
+    }
+
     // ── All other collections (borrowings, payments, appraisals, etc.) ────────
     match /{collection}/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth != null &&
+        collection != 'wallets' &&
+        collection != 'admin_wallet' &&
+        collection != 'stripe_events';
     }
   }
 }

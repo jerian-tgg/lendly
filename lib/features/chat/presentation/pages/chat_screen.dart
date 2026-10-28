@@ -6,8 +6,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:lendly/core/utils/image_utils.dart';
 import 'package:lendly/features/chat/presentation/pages/qr_handoff_screen.dart';
+import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart';
 
 class ChatScreen extends StatefulWidget {
   final String convoId;
@@ -156,33 +158,71 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _approveRequest() async {
     final ok = await _showConfirmDialog(
-      title: 'Accept Request',
-      message: 'Accept this borrow request? The borrower will be notified.',
-      confirmLabel: 'Accept',
+      title: 'Accept Request & Hold Escrow',
+      message:
+          'Accept this borrow request? The rental amount will be moved from the borrower\'s available ORC to escrow until the item is safely returned.',
+      confirmLabel: 'Accept & Escrow',
       confirmColor: const Color(0xFF2ECC71),
     );
     if (ok != true) return;
-    await FirebaseFirestore.instance
-        .collection('conversations')
-        .doc(widget.convoId)
-        .update({'approved': true, 'denied': false});
-    Fluttertoast.showToast(msg: 'Request accepted!');
+
+    try {
+      await WalletRepository().acceptRentalRequest(widget.convoId);
+      Fluttertoast.showToast(msg: 'Request accepted & escrow secured!');
+    } on FirebaseFunctionsException catch (e) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Unable to Accept Request',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            e.message ?? 'Borrower has insufficient ORC balance to accept this rental.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      Fluttertoast.showToast(msg: 'Failed to accept: $e');
+    }
   }
 
   Future<void> _denyRequest() async {
     final ok = await _showConfirmDialog(
       title: 'Deny Request',
       message:
-          'Deny this borrow request? The borrower will no longer be able to message you for this item.',
+          'Deny this borrow request? Any held escrow funds will be immediately refunded to the borrower.',
       confirmLabel: 'Deny',
       confirmColor: Colors.red,
     );
     if (ok != true) return;
-    await FirebaseFirestore.instance
-        .collection('conversations')
-        .doc(widget.convoId)
-        .update({'denied': true, 'approved': false});
-    Fluttertoast.showToast(msg: 'Request denied.');
+
+    try {
+      await WalletRepository().cancelOrRefundRental(widget.convoId, 'Denied by lender');
+      Fluttertoast.showToast(msg: 'Request denied.');
+    } catch (e) {
+      await FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(widget.convoId)
+          .update({'denied': true, 'approved': false});
+      Fluttertoast.showToast(msg: 'Request denied.');
+    }
   }
 
   Future<void> _openQrScreen(String action, Map<String, dynamic> convoData) async {

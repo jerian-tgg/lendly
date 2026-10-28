@@ -11,7 +11,8 @@ import 'package:lendly/features/items/presentation/widgets/item_card.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 import 'package:lendly/core/utils/image_utils.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
-import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
+import 'package:lendly/features/wallet/presentation/pages/orc_wallet_screen.dart';
+import 'package:lendly/features/wallet/presentation/widgets/cash_in_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isGuest;
@@ -751,110 +752,132 @@ class _ItemListScreenState extends State<ItemListScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: StreamBuilder<DocumentSnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('users')
+                    .collection('wallets')
                     .doc(user.uid)
                     .snapshots(),
                 builder: (context, snapshot) {
-                  double balance = 3400.0;
+                  double available = 0.0;
+                  double escrow = 0.0;
                   if (snapshot.hasData && snapshot.data!.exists) {
-                    final uData = snapshot.data!.data() as Map<String, dynamic>?;
-                    if (uData != null && uData.containsKey('balance')) {
-                      balance = (uData['balance'] as num).toDouble();
+                    final data = snapshot.data!.data() as Map<String, dynamic>?;
+                    if (data != null) {
+                      available = (data['availableBalance'] as num?)?.toDouble() ?? 0.0;
+                      escrow = (data['escrowBalance'] as num?)?.toDouble() ?? 0.0;
                     }
                   }
 
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const OrcWalletScreen()),
+                      );
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.account_balance_wallet_outlined,
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Current Balance:',
-                                  style: TextStyle(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.account_balance_wallet_outlined,
                                     color: Colors.white.withValues(alpha: 0.9),
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
+                                    size: 18,
                                   ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Available Balance:',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '₱ ${available.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              if (escrow > 0) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.lock_clock, size: 12, color: Colors.amber[200]),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Escrow: ₱${escrow.toStringAsFixed(0)}',
+                                      style: TextStyle(
+                                        color: Colors.amber[200],
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '₱ ${balance.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
 
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Wallet top-up features active.'),
-                              ),
-                            );
-                          },
-                          icon: const Icon(
-                            Icons.add_card,
-                            size: 16,
-                            color: Color(0xFF7B40B5),
-                          ),
-                          label: const Text(
-                            'Top Up',
-                            style: TextStyle(
+                          ElevatedButton.icon(
+                            onPressed: () => CashInDialog.show(context),
+                            icon: const Icon(
+                              Icons.add_card,
+                              size: 16,
                               color: Color(0xFF7B40B5),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                            ),
+                            label: const Text(
+                              'Cash In',
+                              style: TextStyle(
+                                color: Color(0xFF7B40B5),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },
