@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
 import 'package:lendly/features/items/domain/entities/item.dart';
+import 'package:lendly/features/items/presentation/widgets/location_picker_map_dialog.dart';
 
 class AddItemDialog extends StatefulWidget {
   final String? itemId;
@@ -148,6 +149,39 @@ class _AddItemDialogState extends State<AddItemDialog> {
         }
       }
     } catch (_) {}
+  }
+
+  Future<void> _pickLocationOnMap() async {
+    final current = (_itemLatitude != null && _itemLongitude != null)
+        ? GeoLocation(
+            latitude: _itemLatitude!,
+            longitude: _itemLongitude!,
+            name: _cityController.text.isNotEmpty ? _cityController.text : null,
+          )
+        : LocationHelper.defaultLocation;
+
+    final result = await LocationPickerMapDialog.show(
+      context,
+      initialLocation: current,
+      initialRadiusKm: 5.0,
+      title: 'Pin Item Location on Map',
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _itemLatitude = result.location.latitude;
+        _itemLongitude = result.location.longitude;
+        if (result.location.name != null && result.location.name!.isNotEmpty) {
+          _cityController.text = result.location.name!;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('📍 Item location pinned: ${_cityController.text}'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -844,6 +878,28 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                   spacing: 8,
                                   runSpacing: 6,
                                   children: [
+                                    InkWell(
+                                      onTap: _pickLocationOnMap,
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF7B40B5),
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.pin_drop, size: 13, color: Colors.white),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Pin on Map',
+                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                     InkWell(
                                       onTap: _useProfileLocation,
                                       borderRadius: BorderRadius.circular(16),

@@ -12,6 +12,7 @@ import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
 import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
+import 'package:lendly/features/items/presentation/widgets/location_picker_map_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -276,20 +277,61 @@ class _ItemListScreenState extends State<ItemListScreen> {
   }
 
   Future<void> _loadUserReferenceLocation() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    // 1. First attempt: retrieve real device location via GPS / device location service
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (doc.exists && mounted) {
-        final data = doc.data();
-        final loc = LocationHelper.parseCoordinates(data?['location']);
-        if (loc != null) {
-          setState(() {
-            _currentReferenceLocation = loc;
-          });
-        }
+      final deviceLoc = await LocationHelper.getDeviceLocation();
+      if (deviceLoc != null && mounted) {
+        setState(() {
+          _currentReferenceLocation = deviceLoc;
+        });
+        return;
       }
     } catch (_) {}
+
+    // 2. Second attempt: look up user's saved location in Firestore
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists && mounted) {
+          final data = doc.data();
+          final loc = LocationHelper.parseCoordinates(data?['location']);
+          if (loc != null) {
+            setState(() {
+              _currentReferenceLocation = loc;
+            });
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _openLocationPicker() async {
+    final result = await LocationPickerMapDialog.show(
+      context,
+      initialLocation: _currentReferenceLocation,
+      initialRadiusKm: _selectedRadiusKm,
+      title: 'Set Location & Radius',
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _currentReferenceLocation = result.location;
+        _selectedRadiusKm = result.radiusKm;
+      });
+
+      // Persist to user profile if logged in
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        try {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            'location': '${result.location.latitude.toStringAsFixed(6)}, ${result.location.longitude.toStringAsFixed(6)}',
+            'locationName': result.location.name,
+          }, SetOptions(merge: true));
+        } catch (_) {}
+      }
+    }
   }
 
   Future<void> _fetchAndCacheOwnerLocation(String ownerId) async {
@@ -357,56 +399,73 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   const Divider(),
                   const SizedBox(height: 10),
 
-                  // Reference Location Bar (Geographical Radius Center!)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9F5FE),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.25)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.my_location, size: 18, color: Color(0xFF7B40B5)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Reference Point / My Location', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600)),
-                              Text(
-                                _currentReferenceLocation.name ??
-                                    '${_currentReferenceLocation.latitude.toStringAsFixed(2)}, ${_currentReferenceLocation.longitude.toStringAsFixed(2)}',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                  // Reference Location Bar & Map Pin Picker (Geographical Radius Center!)
+                  InkWell(
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      await _openLocationPicker();
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF9F5FE),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.pin_drop, size: 20, color: Color(0xFF7B40B5)),
                           ),
-                        ),
-                        PopupMenuButton<GeoLocation>(
-                          icon: const Icon(Icons.swap_horiz, size: 20, color: Color(0xFF7B40B5)),
-                          tooltip: 'Change Reference Location',
-                          onSelected: (loc) {
-                            setModalState(() => _currentReferenceLocation = loc);
-                            setState(() => _currentReferenceLocation = loc);
-                          },
-                          itemBuilder: (context) {
-                            return LocationHelper.presetLocations.map((loc) {
-                              return PopupMenuItem<GeoLocation>(
-                                value: loc,
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.location_on, size: 14, color: Color(0xFF7B40B5)),
-                                    const SizedBox(width: 6),
-                                    Text(loc.name ?? '${loc.latitude}, ${loc.longitude}', style: const TextStyle(fontSize: 12)),
-                                  ],
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Search Center / Location Pin',
+                                  style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600),
                                 ),
-                              );
-                            }).toList();
-                          },
-                        ),
-                      ],
+                                Text(
+                                  _currentReferenceLocation.name ??
+                                      '${_currentReferenceLocation.latitude.toStringAsFixed(4)}, ${_currentReferenceLocation.longitude.toStringAsFixed(4)}',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const Text(
+                                  'Tap to open map & move pin manually',
+                                  style: TextStyle(fontSize: 10, color: Colors.black54),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7B40B5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.map, size: 13, color: Colors.white),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Map Pin',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -732,6 +791,117 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
                   ),
+                ),
+              ),
+            ),
+          ),
+
+          // Facebook Marketplace Location & Radius Banner
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+            child: InkWell(
+              onTap: _openLocationPicker,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.2)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.place,
+                        size: 16,
+                        color: Color(0xFF7B40B5),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _currentReferenceLocation.name ??
+                                      '${_currentReferenceLocation.latitude.toStringAsFixed(3)}, ${_currentReferenceLocation.longitude.toStringAsFixed(3)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Color(0xFF2D3748),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  _selectedRadiusKm >= 100.0 ? 'Any distance' : 'Within ${_selectedRadiusKm.toInt()} km',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF7B40B5),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            _selectedRadiusKm >= 100.0
+                                ? 'Tap to drop map pin & filter distance'
+                                : 'Showing items within ${_selectedRadiusKm.toInt()} km • Tap to adjust pin on map',
+                            style: TextStyle(fontSize: 10.5, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_location_alt, size: 14, color: Color(0xFF7B40B5)),
+                          SizedBox(width: 4),
+                          Text(
+                            'Map Pin',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF7B40B5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
