@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GeoLocation {
@@ -295,5 +298,129 @@ class LocationHelper {
       return locationText;
     }
     return fallbackCity;
+  }
+
+  /// Finds the closest preset city name within [maxDistanceKm].
+  static String? getNearestCityName(double lat, double lng, {double maxDistanceKm = 30.0}) {
+    GeoLocation? closest;
+    double minDistance = double.infinity;
+
+    for (final preset in presetLocations) {
+      final d = calculateDistance(lat, lng, preset.latitude, preset.longitude);
+      if (d < minDistance) {
+        minDistance = d;
+        closest = preset;
+      }
+    }
+
+    if (closest != null && minDistance <= maxDistanceKm) {
+      return closest.name?.split('(').first.trim();
+    }
+    return null;
+  }
+
+  /// Attempts to fetch live device GPS location using [Geolocator].
+  /// Falls back to IP-based location and preset defaults if permissions/hardware are unavailable.
+  static Future<GeoLocation> getDeviceLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        final ipLoc = await getIpLocation();
+        if (ipLoc != null) return ipLoc;
+        return defaultLocation;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          final ipLoc = await getIpLocation();
+          if (ipLoc != null) return ipLoc;
+          return defaultLocation;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        final ipLoc = await getIpLocation();
+        if (ipLoc != null) return ipLoc;
+        return defaultLocation;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+
+      final nearestCity = getNearestCityName(position.latitude, position.longitude);
+      final locName = nearestCity ?? 'My Location (${position.latitude.toStringAsFixed(2)}, ${position.longitude.toStringAsFixed(2)})';
+
+      return GeoLocation(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        name: locName,
+      );
+    } catch (_) {
+      final ipLoc = await getIpLocation();
+      if (ipLoc != null) return ipLoc;
+      return defaultLocation;
+    }
+  }
+
+  /// Fallback IP-based geolocation (works on laptops/desktops and web without GPS sensors).
+  static Future<GeoLocation?> getIpLocation() async {
+    try {
+      final res = await http.get(Uri.parse('http://ip-api.com/json')).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final lat = (data['lat'] as num?)?.toDouble();
+        final lng = (data['lon'] as num?)?.toDouble();
+        final city = data['city'] as String?;
+        final region = data['regionName'] as String?;
+
+        if (lat != null && lng != null) {
+          final name = city != null ? (region != null ? '$city, $region' : city) : 'My Location';
+          return GeoLocation(
+            latitude: lat,
+            longitude: lng,
+            name: name,
+          );
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Reverse geocodes coordinates to a clean place or city name using Nominatim / presets.
+  static Future<String> reverseGeocode(double lat, double lng) async {
+    final nearest = getNearestCityName(lat, lng, maxDistanceKm: 12.0);
+    if (nearest != null) return nearest;
+
+    try {
+      final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=14');
+      final res = await http.get(url, headers: {'User-Agent': 'LendlyApp/1.0'}).timeout(const Duration(seconds: 3));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final address = data['address'] as Map<String, dynamic>?;
+        if (address != null) {
+          final city = address['city'] ?? address['town'] ?? address['municipality'] ?? address['county'];
+          final state = address['state'] ?? address['region'];
+          if (city != null) {
+            return state != null ? '$city, $state' : city.toString();
+          }
+        }
+        final displayName = data['display_name'] as String?;
+        if (displayName != null) {
+          final parts = displayName.split(',');
+          if (parts.length >= 2) {
+            return '${parts[0].trim()}, ${parts[1].trim()}';
+          }
+          return displayName;
+        }
+      }
+    } catch (_) {}
+
+    return nearest ?? '${lat.toStringAsFixed(3)}, ${lng.toStringAsFixed(3)}';
   }
 }
