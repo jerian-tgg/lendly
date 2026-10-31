@@ -10,9 +10,11 @@
 //   3. Scanner reads partner QR → validates convoId + action match
 //   4. On success → Firestore updated → screen pops with result
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -40,9 +42,12 @@ class QrHandoffScreen extends StatefulWidget {
 class _QrHandoffScreenState extends State<QrHandoffScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final GlobalKey<_ScanTabState> _scanTabKey = GlobalKey<_ScanTabState>();
+  StreamSubscription<DocumentSnapshot>? _convoSub;
   bool _processing = false;
   String? _errorMessage;
   bool _confirmed = false;
+  bool _isExiting = false;
 
   /// The QR data this user presents to their partner
   String get _myQrData => jsonEncode({
@@ -56,10 +61,43 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+    _listenToConvo();
+  }
+
+  void _onTabChanged() {
+    if (_tabController.index == 1) {
+      _scanTabKey.currentState?.startCamera();
+    } else {
+      _scanTabKey.currentState?.pauseScanner();
+    }
+  }
+
+  /// Listen for remote confirmation when the partner scans our QR code
+  void _listenToConvo() {
+    _convoSub = FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(widget.convoId)
+        .snapshots()
+        .listen((snap) {
+      if (!snap.exists || !mounted || _isExiting) return;
+      final data = snap.data();
+      if (data == null) return;
+
+      final bool isConfirmed = _isHandoff()
+          ? (data['isPaid'] == true && data['isReceived'] == true)
+          : (data['isReturned'] == true && data['isReturnConfirmed'] == true);
+
+      if (isConfirmed && !_isExiting) {
+        _exitWithSuccess();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _convoSub?.cancel();
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -76,8 +114,25 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
       ? 'The borrower scans the lender\'s QR — or the lender scans the borrower\'s — to confirm the item has changed hands.'
       : 'Both parties scan to confirm the item has been returned and the transaction is complete.';
 
+  /// Automatically exits the QR code screen and returns back to messaging
+  void _exitWithSuccess() {
+    if (_isExiting) return;
+    _isExiting = true;
+    _confirmed = true;
+    _convoSub?.cancel();
+    _scanTabKey.currentState?.pauseScanner();
+
+    try {
+      HapticFeedback.mediumImpact();
+    } catch (_) {}
+
+    if (mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
   Future<void> _onQrDetected(String rawValue) async {
-    if (_processing || _confirmed) return;
+    if (_processing || _confirmed || _isExiting) return;
 
     setState(() {
       _processing = true;
@@ -90,16 +145,22 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
       // Validate: must match same conversation and action
       if (data['convoId'] != widget.convoId) {
         _fail('QR code is for a different transaction.');
+        _scanTabKey.currentState?.resumeScanner();
         return;
       }
       if (data['action'] != widget.action) {
         _fail('This QR code is for a different step (${data['action']}).');
+        _scanTabKey.currentState?.resumeScanner();
         return;
       }
       if (data['userId'] == widget.currentUserId) {
         _fail('You cannot scan your own QR code.');
+        _scanTabKey.currentState?.resumeScanner();
         return;
       }
+
+      // Valid QR detected: freeze/pause camera immediately
+      _scanTabKey.currentState?.pauseScanner();
 
       // Write to Firestore
       final Map<String, dynamic> update = _isHandoff()
@@ -119,19 +180,16 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
           .doc(widget.convoId)
           .update(update);
 
-      setState(() {
-        _confirmed = true;
-        _processing = false;
-      });
-
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) Navigator.pop(context, true);
+      // Automatic exit and return back to messaging!
+      _exitWithSuccess();
     } catch (e) {
       _fail('Invalid QR code. Please try again.');
+      _scanTabKey.currentState?.resumeScanner();
     }
   }
 
   void _fail(String msg) {
+    if (!mounted) return;
     setState(() {
       _errorMessage = msg;
       _processing = false;
@@ -185,6 +243,7 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
             description: _description,
           ),
           _ScanTab(
+            key: _scanTabKey,
             active: !_confirmed,
             processing: _processing,
             confirmed: _confirmed,
@@ -192,7 +251,10 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
             accentColor: _accentColor,
             action: widget.action,
             onDetected: _onQrDetected,
-            onClearError: () => setState(() => _errorMessage = null),
+            onClearError: () {
+              setState(() => _errorMessage = null);
+              _scanTabKey.currentState?.resumeScanner();
+            },
           ),
         ],
       ),
@@ -352,6 +414,7 @@ class _ScanTab extends StatefulWidget {
   final VoidCallback onClearError;
 
   const _ScanTab({
+    super.key,
     required this.active,
     required this.processing,
     required this.confirmed,
@@ -370,7 +433,11 @@ class _ScanTabState extends State<_ScanTab> {
   MobileScannerController? _ctrl;
   bool _cameraStarted = false;
 
-  void _startCamera() {
+  void startCamera() {
+    if (_cameraStarted && _ctrl != null) {
+      resumeScanner();
+      return;
+    }
     setState(() {
       _ctrl = MobileScannerController(
         detectionSpeed: DetectionSpeed.normal,
@@ -378,6 +445,18 @@ class _ScanTabState extends State<_ScanTab> {
       );
       _cameraStarted = true;
     });
+  }
+
+  void pauseScanner() {
+    try {
+      _ctrl?.stop();
+    } catch (_) {}
+  }
+
+  void resumeScanner() {
+    try {
+      _ctrl?.start();
+    } catch (_) {}
   }
 
   @override
@@ -389,7 +468,17 @@ class _ScanTabState extends State<_ScanTab> {
   @override
   Widget build(BuildContext context) {
     if (widget.confirmed) {
-      return _SuccessView(accentColor: widget.accentColor, action: widget.action);
+      return Center(
+        child: Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            color: widget.accentColor.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.check_circle_rounded, color: widget.accentColor, size: 56),
+        ),
+      );
     }
 
     if (!_cameraStarted) {
@@ -422,7 +511,7 @@ class _ScanTabState extends State<_ScanTab> {
             ),
             const SizedBox(height: 28),
             ElevatedButton.icon(
-              onPressed: _startCamera,
+              onPressed: startCamera,
               icon: const Icon(Icons.camera_alt_outlined,
                   color: Colors.white, size: 18),
               label: const Text('Open Camera',
@@ -448,7 +537,8 @@ class _ScanTabState extends State<_ScanTab> {
           controller: _ctrl!,
           onDetect: (capture) {
             final barcode = capture.barcodes.firstOrNull;
-            if (barcode?.rawValue != null) {
+            if (barcode?.rawValue != null && !widget.processing && !widget.confirmed) {
+              pauseScanner();
               widget.onDetected(barcode!.rawValue!);
             }
           },

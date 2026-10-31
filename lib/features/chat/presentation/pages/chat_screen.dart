@@ -299,7 +299,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     if (!mounted) return;
-    await Navigator.push(
+    final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => QrHandoffScreen(
@@ -311,6 +311,33 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  action == 'handoff'
+                      ? '✓ Handoff confirmed! Item exchange complete.'
+                      : '✓ Return confirmed! Transaction concluded.',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: action == 'handoff'
+              ? const Color(0xFF3498DB)
+              : const Color(0xFF7B40B5),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _clearChatMessages() async {
