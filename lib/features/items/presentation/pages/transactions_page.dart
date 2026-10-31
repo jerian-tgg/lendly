@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lendly/core/utils/image_utils.dart';
+import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 
 class TransactionsPage extends StatefulWidget {
   const TransactionsPage({super.key});
@@ -47,13 +48,26 @@ class _TransactionsPageState extends State<TransactionsPage>
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Transactions',
-          style: TextStyle(
-            color: Color(0xFF1A1A2E),
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Transactions',
+              style: TextStyle(
+                color: Color(0xFF1A1A2E),
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            Text(
+              'Official Activity Records • View Only',
+              style: TextStyle(
+                color: Colors.black45,
+                fontSize: 11,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -504,9 +518,6 @@ class _TransactionCard extends StatelessWidget {
                         ? 1
                         : 0;
 
-        final isOwner = convo['ownerId'] == currentUserId ||
-            convo['lenderId'] == currentUserId;
-
         final isLenderRole = convo['ownerId'] == currentUserId ||
             convo['lenderId'] == currentUserId;
 
@@ -527,122 +538,158 @@ class _TransactionCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: isValidImageUrl(imageUrl)
-                          ? Image.network(
-                              imageUrl!,
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => _placeholder(),
-                            )
-                          : _placeholder(),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => _openChat(context, convo, itemId),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: isValidImageUrl(imageUrl)
+                              ? Image.network(
+                                  imageUrl!,
+                                  width: 56,
+                                  height: 56,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => _placeholder(),
+                                )
+                              : _placeholder(),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                itemData['name'] ?? 'Item',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1A1A2E),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${itemData['price'] ?? ''} / ${itemData['pricePer'] ?? 'day'}',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.black54),
+                              ),
+                              const SizedBox(height: 4),
+                              _RoleChip(isLender: isLenderRole),
+                            ],
+                          ),
+                        ),
+                        _StatusBadge(isCompleted: isCompleted, step: step),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            itemData['name'] ?? 'Item',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A1A2E),
+                  ),
+                  const SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: _ProgressStepper(step: step),
+                  ),
+                  // Contract badge
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+                    child: _ContractBadge(
+                      signed: contractSigned,
+                      pdfUrl: contractPdfUrl,
+                    ),
+                  ),
+                  if (returnDue != null) ...[
+                    const SizedBox(height: 10),
+                    _ReturnDeadlineBanner(returnDue: returnDue),
+                  ] else if (!isCompleted) ...[
+                    const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.black12),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.event_note_outlined,
+                                size: 14, color: Colors.black45),
+                            SizedBox(width: 6),
+                            Text(
+                              'Return Schedule: Fixed by contract / chat agreement',
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.black54),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${itemData['price'] ?? ''} / ${itemData['pricePer'] ?? 'day'}',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.black54),
-                          ),
-                          const SizedBox(height: 4),
-                          _RoleChip(isLender: isLenderRole),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                    _StatusBadge(isCompleted: isCompleted, step: step),
                   ],
-                ),
+                  const Divider(height: 22, indent: 14, endIndent: 14),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                    child: _buildRecordFooter(
+                        context, convo, itemId, isCompleted, step),
+                  ),
+                ],
               ),
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: _ProgressStepper(step: step),
-              ),
-              // Contract badge
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-                child: _ContractBadge(
-                  signed: contractSigned,
-                  pdfUrl: contractPdfUrl,
-                ),
-              ),
-              if (returnDue != null) ...[
-                const SizedBox(height: 10),
-                _ReturnDeadlineBanner(returnDue: returnDue),
-              ],
-              if (!isCompleted) ...[
-                const Divider(height: 24, indent: 14, endIndent: 14),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                  child: _buildActionRow(context, convo, isOwner),
-                ),
-              ] else
-                const SizedBox(height: 14),
-            ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildActionRow(
-      BuildContext context, Map<String, dynamic> convo, bool isOwner) {
-    final nextBtn = _nextActionButton(convo, convoDoc.id);
-    final showCalendar = isOwner || isLenderView;
-    if (!showCalendar && nextBtn == null) return const SizedBox.shrink();
-
+  Widget _buildRecordFooter(BuildContext context, Map<String, dynamic> convo,
+      String itemId, bool isCompleted, int step) {
     return Row(
       children: [
-        if (showCalendar) ...[
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () => _pickReturnDate(
-                context,
-                convoDoc.id,
-                convo['returnDate'] != null
-                    ? (convo['returnDate'] as Timestamp).toDate()
-                    : null,
-              ),
-              icon: const Icon(Icons.calendar_today_outlined, size: 15),
-              label: Text(
-                convo['returnDate'] == null ? 'Set Return Date' : 'Edit Date',
-                style: const TextStyle(fontSize: 12),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF7B40B5),
-                side: const BorderSide(color: Color(0xFF7B40B5)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
+        Icon(
+          Icons.shield_outlined,
+          size: 15,
+          color: Colors.blueGrey.shade600,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            isCompleted
+                ? 'Immutable Record • Completed'
+                : 'View-Only Record • Verified via QR & Escrow',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Colors.blueGrey.shade600,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        OutlinedButton.icon(
+          onPressed: () => _openChat(context, convo, itemId),
+          icon: const Icon(Icons.chat_bubble_outline, size: 13),
+          label: const Text('View Chat', style: TextStyle(fontSize: 12)),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF7B40B5),
+            side: const BorderSide(color: Color(0xFF7B40B5)),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
-          if (nextBtn != null) const SizedBox(width: 10),
-        ],
-        if (nextBtn != null) Expanded(child: nextBtn),
+        ),
       ],
     );
   }
@@ -655,114 +702,48 @@ class _TransactionCard extends StatelessWidget {
             color: Colors.black26, size: 28),
       );
 
-  Widget? _nextActionButton(Map<String, dynamic> convo, String convoId) {
-    final isPaid = convo['isPaid'] == true;
-    final isReceived = convo['isReceived'] == true;
-    final isReturned = convo['isReturned'] == true;
-    final isReturnConfirmed = convo['isReturnConfirmed'] == true;
-    final contractSigned = convo['contractSigned'] == true;
+  Future<void> _openChat(
+      BuildContext context, Map<String, dynamic> convo, String itemId) async {
+    final participants = List<String>.from(convo['participants'] ?? []);
+    final otherUserId = participants.firstWhere(
+      (id) => id != currentUserId,
+      orElse: () => '',
+    );
 
-    Future<void> update(Map<String, dynamic> data) =>
-        FirebaseFirestore.instance
-            .collection('conversations')
-            .doc(convoId)
-            .update(data);
+    String otherUserName = (convo['ownerId'] == currentUserId
+            ? convo['borrowerName']
+            : convo['lenderName']) ??
+        'User';
 
-    if (!isPaid) {
-      // Block payment until contract is signed by both parties
-      if (!contractSigned) {
-        return _ActionButton(
-          label: 'Sign Contract First',
-          color: Colors.grey.shade400,
-          icon: Icons.lock_outline,
-          onTap: () {},
-        );
-      }
-      return _ActionButton(
-        label: 'Mark Paid',
-        color: const Color(0xFF2ECC71),
-        icon: Icons.payments_outlined,
-        onTap: () => update({'isPaid': true}),
-      );
-    } else if (!isReceived) {
-      return _ActionButton(
-        label: 'Mark Received',
-        color: const Color(0xFF3498DB),
-        icon: Icons.check_circle_outline,
-        onTap: () => update({'isReceived': true}),
-      );
-    } else if (!isReturned) {
-      return _ActionButton(
-        label: 'Mark Returned',
-        color: const Color(0xFFE67E22),
-        icon: Icons.undo_outlined,
-        onTap: () => update({'isReturned': true}),
-      );
-    } else if (!isReturnConfirmed) {
-      return _ActionButton(
-        label: 'Confirm Return',
-        color: const Color(0xFF7B40B5),
-        icon: Icons.verified_outlined,
-        onTap: () => update({'isReturnConfirmed': true}),
-      );
+    if (otherUserId.isNotEmpty) {
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(otherUserId)
+            .get();
+        if (userDoc.exists) {
+          final data = userDoc.data();
+          final name = data?['name'] ?? data?['username'];
+          if (name is String && name.isNotEmpty) {
+            otherUserName = name;
+          }
+        }
+      } catch (_) {}
     }
-    return null;
-  }
 
-  Future<void> _pickReturnDate(
-      BuildContext context, String convoId, DateTime? current) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: current ?? DateTime.now().add(const Duration(days: 3)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: Color(0xFF7B40B5),
-            onPrimary: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked == null || !context.mounted) return;
-
-    final time = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 17, minute: 0),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: Color(0xFF7B40B5),
-            onPrimary: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
-    );
     if (!context.mounted) return;
-
-    final finalDate = time != null
-        ? DateTime(
-            picked.year, picked.month, picked.day, time.hour, time.minute)
-        : DateTime(picked.year, picked.month, picked.day, 17, 0);
-
-    await FirebaseFirestore.instance
-        .collection('conversations')
-        .doc(convoId)
-        .update({'returnDate': Timestamp.fromDate(finalDate)});
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Return date set to ${DateFormat('MMM d, yyyy - h:mm a').format(finalDate)}',
-          ),
-          backgroundColor: const Color(0xFF7B40B5),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          convoId: convoDoc.id,
+          currentUserId: currentUserId,
+          otherUserId: otherUserId,
+          otherUserName: otherUserName,
+          itemId: itemId,
         ),
-      );
-    }
+      ),
+    );
   }
 }
 
@@ -1050,40 +1031,6 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// -- Action Button --
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final Color color;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.label,
-    required this.color,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 16, color: Colors.white),
-      label: Text(
-        label,
-        style: const TextStyle(
-            fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    );
-  }
-}
 
 // ── Contract Badge ─────────────────────────────────────────────────────────
 
