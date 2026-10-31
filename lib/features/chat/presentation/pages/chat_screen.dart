@@ -11,6 +11,8 @@ import 'package:lendly/core/utils/image_utils.dart';
 import 'package:lendly/features/chat/presentation/pages/qr_handoff_screen.dart';
 import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:lendly/features/items/presentation/pages/electronic_contract_page.dart';
+import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
+import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
 
 class ChatScreen extends StatefulWidget {
   final String convoId;
@@ -57,6 +59,13 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  String _getEffectiveItemId(Map<String, dynamic> convoData) {
+    final fromConvo = convoData['itemId'] as String?;
+    if (fromConvo != null && fromConvo.isNotEmpty) return fromConvo;
+    if (widget.itemId != null && widget.itemId!.isNotEmpty) return widget.itemId!;
+    return '';
   }
 
   void _sendMessage(String text) async {
@@ -231,7 +240,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
-    final itemId = convoData['itemId'] as String? ?? '';
+    final itemId = _getEffectiveItemId(convoData);
     final lenderId   = convoData['ownerId'] ?? convoData['lenderId'] ?? '';
     final borrowerId = convoData['participants']?.firstWhere(
       (id) => id != lenderId,
@@ -242,22 +251,22 @@ class _ChatScreenState extends State<ChatScreen> {
     Map<String, dynamic> itemData = {};
     if (itemId.isNotEmpty) {
       final snap = await FirebaseFirestore.instance.collection('items').doc(itemId).get();
-      itemData = snap.data() as Map<String, dynamic>? ?? {};
+      itemData = snap.data() ?? {};
     }
 
     // Fetch lender and borrower user docs
     Future<Map<String, dynamic>> fetchUser(String uid) async {
       if (uid.isEmpty) return {};
       final snap = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      return snap.data() as Map<String, dynamic>? ?? {};
+      return snap.data() ?? {};
     }
 
     final lenderDoc   = await fetchUser(lenderId);
     final borrowerDoc = await fetchUser(borrowerId);
 
-    String _displayName(Map<String, dynamic> doc, String fallback) =>
+    String displayName(Map<String, dynamic> doc, String fallback) =>
         doc['displayName'] ?? doc['name'] ?? doc['username'] ?? fallback;
-    String _email(Map<String, dynamic> doc, String fallback) =>
+    String email(Map<String, dynamic> doc, String fallback) =>
         doc['email'] ?? fallback;
 
     final isLender = currentUser.uid == lenderId;
@@ -272,21 +281,197 @@ class _ChatScreenState extends State<ChatScreen> {
           isLender:      isLender,
           convoData:     convoData,
           itemData:      itemData,
-          lenderName:    _displayName(lenderDoc, 'Lender'),
-          lenderEmail:   _email(lenderDoc, ''),
-          borrowerName:  _displayName(borrowerDoc, 'Borrower'),
-          borrowerEmail: _email(borrowerDoc, ''),
+          lenderName:    displayName(lenderDoc, 'Lender'),
+          lenderEmail:   email(lenderDoc, ''),
+          borrowerName:  displayName(borrowerDoc, 'Borrower'),
+          borrowerEmail: email(borrowerDoc, ''),
         ),
       ),
     );
+  }
+
+  Future<void> _openItemReviewDialog({
+    required String itemId,
+    required String itemTitle,
+    required String ownerId,
+    required String ownerName,
+  }) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to submit a review.')),
+      );
+      return;
+    }
+    if (currentUser.uid == ownerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You cannot review your own listing.')),
+      );
+      return;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => ReviewDialog(
+        revieweeId: ownerId,
+        targetName: ownerName.isNotEmpty ? ownerName : widget.otherUserName,
+        itemId: itemId,
+        itemTitle: itemTitle,
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _openUserReviewDialog({
+    required String targetUserId,
+    required String targetUserName,
+  }) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to submit a review.')),
+      );
+      return;
+    }
+    if (currentUser.uid == targetUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You cannot review yourself.')),
+      );
+      return;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => ReviewDialog(
+        revieweeId: targetUserId,
+        targetName: targetUserName.isNotEmpty ? targetUserName : 'User',
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _navigateToItemDetail(String itemId, Map<String, dynamic> itemData) async {
+    if (itemId.isEmpty) return;
+    Map<String, dynamic> data = Map<String, dynamic>.from(itemData);
+    if (data.isEmpty) {
+      try {
+        final snap = await FirebaseFirestore.instance.collection('items').doc(itemId).get();
+        if (snap.exists && snap.data() != null) {
+          data = snap.data()!;
+        }
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ItemDetailScreen(
+          itemId: itemId,
+          itemData: data,
+        ),
+      ),
+    );
+  }
+
+  void _promptPostReturnReview({
+    required String itemId,
+    required String itemName,
+    required String ownerId,
+    required String ownerName,
+  }) {
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (ctx) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.star_rounded, color: Colors.amber, size: 36),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'How was your rental experience?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Help the Lendly community by sharing a review and rating for "$itemName".',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _openItemReviewDialog(
+                      itemId: itemId,
+                      itemTitle: itemName,
+                      ownerId: ownerId,
+                      ownerName: ownerName,
+                    );
+                  },
+                  icon: const Icon(Icons.star, color: Colors.white, size: 18),
+                  label: const Text('Review This Item', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7B40B5),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Maybe Later', style: TextStyle(color: Colors.grey[600])),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Future<void> _openQrScreen(String action, Map<String, dynamic> convoData) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
-    final itemId = convoData['itemId'] as String? ?? '';
+    final itemId = _getEffectiveItemId(convoData);
     String itemName = 'Item';
+    String ownerId = convoData['itemOwnerId'] ?? convoData['ownerId'] ?? '';
+    String ownerName = widget.otherUserName;
+
     if (itemId.isNotEmpty) {
       final itemSnap = await FirebaseFirestore.instance
           .collection('items')
@@ -295,6 +480,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (itemSnap.exists) {
         final d = itemSnap.data() as Map<String, dynamic>;
         itemName = d['name'] ?? d['title'] ?? 'Item';
+        if (ownerId.isEmpty) ownerId = d['ownerId'] ?? '';
+        if (d['ownerName'] != null) ownerName = d['ownerName'];
       }
     }
 
@@ -337,6 +524,20 @@ class _ChatScreenState extends State<ChatScreen> {
           duration: const Duration(seconds: 3),
         ),
       );
+
+      // Prompt borrower to review the item when return is confirmed
+      if (action == 'return') {
+        final isOwner = convoData['itemOwnerId'] == widget.currentUserId ||
+            convoData['ownerId'] == widget.currentUserId;
+        if (!isOwner && itemId.isNotEmpty) {
+          _promptPostReturnReview(
+            itemId: itemId,
+            itemName: itemName,
+            ownerId: ownerId.isNotEmpty ? ownerId : widget.otherUserId,
+            ownerName: ownerName,
+          );
+        }
+      }
     }
   }
 
@@ -362,247 +563,396 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: StreamBuilder<DocumentSnapshot>(
-          stream: _userStream,
-          builder: (context, snap) {
-            final photoUrl = snap.hasData && snap.data!.exists
-                ? (snap.data!.data() as Map<String, dynamic>)['photoURL']
-                : null;
-            return Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundImage: isValidImageUrl(photoUrl)
-                      ? NetworkImage(photoUrl!)
-                      : const AssetImage('assets/images/default_avatar.png')
-                          as ImageProvider,
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _conversationStream,
+      builder: (context, convoSnap) {
+        final convoData = convoSnap.hasData && convoSnap.data!.exists
+            ? convoSnap.data!.data() as Map<String, dynamic>? ?? {}
+            : <String, dynamic>{};
+
+        final effectiveItemId = _getEffectiveItemId(convoData);
+        final isOwner = convoData['itemOwnerId'] == widget.currentUserId ||
+            convoData['ownerId'] == widget.currentUserId;
+        final isApproved = convoData['approved'] == true;
+        final isDenied = convoData['denied'] == true;
+        final isPaid = convoData['isPaid'] == true;
+        final isReceived = convoData['isReceived'] == true;
+        final isReturned = convoData['isReturned'] == true;
+        final isReturnConfirmed = convoData['isReturnConfirmed'] == true;
+        final isFullyDone =
+            isPaid && isReceived && isReturned && isReturnConfirmed;
+        // Contract state
+        final contractSigned     = convoData['contractSigned']         == true;
+        final lenderSigned       = convoData['contractLenderSigned']   == true;
+        final borrowerSigned     = convoData['contractBorrowerSigned'] == true;
+        final iHaveSigned        = isOwner ? lenderSigned : borrowerSigned;
+
+        final ownerId = convoData['ownerId'] ?? convoData['itemOwnerId'] ?? '';
+        final borrowerId = convoData['borrowerId'] ??
+            ((convoData['participants'] as List<dynamic>?)?.firstWhere(
+              (id) => id != ownerId,
+              orElse: () => '',
+            ) as String? ?? '');
+
+        return StreamBuilder<DocumentSnapshot>(
+          stream: effectiveItemId.isNotEmpty
+              ? FirebaseFirestore.instance.collection('items').doc(effectiveItemId).snapshots()
+              : null,
+          builder: (context, itemSnap) {
+            Map<String, dynamic> itemData = {};
+            if (itemSnap.hasData && itemSnap.data != null && itemSnap.data!.exists) {
+              itemData = itemSnap.data!.data() as Map<String, dynamic>? ?? {};
+            }
+
+            final itemName = itemData['name'] ?? itemData['title'] ?? 'Item';
+            final itemOwnerId = itemData['ownerId'] as String? ?? ownerId;
+            final itemOwnerName = itemData['ownerName'] as String? ?? widget.otherUserName;
+
+            return Scaffold(
+              backgroundColor: const Color(0xFFF7FAFC),
+              appBar: AppBar(
+                backgroundColor: Colors.white,
+                elevation: 1,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.otherUserName,
-                      style: const TextStyle(
-                          color: Color(0xFF1A1A2E),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15),
-                    ),
-                    const Text('Lendly Chat',
-                        style: TextStyle(
-                            color: Colors.black45, fontSize: 11)),
-                  ],
-                ),
-              ],
-            );
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_sweep_outlined,
-                color: Color(0xFF1A1A2E)),
-            tooltip: 'Clear chat',
-            onPressed: () async {
-              final ok = await _showConfirmDialog(
-                title: 'Clear Chat',
-                message:
-                    'Delete all messages? The conversation record will remain.',
-                confirmLabel: 'Clear',
-                confirmColor: Colors.red,
-              );
-              if (ok == true) {
-                await _clearChatMessages();
-                Fluttertoast.showToast(msg: 'Chat cleared');
-              }
-            },
-          ),
-        ],
-      ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: _conversationStream,
-        builder: (context, convoSnap) {
-          if (!convoSnap.hasData) {
-            return const Center(
-                child:
-                    CircularProgressIndicator(color: Color(0xFF7B40B5)));
-          }
-
-          final convoData =
-              convoSnap.data!.data() as Map<String, dynamic>? ?? {};
-          final isOwner =
-              convoData['itemOwnerId'] == widget.currentUserId ||
-                  convoData['ownerId'] == widget.currentUserId;
-          final isApproved = convoData['approved'] == true;
-          final isDenied = convoData['denied'] == true;
-          final isPaid = convoData['isPaid'] == true;
-          final isReceived = convoData['isReceived'] == true;
-          final isReturned = convoData['isReturned'] == true;
-          final isReturnConfirmed = convoData['isReturnConfirmed'] == true;
-          final isFullyDone =
-              isPaid && isReceived && isReturned && isReturnConfirmed;
-          // Contract state
-          final contractSigned     = convoData['contractSigned']         == true;
-          final lenderSigned       = convoData['contractLenderSigned']   == true;
-          final borrowerSigned     = convoData['contractBorrowerSigned'] == true;
-          final iHaveSigned        = isOwner ? lenderSigned : borrowerSigned;
-          final contractPdfUrl     = convoData['contractPdfUrl'] as String?;
-
-          return Column(
-            children: [
-              // Pinned borrow request card
-              _BorrowRequestCard(convoData: convoData),
-
-              // Messages
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('conversations')
-                      .doc(widget.convoId)
-                      .collection('messages')
-                      .orderBy('timestamp', descending: false)
-                      .snapshots(),
-                  builder: (context, msgSnap) {
-                    if (!msgSnap.hasData) {
-                      return const Center(
-                          child: CircularProgressIndicator(
-                              color: Color(0xFF7B40B5)));
-                    }
-
-                    final messages = msgSnap.data!.docs;
-                    if (messages.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.chat_bubble_outline,
-                                size: 48, color: Colors.grey[300]),
-                            const SizedBox(height: 12),
-                            const Text('No messages yet.',
-                                style: TextStyle(
-                                    color: Colors.black38,
-                                    fontSize: 13)),
-                          ],
+                title: StreamBuilder<DocumentSnapshot>(
+                  stream: _userStream,
+                  builder: (context, snap) {
+                    final photoUrl = snap.hasData && snap.data!.exists
+                        ? (snap.data!.data() as Map<String, dynamic>)['photoURL']
+                        : null;
+                    return Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundImage: isValidImageUrl(photoUrl)
+                              ? NetworkImage(photoUrl!)
+                              : const AssetImage('assets/images/default_avatar.png')
+                                  as ImageProvider,
                         ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = messages[index].data()
-                            as Map<String, dynamic>;
-                        final type = msg['type'] ?? 'text';
-
-                        if (type == 'borrow_request') {
-                          return _BorrowRequestMessage(
-                            msg: msg,
-                            isMe: msg['senderId'] ==
-                                widget.currentUserId,
-                          );
-                        }
-
-                        final isMe =
-                            msg['senderId'] == widget.currentUserId;
-                        return _ChatBubble(
-                          text: msg['text'] ?? '',
-                          isMe: isMe,
-                          senderName:
-                              isMe ? null : widget.otherUserName,
-                          timestamp: msg['timestamp'] as Timestamp?,
-                        );
-                      },
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.otherUserName,
+                                style: const TextStyle(
+                                    color: Color(0xFF1A1A2E),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                effectiveItemId.isNotEmpty ? itemName : 'Lendly Chat',
+                                style: const TextStyle(
+                                    color: Colors.black45, fontSize: 11),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),
+                actions: [
+                  if (!isOwner && effectiveItemId.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.star_rounded, color: Colors.amber),
+                      tooltip: 'Rate & Review Item',
+                      onPressed: () => _openItemReviewDialog(
+                        itemId: effectiveItemId,
+                        itemTitle: itemName,
+                        ownerId: itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId,
+                        ownerName: itemOwnerName,
+                      ),
+                    ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Color(0xFF1A1A2E)),
+                    onSelected: (val) async {
+                      if (val == 'review_item') {
+                        _openItemReviewDialog(
+                          itemId: effectiveItemId,
+                          itemTitle: itemName,
+                          ownerId: itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId,
+                          ownerName: itemOwnerName,
+                        );
+                      } else if (val == 'view_item') {
+                        _navigateToItemDetail(effectiveItemId, itemData);
+                      } else if (val == 'clear_chat') {
+                        final ok = await _showConfirmDialog(
+                          title: 'Clear Chat',
+                          message: 'Delete all messages? The conversation record will remain.',
+                          confirmLabel: 'Clear',
+                          confirmColor: Colors.red,
+                        );
+                        if (ok == true) {
+                          await _clearChatMessages();
+                          Fluttertoast.showToast(msg: 'Chat cleared');
+                        }
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      if (!isOwner && effectiveItemId.isNotEmpty)
+                        const PopupMenuItem(
+                          value: 'review_item',
+                          child: Row(
+                            children: [
+                              Icon(Icons.rate_review_outlined, color: Color(0xFF7B40B5), size: 18),
+                              SizedBox(width: 8),
+                              Text('Rate & Review Item'),
+                            ],
+                          ),
+                        ),
+                      if (effectiveItemId.isNotEmpty)
+                        const PopupMenuItem(
+                          value: 'view_item',
+                          child: Row(
+                            children: [
+                              Icon(Icons.inventory_2_outlined, color: Color(0xFF7B40B5), size: 18),
+                              SizedBox(width: 8),
+                              Text('View Item Details'),
+                            ],
+                          ),
+                        ),
+                      const PopupMenuItem(
+                        value: 'clear_chat',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_sweep_outlined, color: Colors.red, size: 18),
+                            SizedBox(width: 8),
+                            Text('Clear Chat'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+              body: !convoSnap.hasData
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF7B40B5)))
+                  : Column(
+                      children: [
+                        // Pinned borrow request & item card
+                        _BorrowRequestCard(
+                          convoData: convoData,
+                          itemId: effectiveItemId,
+                          itemData: itemData,
+                          isOwner: isOwner,
+                          onViewItem: effectiveItemId.isNotEmpty
+                              ? () => _navigateToItemDetail(effectiveItemId, itemData)
+                              : null,
+                          onReviewItem: (!isOwner && effectiveItemId.isNotEmpty)
+                              ? () => _openItemReviewDialog(
+                                    itemId: effectiveItemId,
+                                    itemTitle: itemName,
+                                    ownerId: itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId,
+                                    ownerName: itemOwnerName,
+                                  )
+                              : null,
+                        ),
 
-              // Status banner
-              _StatusBar(
-                isApproved: isApproved,
-                isDenied: isDenied,
-                isFullyDone: isFullyDone,
-                isPaid: isPaid,
-                isReceived: isReceived,
-                isReturned: isReturned,
-                isReturnConfirmed: isReturnConfirmed,
-              ),
+                        // Messages
+                        Expanded(
+                          child: StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('conversations')
+                                .doc(widget.convoId)
+                                .collection('messages')
+                                .orderBy('timestamp', descending: false)
+                                .snapshots(),
+                            builder: (context, msgSnap) {
+                              if (!msgSnap.hasData) {
+                                return const Center(
+                                    child: CircularProgressIndicator(
+                                        color: Color(0xFF7B40B5)));
+                              }
 
-              // Owner: approve / deny
-              if (!isDenied && !isFullyDone && isOwner && !isApproved)
-                _OwnerActionPanel(
-                  onApprove: _approveRequest,
-                  onDeny: _denyRequest,
-                ),
+                              final messages = msgSnap.data!.docs;
+                              if (messages.isEmpty) {
+                                return Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.chat_bubble_outline,
+                                          size: 48, color: Colors.grey[300]),
+                                      const SizedBox(height: 12),
+                                      const Text('No messages yet.',
+                                          style: TextStyle(
+                                              color: Colors.black38,
+                                              fontSize: 13)),
+                                    ],
+                                  ),
+                                );
+                              }
 
-              // Contract signing panel — shown after approval until both sign
-              if (isApproved && !isFullyDone && !contractSigned)
-                _ContractSigningPanel(
-                  contractSigned:  contractSigned,
-                  lenderSigned:    lenderSigned,
-                  borrowerSigned:  borrowerSigned,
-                  iHaveSigned:     iHaveSigned,
-                  onOpenContract:  () => _openContractPage(convoData),
-                ),
+                              return ListView.builder(
+                                controller: _scrollController,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                itemCount: messages.length,
+                                itemBuilder: (context, index) {
+                                  final msg = messages[index].data()
+                                      as Map<String, dynamic>;
+                                  final type = msg['type'] ?? 'text';
 
-              // QR handoff/return buttons → only after contract is signed
-              if (isApproved && !isFullyDone && contractSigned)
-                _QrActionPanel(
-                  isOwner: isOwner,
-                  isPaid: isPaid,
-                  isReceived: isReceived,
-                  isReturned: isReturned,
-                  isReturnConfirmed: isReturnConfirmed,
-                  onConfirmHandoff: () =>
-                      _openQrScreen('handoff', convoData),
-                  onConfirmReturn: () =>
-                      _openQrScreen('return', convoData),
-                ),
+                                  if (type == 'borrow_request') {
+                                    return _BorrowRequestMessage(
+                                      msg: msg,
+                                      isMe: msg['senderId'] == widget.currentUserId,
+                                      onViewItem: effectiveItemId.isNotEmpty
+                                          ? () => _navigateToItemDetail(effectiveItemId, itemData)
+                                          : null,
+                                      onReviewItem: (!isOwner && effectiveItemId.isNotEmpty)
+                                          ? () => _openItemReviewDialog(
+                                                itemId: effectiveItemId,
+                                                itemTitle: itemName,
+                                                ownerId: itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId,
+                                                ownerName: itemOwnerName,
+                                              )
+                                          : null,
+                                    );
+                                  }
 
-              // Input
-              if (!isDenied || isOwner)
-                _MessageInput(
-                  controller: _messageController,
-                  onSend: () => _sendMessage(_messageController.text),
-                )
-              else
-                _DeniedBar(),
-            ],
-          );
-        },
-      ),
+                                  final isMe =
+                                      msg['senderId'] == widget.currentUserId;
+                                  return _ChatBubble(
+                                    text: msg['text'] ?? '',
+                                    isMe: isMe,
+                                    senderName:
+                                        isMe ? null : widget.otherUserName,
+                                    timestamp: msg['timestamp'] as Timestamp?,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+
+                        // Status banner
+                        _StatusBar(
+                          isApproved: isApproved,
+                          isDenied: isDenied,
+                          isFullyDone: isFullyDone,
+                          isPaid: isPaid,
+                          isReceived: isReceived,
+                          isReturned: isReturned,
+                          isReturnConfirmed: isReturnConfirmed,
+                          isOwner: isOwner,
+                        ),
+
+                        // Owner: approve / deny
+                        if (!isDenied && !isFullyDone && isOwner && !isApproved)
+                          _OwnerActionPanel(
+                            onApprove: _approveRequest,
+                            onDeny: _denyRequest,
+                          ),
+
+                        // Contract signing panel — shown after approval until both sign
+                        if (isApproved && !isFullyDone && !contractSigned)
+                          _ContractSigningPanel(
+                            contractSigned:  contractSigned,
+                            lenderSigned:    lenderSigned,
+                            borrowerSigned:  borrowerSigned,
+                            iHaveSigned:     iHaveSigned,
+                            onOpenContract:  () => _openContractPage(convoData),
+                          ),
+
+                        // QR handoff/return buttons → only after contract is signed
+                        if (isApproved && !isFullyDone && contractSigned)
+                          _QrActionPanel(
+                            isOwner: isOwner,
+                            isPaid: isPaid,
+                            isReceived: isReceived,
+                            isReturned: isReturned,
+                            isReturnConfirmed: isReturnConfirmed,
+                            onConfirmHandoff: () =>
+                                _openQrScreen('handoff', convoData),
+                            onConfirmReturn: () =>
+                                _openQrScreen('return', convoData),
+                          ),
+
+                        // Review callout panel: shown after completion
+                        if (isFullyDone || (isReturned && isReturnConfirmed))
+                          _CompletedReviewPanel(
+                            itemId: effectiveItemId,
+                            itemName: itemName,
+                            itemImageUrl: (itemData['imageUrls'] is List && itemData['imageUrls'].isNotEmpty)
+                                ? itemData['imageUrls'][0]
+                                : null,
+                            ownerId: itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId,
+                            ownerName: itemOwnerName,
+                            isOwner: isOwner,
+                            borrowerId: borrowerId.isNotEmpty ? borrowerId : widget.otherUserId,
+                            borrowerName: isOwner ? widget.otherUserName : 'Borrower',
+                            currentUserId: widget.currentUserId,
+                            onReviewItem: () => _openItemReviewDialog(
+                              itemId: effectiveItemId,
+                              itemTitle: itemName,
+                              ownerId: itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId,
+                              ownerName: itemOwnerName,
+                            ),
+                            onReviewUser: () => _openUserReviewDialog(
+                              targetUserId: isOwner
+                                  ? (borrowerId.isNotEmpty ? borrowerId : widget.otherUserId)
+                                  : (itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId),
+                              targetUserName: isOwner ? widget.otherUserName : itemOwnerName,
+                            ),
+                          ),
+
+                        // Input
+                        if (!isDenied || isOwner)
+                          _MessageInput(
+                            controller: _messageController,
+                            onSend: () => _sendMessage(_messageController.text),
+                          )
+                        else
+                          _DeniedBar(),
+                      ],
+                    ),
+            );
+          },
+        );
+      },
     );
   }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Pinned Borrow Request Card (top of chat)
+// Pinned Borrow Request & Item Card (top of chat)
 // ────────────────────────────────────────────────────────────────────────────
 
 class _BorrowRequestCard extends StatelessWidget {
   final Map<String, dynamic> convoData;
-  const _BorrowRequestCard({required this.convoData});
+  final String itemId;
+  final Map<String, dynamic> itemData;
+  final bool isOwner;
+  final VoidCallback? onViewItem;
+  final VoidCallback? onReviewItem;
+
+  const _BorrowRequestCard({
+    required this.convoData,
+    required this.itemId,
+    required this.itemData,
+    required this.isOwner,
+    this.onViewItem,
+    this.onReviewItem,
+  });
 
   @override
   Widget build(BuildContext context) {
     final startStr = convoData['startDate'] as String?;
     final endStr = convoData['endDate'] as String?;
-    if (startStr == null || endStr == null) return const SizedBox.shrink();
+    final bool hasDates = startStr != null && endStr != null;
+    final start = hasDates ? DateTime.tryParse(startStr) : null;
+    final end = hasDates ? DateTime.tryParse(endStr) : null;
 
-    final start = DateTime.tryParse(startStr);
-    final end = DateTime.tryParse(endStr);
-    if (start == null || end == null) return const SizedBox.shrink();
+    if (!hasDates && itemId.isEmpty) return const SizedBox.shrink();
 
     final totalDays = convoData['totalDays'] as int? ?? 0;
     final totalPrice =
@@ -610,14 +960,32 @@ class _BorrowRequestCard extends StatelessWidget {
     final fmt = DateFormat('MMM d, yyyy');
     final isApproved = convoData['approved'] == true;
     final isDenied = convoData['denied'] == true;
+    final isFullyDone = convoData['isPaid'] == true &&
+        convoData['isReceived'] == true &&
+        convoData['isReturned'] == true &&
+        convoData['isReturnConfirmed'] == true;
+
+    final itemName = itemData['name'] ?? itemData['title'] ?? 'Item';
+    final imageUrl = (itemData['imageUrls'] is List && itemData['imageUrls'].isNotEmpty)
+        ? itemData['imageUrls'][0]
+        : (itemData['imageUrl'] as String?);
+    final rating = (itemData['rating'] as num?)?.toDouble() ?? 0.0;
+    final reviewCount = (itemData['reviewCount'] as num?)?.toInt() ?? 0;
 
     final statusColor = isDenied
         ? Colors.red
-        : isApproved
+        : isFullyDone
             ? const Color(0xFF2ECC71)
-            : const Color(0xFFE67E22);
-    final statusLabel =
-        isDenied ? '✗ Denied' : isApproved ? '✓ Accepted' : '⏳ Pending';
+            : isApproved
+                ? const Color(0xFF2ECC71)
+                : const Color(0xFFE67E22);
+    final statusLabel = isDenied
+        ? '✗ Denied'
+        : isFullyDone
+            ? '✓ Completed'
+            : isApproved
+                ? '✓ Accepted'
+                : '⏳ Pending';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -625,7 +993,7 @@ class _BorrowRequestCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.35)),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -636,50 +1004,167 @@ class _BorrowRequestCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Top row: Item thumbnail, Title, Status chip
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(Icons.receipt_long_outlined,
-                  size: 16, color: Color(0xFF7B40B5)),
-              const SizedBox(width: 6),
-              const Text('Borrow Request',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF7B40B5))),
-              const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: statusColor.withValues(alpha: 0.4))),
-                child: Text(statusLabel,
-                    style: TextStyle(
-                        fontSize: 10,
+              if (isValidImageUrl(imageUrl))
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    imageUrl!,
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 44,
+                      height: 44,
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.inventory_2_outlined, size: 20, color: Colors.grey),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.inventory_2_outlined, size: 22, color: Color(0xFF7B40B5)),
+                ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      itemName,
+                      style: const TextStyle(
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: statusColor)),
+                        color: Color(0xFF1A1A2E),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        if (rating > 0) ...[
+                          const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${rating.toStringAsFixed(1)} ($reviewCount)',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (totalPrice > 0)
+                          Text(
+                            '₱${totalPrice.toStringAsFixed(0)} total',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF7B40B5),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 16,
-            runSpacing: 4,
-            children: [
-              _Chip(
+
+          // Date chips if available
+          if (start != null && end != null) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                _Chip(
                   icon: Icons.calendar_today_outlined,
-                  text:
-                      '${fmt.format(start)} — ${fmt.format(end)}'),
-              _Chip(
+                  text: '${fmt.format(start)} — ${fmt.format(end)}',
+                ),
+                _Chip(
                   icon: Icons.timelapse,
-                  text:
-                      '$totalDays day${totalDays > 1 ? 's' : ''}'),
-              _Chip(
-                  icon: Icons.payments_outlined,
-                  text:
-                      '₱${totalPrice.toStringAsFixed(0)} total'),
+                  text: '$totalDays day${totalDays > 1 ? 's' : ''}',
+                ),
+              ],
+            ),
+          ],
+
+          // Action row: View Listing & Review Item
+          const Divider(height: 16),
+          Row(
+            children: [
+              if (onViewItem != null)
+                InkWell(
+                  onTap: onViewItem,
+                  borderRadius: BorderRadius.circular(6),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF7B40B5)),
+                        SizedBox(width: 4),
+                        Text(
+                          'View Listing',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const Spacer(),
+              if (!isOwner && onReviewItem != null)
+                InkWell(
+                  onTap: onReviewItem,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Rate & Review',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ],
@@ -714,8 +1199,15 @@ class _Chip extends StatelessWidget {
 class _BorrowRequestMessage extends StatelessWidget {
   final Map<String, dynamic> msg;
   final bool isMe;
-  const _BorrowRequestMessage(
-      {required this.msg, required this.isMe});
+  final VoidCallback? onViewItem;
+  final VoidCallback? onReviewItem;
+
+  const _BorrowRequestMessage({
+    required this.msg,
+    required this.isMe,
+    this.onViewItem,
+    this.onReviewItem,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -796,6 +1288,38 @@ class _BorrowRequestMessage extends StatelessWidget {
                         color: Color(0xFF7B40B5))),
               ],
             ),
+            if (onViewItem != null || onReviewItem != null) ...[
+              const Divider(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (onViewItem != null)
+                    TextButton.icon(
+                      onPressed: onViewItem,
+                      icon: const Icon(Icons.open_in_new, size: 13),
+                      label: const Text('View Listing', style: TextStyle(fontSize: 11)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF7B40B5),
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      ),
+                    ),
+                  if (onReviewItem != null) ...[
+                    const SizedBox(width: 4),
+                    TextButton.icon(
+                      onPressed: onReviewItem,
+                      icon: const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+                      label: const Text('Review', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF7B40B5),
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -937,6 +1461,7 @@ class _ChatBubble extends StatelessWidget {
 class _StatusBar extends StatelessWidget {
   final bool isApproved, isDenied, isFullyDone;
   final bool isPaid, isReceived, isReturned, isReturnConfirmed;
+  final bool isOwner;
 
   const _StatusBar({
     required this.isApproved,
@@ -946,6 +1471,7 @@ class _StatusBar extends StatelessWidget {
     required this.isReceived,
     required this.isReturned,
     required this.isReturnConfirmed,
+    this.isOwner = false,
   });
 
   @override
@@ -961,7 +1487,9 @@ class _StatusBar extends StatelessWidget {
     } else if (isFullyDone) {
       bg = const Color(0xFFE8F8F0);
       icon = Icons.check_circle_outline;
-      label = 'Transaction complete!';
+      label = isOwner
+          ? 'Transaction complete! Item returned safely.'
+          : 'Transaction complete! Please rate & review the item.';
     } else if (isApproved && isReceived) {
       bg = const Color(0xFFEDF7FF);
       icon = Icons.inventory_2_outlined;
@@ -1225,6 +1753,302 @@ class _QBtn extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Completed Review Panel (Post-transaction review callout in chat)
+// ────────────────────────────────────────────────────────────────────────────
+
+class _CompletedReviewPanel extends StatelessWidget {
+  final String itemId;
+  final String itemName;
+  final String? itemImageUrl;
+  final String ownerId;
+  final String ownerName;
+  final bool isOwner;
+  final String borrowerId;
+  final String borrowerName;
+  final String currentUserId;
+  final VoidCallback onReviewItem;
+  final VoidCallback onReviewUser;
+
+  const _CompletedReviewPanel({
+    required this.itemId,
+    required this.itemName,
+    this.itemImageUrl,
+    required this.ownerId,
+    required this.ownerName,
+    required this.isOwner,
+    required this.borrowerId,
+    required this.borrowerName,
+    required this.currentUserId,
+    required this.onReviewItem,
+    required this.onReviewUser,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isOwner) {
+      // Borrower view: Review the ITEM (and Lender)
+      if (itemId.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('reviews')
+            .where('reviewerId', isEqualTo: currentUserId)
+            .where('itemId', isEqualTo: itemId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          final docs = snapshot.hasData ? snapshot.data!.docs : [];
+          final bool hasReviewed = docs.isNotEmpty;
+          final double rating = hasReviewed
+              ? ((docs.first.data() as Map<String, dynamic>)['rating'] as num?)?.toDouble() ?? 5.0
+              : 5.0;
+          final String comment = hasReviewed
+              ? ((docs.first.data() as Map<String, dynamic>)['comment'] as String?) ?? ''
+              : '';
+
+          return Container(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: hasReviewed
+                    ? [const Color(0xFFF3E8FF), const Color(0xFFEDE9FE)]
+                    : [const Color(0xFFFFFBEB), const Color(0xFFFEF3C7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: hasReviewed
+                    ? const Color(0xFF7B40B5).withValues(alpha: 0.3)
+                    : Colors.amber.shade300,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: hasReviewed ? const Color(0xFF7B40B5) : Colors.amber.shade700,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        hasReviewed ? Icons.verified_rounded : Icons.star_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            hasReviewed ? 'You Reviewed This Item' : 'How was the item?',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: hasReviewed ? const Color(0xFF5B21B6) : const Color(0xFF92400E),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            hasReviewed
+                                ? 'Thank you for rating "$itemName"!'
+                                : 'Rate "$itemName" to help the community.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: hasReviewed ? Colors.purple.shade900 : Colors.brown.shade800,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (hasReviewed)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.4)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                            const SizedBox(width: 3),
+                            Text(
+                              rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF7B40B5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                if (hasReviewed && comment.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '"$comment"',
+                      style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey[800]),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: onReviewItem,
+                        icon: Icon(
+                          hasReviewed ? Icons.edit_outlined : Icons.rate_review_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        label: Text(
+                          hasReviewed ? 'Edit Your Review' : 'Rate & Review Item',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: hasReviewed ? const Color(0xFF7B40B5) : Colors.amber.shade800,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    } else {
+      // Owner view: Rate the BORROWER
+      final targetUserId = borrowerId.isNotEmpty ? borrowerId : '';
+      if (targetUserId.isEmpty) return const SizedBox.shrink();
+
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('reviews')
+            .where('reviewerId', isEqualTo: currentUserId)
+            .where('revieweeId', isEqualTo: targetUserId)
+            .where('itemId', isNull: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          final docs = snapshot.hasData ? snapshot.data!.docs : [];
+          final bool hasReviewed = docs.isNotEmpty;
+
+          return Container(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: hasReviewed
+                    ? const Color(0xFF2ECC71).withValues(alpha: 0.4)
+                    : const Color(0xFF7B40B5).withValues(alpha: 0.3),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: hasReviewed
+                            ? const Color(0xFF2ECC71).withValues(alpha: 0.15)
+                            : const Color(0xFF7B40B5).withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        hasReviewed ? Icons.verified_user : Icons.person_pin_rounded,
+                        color: hasReviewed ? const Color(0xFF2ECC71) : const Color(0xFF7B40B5),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            hasReviewed ? 'Borrower Reviewed' : 'Rate Borrower',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            hasReviewed
+                                ? 'You reviewed $borrowerName.'
+                                : 'How was your lending experience with $borrowerName?',
+                            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: onReviewUser,
+                      icon: Icon(hasReviewed ? Icons.edit_outlined : Icons.star_rate_rounded, size: 16),
+                      label: Text(hasReviewed ? 'Edit' : 'Rate'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF7B40B5),
+                        textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
   }
 }
 

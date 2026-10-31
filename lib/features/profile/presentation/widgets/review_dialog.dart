@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lendly/core/services/review_service.dart';
 
@@ -6,6 +8,8 @@ class ReviewDialog extends StatefulWidget {
   final String targetName;
   final String? itemId;
   final String? itemTitle;
+  final double? initialRating;
+  final String? initialComment;
 
   const ReviewDialog({
     super.key,
@@ -13,6 +17,8 @@ class ReviewDialog extends StatefulWidget {
     required this.targetName,
     this.itemId,
     this.itemTitle,
+    this.initialRating,
+    this.initialComment,
   });
 
   @override
@@ -24,6 +30,51 @@ class _ReviewDialogState extends State<ReviewDialog> {
   final TextEditingController _commentController = TextEditingController();
   double _selectedRating = 5.0;
   bool _isSubmitting = false;
+  bool _isExistingReview = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialRating != null) {
+      _selectedRating = widget.initialRating!;
+      _isExistingReview = true;
+    }
+    if (widget.initialComment != null) {
+      _commentController.text = widget.initialComment!;
+      _isExistingReview = true;
+    } else {
+      _loadExistingReview();
+    }
+  }
+
+  Future<void> _loadExistingReview() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('reviews')
+          .where('reviewerId', isEqualTo: currentUser.uid);
+
+      if (widget.itemId != null && widget.itemId!.isNotEmpty) {
+        query = query.where('itemId', isEqualTo: widget.itemId);
+      } else {
+        query = query
+            .where('revieweeId', isEqualTo: widget.revieweeId)
+            .where('itemId', isNull: true);
+      }
+
+      final snapshot = await query.limit(1).get();
+      if (snapshot.docs.isNotEmpty && mounted) {
+        final data = snapshot.docs.first.data() as Map<String, dynamic>;
+        setState(() {
+          _isExistingReview = true;
+          _selectedRating = (data['rating'] as num?)?.toDouble() ?? _selectedRating;
+          _commentController.text = data['comment'] ?? '';
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -64,7 +115,9 @@ class _ReviewDialogState extends State<ReviewDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Thank you! Your ${_selectedRating.toInt()}-star review has been posted and ratings updated.',
+                    _isExistingReview
+                        ? 'Your ${_selectedRating.toInt()}-star review has been updated and ratings refreshed.'
+                        : 'Thank you! Your ${_selectedRating.toInt()}-star review has been posted and ratings updated.',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -123,7 +176,9 @@ class _ReviewDialogState extends State<ReviewDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isItemReview ? 'Rate & Review Item' : 'Rate & Review Lender',
+                            _isExistingReview
+                                ? (isItemReview ? 'Edit Item Review' : 'Edit Review')
+                                : (isItemReview ? 'Rate & Review Item' : 'Rate & Review Lender'),
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87),
                           ),
                           Text(
@@ -253,7 +308,9 @@ class _ReviewDialogState extends State<ReviewDialog> {
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Icon(Icons.send_rounded, size: 18),
                     label: Text(
-                      _isSubmitting ? 'Posting Review...' : 'Submit Review & Rating',
+                      _isSubmitting
+                          ? 'Saving Review...'
+                          : (_isExistingReview ? 'Update Review' : 'Submit Review & Rating'),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     style: ElevatedButton.styleFrom(
