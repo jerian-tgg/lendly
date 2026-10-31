@@ -880,14 +880,53 @@ class _ItemListScreenState extends State<ItemListScreen> {
                                 ],
                               ),
                               const SizedBox(height: 6),
-                              Text(
-                                '₱ ${available.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.5,
-                                ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.amber[300]!,
+                                          Colors.amber[600]!,
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.amber.withValues(alpha: 0.4),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'O',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w900,
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${available.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} ORC',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                               if (escrow > 0) ...[
                                 const SizedBox(height: 4),
@@ -896,7 +935,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                                     Icon(Icons.lock_clock, size: 12, color: Colors.amber[200]),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Escrow: ₱${escrow.toStringAsFixed(0)}',
+                                      'Escrow: ${escrow.toStringAsFixed(0)} ORC',
                                       style: TextStyle(
                                         color: Colors.amber[200],
                                         fontSize: 12,
