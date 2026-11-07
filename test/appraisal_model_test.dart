@@ -77,5 +77,51 @@ void main() {
       expect(map['appraisalStatus'], 'certified');
       expect(map['certifiedByAppraiserId'], 'appraiser-1');
     });
+
+    test('Pricing & Defects: toMap preserves owner pricing and serializes defects & meetup verification', () {
+      const defect = DocumentedDefect(
+        category: 'Cosmetic / Surface',
+        severity: 'Minor',
+        description: 'Micro scratches on casing',
+        photoUrl: 'https://example.com/photo.jpg',
+      );
+
+      final now = DateTime.now();
+      final model = AppraisalModel(
+        functionScore: 9,
+        cosmeticScore: 8,
+        overallScore: 8.5,
+        conditionGrade: 'Excellent (Minor Wear)',
+        estimatedValue: 15000.0,
+        certificateId: 'CERT-TEST-123',
+        appraiserId: 'appraiser_1',
+        appraiserBusinessName: 'Test Agency',
+        notes: '',
+        isOwnerMeetupVerified: true,
+        meetupVerificationMethod: 'qr_scan',
+        meetupVerifiedAt: now,
+        hasDefects: true,
+        documentedDefects: const [defect],
+      );
+
+      final map = model.toMap();
+
+      // Check daily rate / price is NOT modified by appraiser
+      expect(map.containsKey('price'), isFalse);
+      expect(map.containsKey('suggestedDailyRate'), isFalse);
+
+      // Check meetup verification fields
+      expect(map['isOwnerMeetupVerified'], isTrue);
+      expect(map['meetupVerificationMethod'], 'qr_scan');
+      expect(map['meetupVerifiedAt'], now);
+
+      // Check defects serialization
+      expect(map['hasDefects'], isTrue);
+      expect(map['documentedDefects'], isA<List>());
+      final defectsList = map['documentedDefects'] as List;
+      expect(defectsList.length, 1);
+      expect(defectsList[0]['description'], 'Micro scratches on casing');
+      expect(defectsList[0]['severity'], 'Minor');
+    });
   });
 }

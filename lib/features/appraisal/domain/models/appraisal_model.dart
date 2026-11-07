@@ -1,12 +1,55 @@
 import 'package:flutter/material.dart';
 
+class DocumentedDefect {
+  final String category;
+  final String severity; // 'Minor', 'Moderate', 'Major'
+  final String description;
+  final String? photoUrl;
+
+  const DocumentedDefect({
+    required this.category,
+    required this.severity,
+    required this.description,
+    this.photoUrl,
+  });
+
+  factory DocumentedDefect.fromMap(Map<String, dynamic> map) {
+    return DocumentedDefect(
+      category: map['category'] ?? 'General',
+      severity: map['severity'] ?? 'Minor',
+      description: map['description'] ?? '',
+      photoUrl: map['photoUrl'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'category': category,
+      'severity': severity,
+      'description': description,
+      if (photoUrl != null && photoUrl!.isNotEmpty) 'photoUrl': photoUrl,
+    };
+  }
+
+  static Color getSeverityColor(String severity) {
+    switch (severity.toLowerCase()) {
+      case 'major':
+        return const Color(0xFFDC2626); // Red
+      case 'moderate':
+        return const Color(0xFFEA580C); // Orange
+      case 'minor':
+      default:
+        return const Color(0xFFD97706); // Amber
+    }
+  }
+}
+
 class AppraisalModel {
   final int functionScore; // 1 - 10
   final int cosmeticScore; // 1 - 10
   final double overallScore; // Calculated 1.0 - 10.0
   final String conditionGrade;
   final double estimatedValue;
-  final double? suggestedDailyRate;
   final String? certificateId;
   final String? appraiserId;
   final String? appraiserBusinessName;
@@ -16,6 +59,11 @@ class AppraisalModel {
   final bool isSerialVerified;
   final bool isCleanWorking;
   final bool isDepositRecommended;
+  final bool isOwnerMeetupVerified;
+  final String? meetupVerificationMethod; // 'qr_scan' | 'in_person_confirmation'
+  final DateTime? meetupVerifiedAt;
+  final bool hasDefects;
+  final List<DocumentedDefect> documentedDefects;
 
   const AppraisalModel({
     required this.functionScore,
@@ -23,7 +71,6 @@ class AppraisalModel {
     required this.overallScore,
     required this.conditionGrade,
     required this.estimatedValue,
-    this.suggestedDailyRate,
     this.certificateId,
     this.appraiserId,
     this.appraiserBusinessName,
@@ -33,6 +80,11 @@ class AppraisalModel {
     this.isSerialVerified = true,
     this.isCleanWorking = true,
     this.isDepositRecommended = true,
+    this.isOwnerMeetupVerified = false,
+    this.meetupVerificationMethod,
+    this.meetupVerifiedAt,
+    this.hasDefects = false,
+    this.documentedDefects = const [],
   });
 
   /// Derive the certified condition grade from Function (1-10) and Cosmetic (1-10) scores.
@@ -152,6 +204,11 @@ class AppraisalModel {
       'isSerialVerified': isSerialVerified,
       'isCleanWorking': isCleanWorking,
       'isDepositRecommended': isDepositRecommended,
+      'isOwnerMeetupVerified': isOwnerMeetupVerified,
+      if (meetupVerificationMethod != null) 'meetupVerificationMethod': meetupVerificationMethod,
+      if (meetupVerifiedAt != null) 'meetupVerifiedAt': meetupVerifiedAt,
+      'hasDefects': hasDefects,
+      'documentedDefects': documentedDefects.map((d) => d.toMap()).toList(),
     };
   }
 }

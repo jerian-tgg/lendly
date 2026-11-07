@@ -5,6 +5,8 @@ import 'package:lendly/features/appraisal/presentation/widgets/appraisal_form_di
 import 'package:lendly/features/appraisal/domain/models/appraisal_model.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
+import 'package:lendly/core/utils/convo_utils.dart';
+import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 
 class AppraisalDashboard extends StatefulWidget {
   const AppraisalDashboard({super.key});
@@ -52,6 +54,53 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
     );
     if (result == true) {
       setState(() {});
+    }
+  }
+
+  Future<void> _messageOwnerForMeetup(BuildContext context, Map<String, dynamic> itemData, String itemId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final ownerId = (itemData['ownerId'] ?? '').toString();
+    final ownerName = (itemData['ownerName'] ?? 'Owner').toString();
+
+    if (currentUserId.isEmpty || ownerId.isEmpty) return;
+    if (currentUserId == ownerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You cannot message yourself for an appraisal.')),
+      );
+      return;
+    }
+
+    try {
+      final convoId = await createOrGetConversation(
+        currentUserId: currentUserId,
+        otherUserId: ownerId,
+        itemId: itemId,
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(const Duration(days: 1)),
+        totalDays: 1,
+        totalPrice: 0,
+      );
+
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(
+              convoId: convoId,
+              currentUserId: currentUserId,
+              otherUserId: ownerId,
+              otherUserName: ownerName,
+              itemId: itemId,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening chat: $e')),
+        );
+      }
     }
   }
 
@@ -580,13 +629,38 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                           ],
                         ),
                       ),
+                      if (itemData['documentedDefects'] is List && (itemData['documentedDefects'] as List).isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.report_problem_outlined, size: 13, color: Color(0xFFD97706)),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${(itemData['documentedDefects'] as List).length} pre-existing defect(s) documented',
+                              style: const TextStyle(fontSize: 10, color: Color(0xFFD97706), fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
 
                     const SizedBox(height: 10),
 
-                    // Action Buttons (Rate Item & View Item)
+                    // Action Buttons (Rate Item, Meetup Chat, & View Item)
                     Row(
                       children: [
+                        OutlinedButton.icon(
+                          onPressed: () => _messageOwnerForMeetup(context, itemData, doc.id),
+                          icon: const Icon(Icons.chat_bubble_outline, size: 14),
+                          label: const Text('Meetup', style: TextStyle(fontSize: 11)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF7B40B5),
+                            side: const BorderSide(color: Color(0xFF7B40B5)),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {
@@ -597,8 +671,8 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                                 ),
                               );
                             },
-                            icon: const Icon(Icons.visibility_outlined, size: 15),
-                            label: const Text('View Item', style: TextStyle(fontSize: 12)),
+                            icon: const Icon(Icons.visibility_outlined, size: 14),
+                            label: const Text('View', style: TextStyle(fontSize: 11)),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.grey.shade800,
                               side: BorderSide(color: Colors.grey.shade300),
@@ -607,14 +681,15 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Expanded(
+                          flex: 2,
                           child: ElevatedButton.icon(
                             onPressed: () => _openAppraisalModal(context, itemData, doc.id),
-                            icon: const Icon(Icons.star_rate_rounded, size: 16),
+                            icon: const Icon(Icons.star_rate_rounded, size: 15),
                             label: Text(
                               isCertified ? 'Re-Appraise' : 'Rate & Appraise',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF7B40B5),
@@ -708,9 +783,21 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              '₱${appValue.toStringAsFixed(0)}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF059669)),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '₱${appValue.toStringAsFixed(0)}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF059669)),
+                                ),
+                                if (itemData['isOwnerMeetupVerified'] == true) ...[
+                                  const SizedBox(width: 4),
+                                  const Tooltip(
+                                    message: 'Verified In-Person Meetup',
+                                    child: Icon(Icons.handshake, size: 14, color: Color(0xFF059669)),
+                                  ),
+                                ],
+                              ],
                             ),
                             const Text('Estimated Value (Private)', style: TextStyle(fontSize: 9, color: Colors.grey)),
                           ],

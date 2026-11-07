@@ -56,6 +56,19 @@ class _ElectronicContractPageState extends State<ElectronicContractPage> {
       retFmt = DateFormat('MMM d, yyyy – h:mm a').format((retTs as Timestamp).toDate());
     }
 
+    final rawDefects = widget.itemData['documentedDefects'];
+    List<String> defectsList = [];
+    if (rawDefects is List && rawDefects.isNotEmpty) {
+      for (var d in rawDefects) {
+        if (d is Map) {
+          final cat = d['category'] ?? 'Defect';
+          final sev = d['severity'] ?? 'Minor';
+          final desc = d['description'] ?? '';
+          defectsList.add('[$sev] $cat: $desc');
+        }
+      }
+    }
+
     return ContractData(
       convoId:             widget.convoId,
       itemName:            widget.itemData['name'] ?? 'Item',
@@ -69,6 +82,7 @@ class _ElectronicContractPageState extends State<ElectronicContractPage> {
       startDate:           start,
       endDate:             end,
       returnDateFormatted: retFmt,
+      documentedDefects:   defectsList,
     );
   }
 
@@ -200,6 +214,7 @@ class _ElectronicContractPageState extends State<ElectronicContractPage> {
                   endDate:    data.endDate,
                   dateFmt:    dateFmt,
                   returnDateFormatted: data.returnDateFormatted,
+                  documentedDefects: data.documentedDefects,
                 ),
                 const SizedBox(height: 16),
 
@@ -334,6 +349,7 @@ class _ContractHeaderCard extends StatelessWidget {
   final DateTime endDate;
   final DateFormat dateFmt;
   final String? returnDateFormatted;
+  final List<String> documentedDefects;
 
   const _ContractHeaderCard({
     required this.convoId,
@@ -346,6 +362,7 @@ class _ContractHeaderCard extends StatelessWidget {
     required this.endDate,
     required this.dateFmt,
     this.returnDateFormatted,
+    this.documentedDefects = const [],
   });
 
   @override
@@ -393,6 +410,8 @@ class _ContractHeaderCard extends StatelessWidget {
           _InfoRow(Icons.payments_outlined, 'Total Amount', '₱${totalPrice.toStringAsFixed(2)}'),
           if (returnDateFormatted != null)
             _InfoRow(Icons.schedule_outlined, 'Return Deadline', returnDateFormatted!),
+          if (documentedDefects.isNotEmpty)
+            _InfoRow(Icons.report_problem_outlined, 'Pre-Existing Defects', documentedDefects.join('; ')),
         ],
       ),
     );

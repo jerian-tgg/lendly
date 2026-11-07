@@ -20,6 +20,7 @@ class ContractData {
   final DateTime startDate;
   final DateTime endDate;
   final String? returnDateFormatted;
+  final List<String> documentedDefects;
 
   const ContractData({
     required this.convoId,
@@ -34,6 +35,7 @@ class ContractData {
     required this.startDate,
     required this.endDate,
     this.returnDateFormatted,
+    this.documentedDefects = const [],
   });
 }
 
@@ -131,6 +133,8 @@ class ContractService {
           _keyValue('Total Amount', '₱${d.totalPrice.toStringAsFixed(2)} (Philippine Peso)', grey),
           if (d.returnDateFormatted != null)
             _keyValue('Agreed Return Deadline', d.returnDateFormatted!, grey),
+          if (d.documentedDefects.isNotEmpty)
+            _keyValue('Documented Pre-Existing Defects', d.documentedDefects.join('; '), grey),
           pw.SizedBox(height: 16),
 
           _section('ARTICLE III — TERMS & CONDITIONS'),

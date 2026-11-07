@@ -1115,12 +1115,31 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               ],
                             ),
                           ),
-                          if (itemData['isSerialVerified'] == true || itemData['isCleanWorking'] == true) ...[
+                          if (itemData['isSerialVerified'] == true ||
+                              itemData['isCleanWorking'] == true ||
+                              itemData['isOwnerMeetupVerified'] == true) ...[
                             const SizedBox(height: 8),
                             Wrap(
                               spacing: 8,
                               runSpacing: 4,
                               children: [
+                                if (itemData['isOwnerMeetupVerified'] == true)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.handshake, size: 12, color: Color(0xFF7B40B5)),
+                                        SizedBox(width: 4),
+                                        Text('In-Person Meetup Verified', style: TextStyle(fontSize: 10, color: Color(0xFF7B40B5), fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
                                 if (itemData['isSerialVerified'] == true)
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1156,6 +1175,121 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     ),
                                   ),
                               ],
+                            ),
+                          ],
+
+                          // Documented Defects Section
+                          const SizedBox(height: 12),
+                          const Divider(height: 1),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Icon(
+                                (itemData['documentedDefects'] is List && (itemData['documentedDefects'] as List).isNotEmpty)
+                                    ? Icons.report_problem_outlined
+                                    : Icons.verified_outlined,
+                                size: 16,
+                                color: (itemData['documentedDefects'] is List && (itemData['documentedDefects'] as List).isNotEmpty)
+                                    ? const Color(0xFFD97706)
+                                    : const Color(0xFF059669),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Documented Defects Tracking:',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          if (itemData['documentedDefects'] is List && (itemData['documentedDefects'] as List).isNotEmpty) ...[
+                            Column(
+                              children: (itemData['documentedDefects'] as List).map<Widget>((d) {
+                                final map = Map<String, dynamic>.from(d as Map);
+                                final severity = map['severity'] ?? 'Minor';
+                                final category = map['category'] ?? 'Defect';
+                                final desc = map['description'] ?? '';
+                                final photoUrl = map['photoUrl'] as String?;
+                                final sevColor = DocumentedDefect.getSeverityColor(severity);
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.amber.shade200),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (photoUrl != null && photoUrl.isNotEmpty) ...[
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Image.network(
+                                            photoUrl,
+                                            width: 38,
+                                            height: 38,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, _, _) => Container(width: 38, height: 38, color: Colors.grey[200]),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                      ],
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                  decoration: BoxDecoration(
+                                                    color: sevColor,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    severity.toString().toUpperCase(),
+                                                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  category,
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              desc,
+                                              style: TextStyle(fontSize: 11, color: Colors.grey[800]),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ] else ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFBBF7D0)),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.check_circle, size: 14, color: Color(0xFF16A34A)),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Zero Pre-Existing Defects Found During Inspection',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                           if (itemData['appraiserNotes'] != null &&
