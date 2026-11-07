@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:lendly/features/chat/data/repositories/chat_repository_impl.dart';
 import 'package:lendly/features/chat/data/datasources/chat_remote_data_source.dart';
 import 'package:lendly/features/chat/domain/entities/conversation.dart';
@@ -18,7 +19,16 @@ class ConversationScreen extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    return '${date.month}/${date.day}/${date.year}';
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0 && now.day == date.day) {
+      return DateFormat('h:mm a').format(date);
+    } else if (difference.inDays < 7 && now.weekday >= date.weekday) {
+      return DateFormat('EEE').format(date);
+    } else {
+      return DateFormat('MMM d').format(date);
+    }
   }
 
   @override
@@ -26,33 +36,124 @@ class ConversationScreen extends StatelessWidget {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF90E0F3),
-        title: const Text(
-          'Conversations',
-          style: TextStyle(color: Colors.white),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.chat_bubble_outline_rounded,
+                color: Color(0xFF7B40B5),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Messages',
+              style: TextStyle(
+                color: Color(0xFF1A1A2E),
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
         ),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<List<Conversation>>(
         stream: chatRepo.getUserConversations(currentUserId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF90E0F3)));
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Failed to load conversations.',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No conversations yet.'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.forum_outlined,
+                        size: 52,
+                        color: Color(0xFF7B40B5),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'No conversations yet',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Messages with lenders and borrowers will show up here.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           final conversations = snapshot.data!;
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(10),
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 10),
             itemCount: conversations.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final convo = conversations[index];
               final otherUserId = _getOtherUserId(convo.participants, currentUserId);
@@ -60,56 +161,157 @@ class ConversationScreen extends StatelessWidget {
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance.collection('users').doc(otherUserId).get(),
                 builder: (context, userSnapshot) {
-                  if (userSnapshot.connectionState == ConnectionState.waiting) {
-                    return const ListTile(title: Text("Loading..."));
-                  }
+                  final userData = userSnapshot.hasData && userSnapshot.data!.exists
+                      ? userSnapshot.data!.data() as Map<String, dynamic>?
+                      : null;
+                  final username = userData?['username'] ?? userData?['name'] ?? 'User';
+                  final profilePicUrl = userData?['photoURL'] as String?;
 
-                  if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                    return const ListTile(title: Text("User not found"));
-                  }
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                  convoId: convo.id,
+                                  currentUserId: currentUserId,
+                                  otherUserId: otherUserId,
+                                  otherUserName: username,
+                                  itemId: convo.itemId,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                // Avatar
+                                CircleAvatar(
+                                  radius: 25,
+                                  backgroundColor: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                  backgroundImage: isValidImageUrl(profilePicUrl)
+                                      ? NetworkImage(profilePicUrl!)
+                                      : null,
+                                  child: !isValidImageUrl(profilePicUrl)
+                                      ? Text(
+                                          username.isNotEmpty ? username[0].toUpperCase() : '?',
+                                          style: const TextStyle(
+                                            color: Color(0xFF7B40B5),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
 
-                  final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                  final username = userData['username'] ?? userData['name'] ?? 'User';
-                  final profilePicUrl = userData['photoURL'] as String?;
+                                // Text details
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              username,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                                color: Color(0xFF1A1A2E),
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _formatDate(convo.lastUpdated),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey[500],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          if (convo.itemId.isNotEmpty) ...[
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.inventory_2_outlined, size: 10, color: Color(0xFF7B40B5)),
+                                                  SizedBox(width: 3),
+                                                  Text(
+                                                    'Rental',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Color(0xFF7B40B5),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                          ],
+                                          Expanded(
+                                            child: Text(
+                                              convo.lastMessageText ?? 'No messages yet.',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
 
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    leading: CircleAvatar(
-                      radius: 25,
-                      backgroundImage: isValidImageUrl(profilePicUrl)
-                          ? NetworkImage(profilePicUrl!)
-                          : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                    ),
-                    title: Text(
-                      username,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      convo.lastMessageText ?? 'No messages yet.',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.black54),
-                    ),
-                    trailing: Text(
-                      _formatDate(convo.lastUpdated),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    tileColor: const Color(0xFFF6FDFF),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatScreen(
-                            convoId: convo.id,
-                            currentUserId: currentUserId,
-                            otherUserId: otherUserId,
-                            otherUserName: username,
-                            itemId: convo.itemId,
+                                const SizedBox(width: 6),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: Colors.grey[400],
+                                  size: 20,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   );
                 },
               );

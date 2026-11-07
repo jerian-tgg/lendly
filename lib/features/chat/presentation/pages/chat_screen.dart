@@ -1427,10 +1427,13 @@ class _ChatBubble extends StatelessWidget {
                   bottomRight:
                       Radius.circular(isMe ? 4 : 18),
                 ),
+                border: isMe
+                    ? null
+                    : Border.all(color: const Color(0xFFE2E8F0)),
                 boxShadow: [
                   BoxShadow(
                       color:
-                          Colors.black.withValues(alpha: 0.06),
+                          Colors.black.withValues(alpha: 0.04),
                       blurRadius: 4,
                       offset: const Offset(0, 2))
                 ],
@@ -2090,7 +2093,15 @@ class _MessageInput extends StatelessWidget {
                 fillColor: const Color(0xFFF7FAFC),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: Color(0xFF7B40B5), width: 1.5),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 10),

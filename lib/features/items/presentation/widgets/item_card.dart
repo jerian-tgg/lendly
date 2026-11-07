@@ -440,7 +440,7 @@ class ItemCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF90E0F3).withValues(alpha: 0.2),
+                                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -448,7 +448,7 @@ class ItemCard extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF007A9B),
+                                  color: Color(0xFF7B40B5),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -562,9 +562,7 @@ class ItemCard extends StatelessWidget {
                                 }
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isOwner
-                                    ? const Color(0xFF7B40B5)
-                                    : const Color(0xFF90E0F3),
+                                backgroundColor: const Color(0xFF7B40B5),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
