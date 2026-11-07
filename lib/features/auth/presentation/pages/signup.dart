@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
+import 'package:lendly/features/items/presentation/widgets/location_picker_map_dialog.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -35,12 +37,14 @@ class _SignUpPageState extends State<SignUpPage> {
   final _phoneController    = TextEditingController();
   final _altPhoneController = TextEditingController();
 
-  // ── Address ──
+  // ── Address & Location Coordinates ──
   final _streetController   = TextEditingController();
   final _barangayController = TextEditingController();
   final _cityController     = TextEditingController();
   final _provinceController = TextEditingController();
   final _zipController      = TextEditingController();
+  GeoLocation? _pinnedLocation;
+  bool _isDetectingLocation = false;
 
   // ── Occupation / Emergency Contact ──
   final _occupationController        = TextEditingController();
@@ -124,10 +128,78 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
+  Future<void> _detectLocationForSignUp() async {
+    if (_isDetectingLocation) return;
+    setState(() => _isDetectingLocation = true);
+    try {
+      final loc = await LocationHelper.getDeviceLocation();
+      if (!mounted) return;
+      final safeLoc = LocationHelper.sanitizeToPhilippines(loc);
+      setState(() {
+        _pinnedLocation = safeLoc;
+        _isDetectingLocation = false;
+        if (_cityController.text.trim().isEmpty && safeLoc.name != null) {
+          final cleanCity = safeLoc.name!.split(',').first.split('(').first.trim();
+          if (cleanCity.isNotEmpty && cleanCity != 'My Location') {
+            _cityController.text = cleanCity;
+          }
+        }
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isDetectingLocation = false);
+      }
+    }
+  }
+
+  Future<void> _openMapPickerForSignUp() async {
+    final initial = _pinnedLocation ??
+        LocationHelper.parseCoordinates(_cityController.text.trim()) ??
+        LocationHelper.defaultLocation;
+
+    final result = await LocationPickerMapDialog.show(
+      context,
+      initialLocation: initial,
+      title: 'Pin Your Default Location',
+      showRadiusSelector: false,
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _pinnedLocation = result.location;
+        if (_cityController.text.trim().isEmpty && result.location.name != null) {
+          final cleanCity = result.location.name!.split(',').first.split('(').first.trim();
+          if (cleanCity.isNotEmpty && cleanCity != 'Custom Pin') {
+            _cityController.text = cleanCity;
+          }
+        }
+      });
+    }
+  }
+
   void _continue() {
     if (_currentFormKey.currentState!.validate()) {
+      if (_currentStep == 2 && _pinnedLocation == null) {
+        // Resolve coordinates from typed city/province if user didn't explicitly pin yet
+        final cityStr = _cityController.text.trim();
+        final provStr = _provinceController.text.trim();
+        final parsed = LocationHelper.parseCoordinates('$cityStr, $provStr') ??
+            LocationHelper.parseCoordinates(cityStr) ??
+            LocationHelper.defaultLocation;
+        _pinnedLocation = GeoLocation(
+          latitude: parsed.latitude,
+          longitude: parsed.longitude,
+          name: cityStr.isNotEmpty ? '$cityStr${provStr.isNotEmpty ? ', $provStr' : ''}' : parsed.name,
+        );
+      }
+
       if (_currentStep < 3) {
-        setState(() => _currentStep++);
+        final nextStep = _currentStep + 1;
+        setState(() => _currentStep = nextStep);
+        if (nextStep == 2 && _pinnedLocation == null) {
+          // Prompt/detect GPS location when entering the Address & Location step
+          _detectLocationForSignUp();
+        }
       } else {
         _signUp();
       }
@@ -141,6 +213,13 @@ class _SignUpPageState extends State<SignUpPage> {
   Future<void> _signUp() async {
     setState(() => _isLoading = true);
     try {
+      final cityStr = _cityController.text.trim();
+      final provStr = _provinceController.text.trim();
+      final effectiveLoc = _pinnedLocation ??
+          LocationHelper.parseCoordinates('$cityStr, $provStr') ??
+          LocationHelper.parseCoordinates(cityStr) ??
+          LocationHelper.defaultLocation;
+
       final user = await FirebaseAuthService().signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -155,8 +234,8 @@ class _SignUpPageState extends State<SignUpPage> {
         altPhone: _altPhoneController.text.trim(),
         street: _streetController.text.trim(),
         barangay: _barangayController.text.trim(),
-        city: _cityController.text.trim(),
-        province: _provinceController.text.trim(),
+        city: cityStr,
+        province: provStr,
         zip: _zipController.text.trim(),
         occupation: _occupationController.text.trim(),
         employer: _employerController.text.trim(),
@@ -167,6 +246,9 @@ class _SignUpPageState extends State<SignUpPage> {
         businessName: _isAppraiser ? _businessNameController.text.trim() : null,
         licenseNumber: _isAppraiser ? _licenseNumberController.text.trim() : null,
         specialization: _isAppraiser ? _specialization : null,
+        latitude: effectiveLoc.latitude,
+        longitude: effectiveLoc.longitude,
+        locationName: effectiveLoc.name ?? (cityStr.isNotEmpty ? '$cityStr, $provStr' : null),
       );
 
       if (user != null && mounted) {
@@ -433,7 +515,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   // ══════════════════════════════════════════
-  // STEP 2 – Address & Occupation
+  // STEP 2 – Address, Location Pin & Occupation
   // ══════════════════════════════════════════
   Widget _buildAddressStep() {
     return Form(
@@ -441,6 +523,116 @@ class _SignUpPageState extends State<SignUpPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _sectionTitle('Default Discovery Location'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9F5FE),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFF7B40B5).withValues(alpha: 0.35),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.pin_drop_rounded,
+                        color: Color(0xFF7B40B5),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _pinnedLocation != null
+                                ? (_pinnedLocation!.name ?? 'Location Pinned')
+                                : (_isDetectingLocation
+                                    ? 'Detecting your GPS location...'
+                                    : 'Set your coordinates for nearby items (50km feed)'),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A1A2E),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _pinnedLocation != null
+                                ? 'Coordinates: ${_pinnedLocation!.latitude.toStringAsFixed(4)}, ${_pinnedLocation!.longitude.toStringAsFixed(4)}'
+                                : 'Pin your location on the map or use GPS so we can show rentals within 50km of you.',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isDetectingLocation ? null : _detectLocationForSignUp,
+                        icon: _isDetectingLocation
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF7B40B5),
+                                ),
+                              )
+                            : const Icon(Icons.my_location, size: 16),
+                        label: const Text('Use GPS', style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF7B40B5),
+                          side: const BorderSide(color: Color(0xFF7B40B5)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _openMapPickerForSignUp,
+                        icon: const Icon(Icons.map_outlined, size: 16),
+                        label: const Text('Pin on Map', style: TextStyle(fontSize: 12)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7B40B5),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           _sectionTitle('Home Address'),
           const SizedBox(height: 16),
           _buildField(controller: _streetController,   hint: 'Street / Unit No., Building *', icon: Icons.home,          validator: _required),

@@ -118,5 +118,30 @@ void main() {
       final matchesRadius = selectedRadius >= 100.0 || pManila <= selectedRadius;
       expect(matchesRadius, isTrue);
     });
+
+    test('Default discovery radius is 50km', () {
+      expect(LocationHelper.defaultDiscoveryRadiusKm, 50.0);
+    });
+
+    test('Validates and sanitizes coordinates to Philippines bounds', () {
+      // Valid Philippine cities
+      expect(LocationHelper.isWithinPhilippines(10.6765, 122.9509), isTrue); // Bacolod
+      expect(LocationHelper.isWithinPhilippines(14.5995, 120.9842), isTrue); // Manila
+      expect(LocationHelper.isWithinPhilippines(7.1907, 125.4504), isTrue);  // Davao
+
+      // Out-of-bounds coordinates (e.g. Android emulator California default or Null Island)
+      expect(LocationHelper.isWithinPhilippines(37.4219, -122.0840), isFalse);
+      expect(LocationHelper.isWithinPhilippines(0.0, 0.0), isFalse);
+
+      // Sanitize falls back to Philippines defaultLocation when outside bounds
+      final sanitized = LocationHelper.sanitizeToPhilippines(
+        const GeoLocation(latitude: 37.4219, longitude: -122.0840, name: 'Mountain View'),
+      );
+      expect(LocationHelper.isWithinPhilippines(sanitized.latitude, sanitized.longitude), isTrue);
+      expect(sanitized.latitude, LocationHelper.defaultLocation.latitude);
+
+      // (0, 0) map placeholder is ignored during parsing
+      expect(LocationHelper.parseCoordinates({'lat': 0.0, 'lng': 0.0}), isNull);
+    });
   });
 }

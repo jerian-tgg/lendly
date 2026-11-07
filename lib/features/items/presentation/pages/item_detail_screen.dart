@@ -773,39 +773,48 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
                   const SizedBox(height: 8),
 
-                  // Rating Row & Location
-                  Row(
+                  // Rating Row & Location (Responsive Wrap to prevent overflow)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    alignment: WrapAlignment.spaceBetween,
                     children: [
-                      if (hasReviews) ...[
-                        ...List.generate(5, (index) {
-                          final starVal = index + 1;
-                          if (ratingVal >= starVal) {
-                            return const Icon(Icons.star, size: 18, color: Colors.amber);
-                          } else if (ratingVal >= starVal - 0.5) {
-                            return const Icon(Icons.star_half, size: 18, color: Colors.amber);
-                          } else {
-                            return Icon(Icons.star_border, size: 18, color: Colors.grey[400]);
-                          }
-                        }),
-                        const SizedBox(width: 6),
-                        Text(
-                          ratingVal.toStringAsFixed(1),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                        Text(
-                          ' ($reviewCount ${reviewCount == 1 ? 'review' : 'reviews'})',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                        ),
-                      ] else ...[
-                        ...List.generate(5, (_) => Icon(Icons.star_outline, size: 16, color: Colors.grey[400])),
-                        const SizedBox(width: 6),
-                        Text(
-                          'No reviews yet',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[600], fontStyle: FontStyle.italic),
-                        ),
-                      ],
-                      const Spacer(),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (hasReviews) ...[
+                            ...List.generate(5, (index) {
+                              final starVal = index + 1;
+                              if (ratingVal >= starVal) {
+                                return const Icon(Icons.star, size: 18, color: Colors.amber);
+                              } else if (ratingVal >= starVal - 0.5) {
+                                return const Icon(Icons.star_half, size: 18, color: Colors.amber);
+                              } else {
+                                return Icon(Icons.star_border, size: 18, color: Colors.grey[400]);
+                              }
+                            }),
+                            const SizedBox(width: 6),
+                            Text(
+                              ratingVal.toStringAsFixed(1),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            Text(
+                              ' ($reviewCount ${reviewCount == 1 ? 'review' : 'reviews'})',
+                              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                            ),
+                          ] else ...[
+                            ...List.generate(5, (_) => Icon(Icons.star_outline, size: 16, color: Colors.grey[400])),
+                            const SizedBox(width: 6),
+                            Text(
+                              'No reviews yet',
+                              style: TextStyle(fontSize: 13, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.location_on, size: 14, color: Color(0xFF7B40B5)),
                           const SizedBox(width: 2),
@@ -849,9 +858,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 children: [
                                   const Icon(Icons.sell_outlined, size: 15, color: Color(0xFF7B40B5)),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    'Rental Price:',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                                  Flexible(
+                                    child: Text(
+                                      'Rental Price:',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -860,12 +872,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.baseline,
                                 textBaseline: TextBaseline.alphabetic,
                                 children: [
-                                  Text(
-                                    priceStr,
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF7B40B5),
+                                  Flexible(
+                                    child: Text(
+                                      priceStr,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF7B40B5),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   Text(
@@ -906,9 +921,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                                 : const Color(0xFF6B7280),
                                   ),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    'Appraisal Status:',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                                  Flexible(
+                                    child: Text(
+                                      'Appraisal Status:',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1070,9 +1088,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                'Lic: ${itemData['certifiedByLicense'] ?? 'APP-REG'}',
-                                style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                              Flexible(
+                                child: Text(
+                                  'Lic: ${itemData['certifiedByLicense'] ?? 'APP-REG'}',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),
@@ -1444,9 +1466,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             children: [
                               Icon(Icons.verified_outlined, size: 13, color: Color(0xFFD97706)),
                               SizedBox(width: 4),
-                              Text(
-                                'Official condition will be rated by the appraiser upon review.',
-                                style: TextStyle(fontSize: 11, color: Colors.grey),
+                              Expanded(
+                                child: Text(
+                                  'Official condition will be rated by the appraiser upon review.',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
                               ),
                             ],
                           ),
@@ -1532,7 +1556,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
-                                            appraiserCondition ?? 'Pending Appraisal',
+                                            appraiserCondition ?? (itemData['condition'] as String?) ?? 'Pending Appraisal',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
@@ -1696,9 +1722,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   children: [
                                     Row(
                                       children: [
-                                        Text(
-                                          ownerName,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                        Flexible(
+                                          child: Text(
+                                            ownerName,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                         const SizedBox(width: 4),
                                         const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
@@ -1841,10 +1871,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   const SizedBox(height: 16),
 
                   // RATINGS & REVIEWS SECTION
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text(
                             'Ratings & Reviews',

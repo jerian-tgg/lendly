@@ -33,12 +33,39 @@ class GeoLocation {
 }
 
 class LocationHelper {
+  // Default discovery radius (50 km around the user's saved location)
+  static const double defaultDiscoveryRadiusKm = 50.0;
+
+  // Geographical bounds for the Philippines (Batanes to Tawi-Tawi / Palawan to Eastern Mindanao)
+  static const double phMinLat = 4.2;
+  static const double phMaxLat = 21.5;
+  static const double phMinLng = 116.0;
+  static const double phMaxLng = 127.0;
+
   // Default reference location (Visayas / Bacolod area matching default auth coordinates 10.123, 122.345)
   static const GeoLocation defaultLocation = GeoLocation(
     latitude: 10.123,
     longitude: 122.345,
     name: 'Bacolod / Visayas Area',
   );
+
+  /// Checks whether coordinates fall within the Philippine archipelago bounds.
+  static bool isWithinPhilippines(double lat, double lng) {
+    return lat >= phMinLat &&
+        lat <= phMaxLat &&
+        lng >= phMinLng &&
+        lng <= phMaxLng;
+  }
+
+  /// Ensures a [GeoLocation] lies within the Philippines; falls back to [defaultLocation]
+  /// if coordinates are invalid (e.g. 0,0) or outside the Philippines (e.g. emulator US default).
+  static GeoLocation sanitizeToPhilippines(GeoLocation? loc) {
+    if (loc == null) return defaultLocation;
+    if (isWithinPhilippines(loc.latitude, loc.longitude)) {
+      return loc;
+    }
+    return defaultLocation;
+  }
 
   // Popular reference locations for quick filtering and selection
   static const List<GeoLocation> presetLocations = [
@@ -80,6 +107,8 @@ class LocationHelper {
       final lng = (lngRaw is num) ? lngRaw.toDouble() : double.tryParse(lngRaw?.toString() ?? '');
 
       if (lat != null && lng != null) {
+        // Ignore (0, 0) placeholder coordinates
+        if (lat == 0.0 && lng == 0.0) return null;
         return GeoLocation(
           latitude: lat,
           longitude: lng,
@@ -152,27 +181,6 @@ class LocationHelper {
             name: preset.name,
           );
         }
-      }
-      if (lower.contains('iloilo')) {
-        return const GeoLocation(latitude: 10.7202, longitude: 122.5621, name: 'Iloilo City');
-      }
-      if (lower.contains('cebu')) {
-        return const GeoLocation(latitude: 10.3157, longitude: 123.8854, name: 'Cebu City');
-      }
-      if (lower.contains('manila') || lower.contains('makati') || lower.contains('taguig') || lower.contains('pasig')) {
-        return const GeoLocation(latitude: 14.5995, longitude: 120.9842, name: 'Metro Manila');
-      }
-      if (lower.contains('davao')) {
-        return const GeoLocation(latitude: 7.1907, longitude: 125.4504, name: 'Davao City');
-      }
-      if (lower.contains('dumaguete')) {
-        return const GeoLocation(latitude: 9.3068, longitude: 123.3054, name: 'Dumaguete City');
-      }
-      if (lower.contains('cagayan')) {
-        return const GeoLocation(latitude: 8.4542, longitude: 124.6319, name: 'Cagayan de Oro');
-      }
-      if (lower.contains('baguio')) {
-        return const GeoLocation(latitude: 16.4023, longitude: 120.5960, name: 'Baguio City');
       }
     }
 
@@ -349,9 +357,16 @@ class LocationHelper {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
+          timeLimit: Duration(seconds: 6),
         ),
       );
+
+      // Guard against emulator default (e.g. Mountain View, US) or out-of-bounds coordinates
+      if (!isWithinPhilippines(position.latitude, position.longitude)) {
+        final ipLoc = await getIpLocation();
+        if (ipLoc != null) return ipLoc;
+        return defaultLocation;
+      }
 
       final nearestCity = getNearestCityName(position.latitude, position.longitude);
       final locName = nearestCity ?? 'My Location (${position.latitude.toStringAsFixed(2)}, ${position.longitude.toStringAsFixed(2)})';
@@ -371,7 +386,7 @@ class LocationHelper {
   /// Fallback IP-based geolocation (works on laptops/desktops and web without GPS sensors).
   static Future<GeoLocation?> getIpLocation() async {
     try {
-      final res = await http.get(Uri.parse('http://ip-api.com/json')).timeout(const Duration(seconds: 4));
+      final res = await http.get(Uri.parse('http://ip-api.com/json')).timeout(const Duration(seconds: 3));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final lat = (data['lat'] as num?)?.toDouble();
@@ -379,7 +394,7 @@ class LocationHelper {
         final city = data['city'] as String?;
         final region = data['regionName'] as String?;
 
-        if (lat != null && lng != null) {
+        if (lat != null && lng != null && isWithinPhilippines(lat, lng)) {
           final name = city != null ? (region != null ? '$city, $region' : city) : 'My Location';
           return GeoLocation(
             latitude: lat,

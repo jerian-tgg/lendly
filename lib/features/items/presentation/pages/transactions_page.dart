@@ -76,9 +76,9 @@ class _TransactionsPageState extends State<TransactionsPage>
           indicatorColor: const Color(0xFF7B40B5),
           indicatorWeight: 3,
           tabs: const [
-            Tab(text: 'Ongoing'),
-            Tab(text: 'Completed'),
-            Tab(text: 'As Lender'),
+            Tab(text: 'Borrow'),
+            Tab(text: 'Lend'),
+            Tab(text: 'History'),
           ],
         ),
       ),
@@ -100,20 +100,23 @@ class _TransactionsPageState extends State<TransactionsPage>
 
           final docs = snapshot.data!.docs;
 
-          final ongoing = docs.where((d) {
+          final borrow = docs.where((d) {
             final data = d.data() as Map<String, dynamic>;
-            return !_isCompleted(data);
+            final isLender = data['lenderId'] == currentUser.uid ||
+                data['ownerId'] == currentUser.uid;
+            return !_isCompleted(data) && !isLender;
           }).toList();
 
-          final completed = docs.where((d) {
+          final lend = docs.where((d) {
+            final data = d.data() as Map<String, dynamic>;
+            final isLender = data['lenderId'] == currentUser.uid ||
+                data['ownerId'] == currentUser.uid;
+            return !_isCompleted(data) && isLender;
+          }).toList();
+
+          final history = docs.where((d) {
             final data = d.data() as Map<String, dynamic>;
             return _isCompleted(data);
-          }).toList();
-
-          final asLender = docs.where((d) {
-            final data = d.data() as Map<String, dynamic>;
-            return data['lenderId'] == currentUser.uid ||
-                data['ownerId'] == currentUser.uid;
           }).toList();
 
           // Docs with a pending return date for the reminder banner
@@ -134,16 +137,19 @@ class _TransactionsPageState extends State<TransactionsPage>
                   controller: _tabController,
                   children: [
                     _TransactionList(
-                        docs: ongoing, currentUserId: currentUser.uid),
-                    _TransactionList(
-                      docs: completed,
+                      docs: borrow,
                       currentUserId: currentUser.uid,
-                      isCompletedTab: true,
+                      isLenderView: false,
                     ),
                     _TransactionList(
-                      docs: asLender,
+                      docs: lend,
                       currentUserId: currentUser.uid,
                       isLenderView: true,
+                    ),
+                    _TransactionList(
+                      docs: history,
+                      currentUserId: currentUser.uid,
+                      isCompletedTab: true,
                     ),
                   ],
                 ),
@@ -433,20 +439,20 @@ class _TransactionList extends StatelessWidget {
           children: [
             Icon(
               isCompletedTab
-                  ? Icons.check_circle_outline
+                  ? Icons.history
                   : isLenderView
                       ? Icons.handshake_outlined
-                      : Icons.receipt_outlined,
+                      : Icons.shopping_bag_outlined,
               size: 48,
               color: Colors.black26,
             ),
             const SizedBox(height: 12),
             Text(
               isCompletedTab
-                  ? 'No completed transactions yet.'
+                  ? 'No transaction history yet.'
                   : isLenderView
                       ? 'You have no active lending.'
-                      : 'No ongoing transactions.',
+                      : 'No active borrowed items.',
               style: const TextStyle(color: Colors.black45),
             ),
           ],

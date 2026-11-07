@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lendly/core/services/cloudinary/cloudinary_service.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 
 class FirebaseUserService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -14,7 +15,7 @@ class FirebaseUserService {
     required String username,
     required String email,
     required String phone,
-    Map<String, dynamic>? location, // {lat, lng, geohash} — null = don't overwrite
+    Map<String, dynamic>? location, // {lat, lng, name, geohash} — null = don't overwrite
     String? photoURL,
   }) async {
     final uid = _auth.currentUser?.uid;
@@ -31,6 +32,9 @@ class FirebaseUserService {
     // Only update location if valid coordinates were provided
     if (location != null) {
       updateData['location'] = location;
+      if (location['lat'] != null) updateData['latitude'] = location['lat'];
+      if (location['lng'] != null) updateData['longitude'] = location['lng'];
+      if (location['name'] != null) updateData['locationName'] = location['name'];
     }
 
     if (photoURL != null) {
@@ -38,7 +42,33 @@ class FirebaseUserService {
     }
 
     await _firestore.collection('users').doc(uid).set(updateData, SetOptions(merge: true));
-    await _auth.currentUser?.verifyBeforeUpdateEmail(email);
+
+    final currentEmail = _auth.currentUser?.email ?? '';
+    if (email.isNotEmpty && email.toLowerCase() != currentEmail.toLowerCase()) {
+      await _auth.currentUser?.verifyBeforeUpdateEmail(email);
+    }
+  }
+
+  // Update the user's default discovery location directly in Firestore
+  Future<void> updateDefaultLocation(GeoLocation location) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) throw Exception("User not logged in");
+
+    final safeLoc = LocationHelper.sanitizeToPhilippines(location);
+    final locName = safeLoc.name ??
+        '${safeLoc.latitude.toStringAsFixed(3)}, ${safeLoc.longitude.toStringAsFixed(3)}';
+
+    await _firestore.collection('users').doc(uid).set({
+      'location': {
+        'lat': safeLoc.latitude,
+        'lng': safeLoc.longitude,
+        'name': locName,
+        'geohash': '',
+      },
+      'latitude': safeLoc.latitude,
+      'longitude': safeLoc.longitude,
+      'locationName': locName,
+    }, SetOptions(merge: true));
   }
 
   // Update verification status in Firestore

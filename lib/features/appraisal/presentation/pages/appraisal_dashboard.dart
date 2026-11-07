@@ -619,8 +619,11 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.grey.shade200),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 4,
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text('Function: $fnScore/10', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
                             Text('Cosmetic: $cosScore/10', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
@@ -805,8 +808,11 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                       ],
                     ),
                     const Divider(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 4,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text('Function: $fnScore/10', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
                         Text('Cosmetic: $cosScore/10', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),

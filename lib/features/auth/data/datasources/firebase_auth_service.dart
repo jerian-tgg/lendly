@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:lendly/core/utils/location_helper.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -37,6 +38,9 @@ class FirebaseAuthService {
     String? businessName,
     String? licenseNumber,
     String? specialization,
+    double? latitude,
+    double? longitude,
+    String? locationName,
   }) async {
     try {
       UserCredential result = await _auth.createUserWithEmailAndPassword(
@@ -52,6 +56,33 @@ class FirebaseAuthService {
         if (!isSystemAdmin) {
           await user.sendEmailVerification();
         }
+
+        // Resolve coordinates from pinned location, city/province, or default Philippines location
+        final GeoLocation resolvedLoc = () {
+          if (latitude != null && longitude != null && LocationHelper.isWithinPhilippines(latitude, longitude)) {
+            return GeoLocation(
+              latitude: latitude,
+              longitude: longitude,
+              name: (locationName != null && locationName.isNotEmpty)
+                  ? locationName
+                  : (city.isNotEmpty ? '$city${province.isNotEmpty ? ', $province' : ''}' : LocationHelper.defaultLocation.name),
+            );
+          }
+          final parsedFromCity = LocationHelper.parseCoordinates('$city, $province') ??
+              LocationHelper.parseCoordinates(city);
+          if (parsedFromCity != null) {
+            return GeoLocation(
+              latitude: parsedFromCity.latitude,
+              longitude: parsedFromCity.longitude,
+              name: city.isNotEmpty ? '$city${province.isNotEmpty ? ', $province' : ''}' : parsedFromCity.name,
+            );
+          }
+          return GeoLocation(
+            latitude: LocationHelper.defaultLocation.latitude,
+            longitude: LocationHelper.defaultLocation.longitude,
+            name: city.isNotEmpty ? '$city${province.isNotEmpty ? ', $province' : ''}' : LocationHelper.defaultLocation.name,
+          );
+        }();
 
         // Add user details to Firestore
         await _firestore.collection('users').doc(user.uid).set({
@@ -110,11 +141,13 @@ class FirebaseAuthService {
 
           // ── Location ──
           'location': {
-            'lat': 14.5547,
-            'lng': 121.0244,
-            'name': city.isNotEmpty ? city : 'Makati, Metro Manila',
+            'lat': resolvedLoc.latitude,
+            'lng': resolvedLoc.longitude,
+            'name': resolvedLoc.name ?? (city.isNotEmpty ? city : 'Bacolod / Visayas Area'),
             'geohash': '',
           },
+          'latitude': resolvedLoc.latitude,
+          'longitude': resolvedLoc.longitude,
         });
       }
 
@@ -243,7 +276,8 @@ class FirebaseAuthService {
         // Check if user exists in Firestore
         DocumentSnapshot doc = await _firestore.collection('users').doc(user.uid).get();
         if (!doc.exists) {
-          // If not, create user document
+          final deviceLoc = await LocationHelper.getDeviceLocation();
+          // If not, create user document with detected/default PH coordinates
           await _firestore.collection('users').doc(user.uid).set({
             'firstName': user.displayName?.split(' ').first ?? 'Jerian', // Handle first name
             'lastName': user.displayName?.split(' ').last ?? 'Josh',    // Handle last name
@@ -252,10 +286,13 @@ class FirebaseAuthService {
             'isVerified': user.emailVerified,
             'joinedAt': FieldValue.serverTimestamp(),
             'location': {
-              'lat': 0.0,
-              'lng': 0.0,
+              'lat': deviceLoc.latitude,
+              'lng': deviceLoc.longitude,
+              'name': deviceLoc.name ?? LocationHelper.defaultLocation.name,
               'geohash': '',
             },
+            'latitude': deviceLoc.latitude,
+            'longitude': deviceLoc.longitude,
             'birthdate': Timestamp.fromDate(DateTime(2004, 12, 28)), // Default for Google sign in
           });
         } else {
@@ -275,6 +312,28 @@ class FirebaseAuthService {
       return user;
     } on FirebaseAuthException catch (e) {
       throw Exception(e.message);
+    }
+  }
+
+  // Send Password Reset Email
+  Future<void> sendPasswordResetEmail(String email) async {
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty) {
+      throw Exception('Please enter your email address.');
+    }
+    try {
+      await _auth.sendPasswordResetEmail(email: trimmedEmail);
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'invalid-email':
+          throw Exception('Please enter a valid email address.');
+        case 'user-not-found':
+          throw Exception('No account found with this email address.');
+        case 'too-many-requests':
+          throw Exception('Too many requests. Please try again later.');
+        default:
+          throw Exception(e.message ?? 'Failed to send password reset email.');
+      }
     }
   }
 

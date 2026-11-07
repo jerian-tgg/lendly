@@ -7,10 +7,12 @@ import 'package:lendly/core/services/didit/didit_verification_service.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
+import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/pages/report_screen.dart';
+import 'package:lendly/features/items/presentation/widgets/location_picker_map_dialog.dart';
 import 'package:lendly/features/profile/data/datasources/firebase_user_service.dart';
 import 'package:lendly/features/profile/presentation/pages/edit_profile.dart';
 import 'package:lendly/features/profile/presentation/widgets/personal_qr_code_card.dart';
@@ -397,6 +399,249 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
   }
 
+  Future<void> _changeDefaultLocation(
+    BuildContext context,
+    Map<String, dynamic> userData,
+  ) async {
+    final currentLoc = LocationHelper.parseCoordinates(userData['location']) ??
+        LocationHelper.parseCoordinates({
+          'lat': userData['latitude'],
+          'lng': userData['longitude'],
+          'name': userData['locationName'],
+        }) ??
+        LocationHelper.defaultLocation;
+
+    final result = await LocationPickerMapDialog.show(
+      context,
+      initialLocation: currentLoc,
+      title: 'Change Default Location',
+      showRadiusSelector: false,
+    );
+
+    if (result != null && mounted) {
+      try {
+        await _userService.updateDefaultLocation(result.location);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Default location updated to ${result.location.name ?? 'pinned location'}',
+            ),
+            backgroundColor: const Color(0xFF2E7D32),
+          ),
+        );
+      } catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update location: $e')),
+        );
+      }
+    }
+  }
+
+  void _showResetPasswordDialog(BuildContext context, String defaultEmail) {
+    final emailCtrl = TextEditingController(
+      text: defaultEmail.isNotEmpty
+          ? defaultEmail
+          : (FirebaseAuth.instance.currentUser?.email ?? ''),
+    );
+    bool isSending = false;
+    String? feedback;
+    bool isSuccess = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock_reset_rounded,
+                      color: Color(0xFF7B40B5),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Reset Password via Email',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'We\'ll send a password reset link to your email address so you can securely set a new password.',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    enabled: !isSending && !isSuccess,
+                    decoration: InputDecoration(
+                      hintText: 'Your email address',
+                      prefixIcon: const Icon(
+                        Icons.email_outlined,
+                        color: Color(0xFF7B40B5),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFF7FAFC),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF7B40B5),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (feedback != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isSuccess
+                            ? const Color(0xFFE8F5E9)
+                            : const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSuccess
+                              ? const Color(0xFF2ECC71).withValues(alpha: 0.4)
+                              : Colors.red.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSuccess
+                                ? Icons.check_circle_outline
+                                : Icons.error_outline,
+                            size: 18,
+                            color: isSuccess
+                                ? const Color(0xFF2E7D32)
+                                : Colors.red[700],
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              feedback!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isSuccess
+                                    ? const Color(0xFF2E7D32)
+                                    : Colors.red[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSending ? null : () => Navigator.pop(dialogCtx),
+                  child: Text(
+                    isSuccess ? 'Done' : 'Cancel',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+                if (!isSuccess)
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7B40B5),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: isSending
+                        ? null
+                        : () async {
+                            final email = emailCtrl.text.trim();
+                            if (email.isEmpty) {
+                              setDialogState(() {
+                                isSuccess = false;
+                                feedback = 'Please enter your email address.';
+                              });
+                              return;
+                            }
+                            setDialogState(() {
+                              isSending = true;
+                              feedback = null;
+                            });
+                            try {
+                              await FirebaseAuthService()
+                                  .sendPasswordResetEmail(email);
+                              setDialogState(() {
+                                isSending = false;
+                                isSuccess = true;
+                                feedback =
+                                    'Password reset link sent to $email. Please check your inbox.';
+                              });
+                            } catch (e) {
+                              setDialogState(() {
+                                isSending = false;
+                                isSuccess = false;
+                                feedback = e
+                                    .toString()
+                                    .replaceFirst('Exception: ', '');
+                              });
+                            }
+                          },
+                    child: isSending
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Send Link'),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -460,15 +705,26 @@ class _UserProfilePageState extends State<UserProfilePage>
                 final displayName = userData['username'] ??
                     '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
                 final nameStr = displayName.isNotEmpty ? displayName : 'Lendly User';
-                // Show city from address (human-readable); or formatted location via LocationHelper
+                // Prioritize saved default location (from map/GPS/settings), falling back to signup address city
                 final location = () {
+                  final locDisplay = LocationHelper.formatLocationDisplay(
+                    userData['location'],
+                    fallback: '',
+                  );
+                  if (locDisplay.isNotEmpty) return locDisplay;
+                  if (userData['locationName'] != null &&
+                      userData['locationName'].toString().isNotEmpty) {
+                    return userData['locationName'].toString();
+                  }
                   final addr = userData['address'];
                   if (addr is Map) {
                     final city = addr['city']?.toString() ?? '';
                     final province = addr['province']?.toString() ?? '';
-                    if (city.isNotEmpty) return '$city${province.isNotEmpty ? ', $province' : ''}';
+                    if (city.isNotEmpty) {
+                      return '$city${province.isNotEmpty ? ', $province' : ''}';
+                    }
                   }
-                  return LocationHelper.formatLocationDisplay(userData['location']);
+                  return 'Location not specified';
                 }();
                 final phone = userData['phone'] ?? '';
                 final profilePictureUrl =
@@ -543,23 +799,68 @@ class _UserProfilePageState extends State<UserProfilePage>
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          size: 14,
-                          color: Color(0xFF7B40B5),
+                    InkWell(
+                      onTap: _isSelf
+                          ? () => _changeDefaultLocation(context, userData)
+                          : null,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: Color(0xFF7B40B5),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                location,
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (_isSelf) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.edit_location_alt_outlined,
+                                      size: 11,
+                                      color: Color(0xFF7B40B5),
+                                    ),
+                                    SizedBox(width: 2),
+                                    Text(
+                                      'Change',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF7B40B5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          location,
-                          style: TextStyle(
-                            color: Colors.grey[700],
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -768,6 +1069,25 @@ class _UserProfilePageState extends State<UserProfilePage>
                               ),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              final email = (userData['email'] ?? '').toString();
+                              _showResetPasswordDialog(context, email);
+                            },
+                            icon: const Icon(Icons.lock_reset_rounded, size: 18),
+                            label: const Text('Reset Password'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF7B40B5),
+                              side: const BorderSide(color: Color(0xFF7B40B5)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
                                 vertical: 12,
                               ),
                             ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,7 +12,6 @@ import 'package:lendly/features/items/presentation/widgets/item_card.dart';
 import 'package:lendly/features/profile/presentation/pages/profile_page.dart';
 import 'package:lendly/core/utils/image_utils.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
-import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
 import 'package:lendly/features/items/presentation/widgets/location_picker_map_dialog.dart';
 import 'package:lendly/features/wallet/presentation/pages/orc_wallet_screen.dart';
 import 'package:lendly/features/wallet/presentation/widgets/cash_in_dialog.dart';
@@ -418,11 +418,12 @@ class _ItemListScreenState extends State<ItemListScreen> {
   String _selectedCategory = 'All';
   String _selectedMode = 'All'; // All, Lend, Borrow, Nearby
   double _selectedRadiusKm =
-      25.0; // Geographical radius filter (5, 10, 25, 50, 100=Any)
+      LocationHelper.defaultDiscoveryRadiusKm; // Default 50km radius around user's saved location
   bool _isGridView = true; // Two-column marketplace layout toggle
 
   GeoLocation _currentReferenceLocation = LocationHelper.defaultLocation;
   final Map<String, GeoLocation> _ownerLocationsCache = {};
+  StreamSubscription<DocumentSnapshot>? _userLocationSub;
 
   final List<String> _categories = [
     'All',
@@ -444,26 +445,42 @@ class _ItemListScreenState extends State<ItemListScreen> {
   }
 
   Future<void> _loadUserReferenceLocation() async {
-    // 1. First attempt: retrieve real device location via GPS / device location service
-    try {
-      final deviceLoc = await LocationHelper.getDeviceLocation();
-      if (deviceLoc != null && mounted) {
-        setState(() {
-          _currentReferenceLocation = deviceLoc;
-        });
-        return;
-      }
-    } catch (_) {}
-
-    // 2. Second attempt: look up user's saved location in Firestore
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // 1. Primary: Listen to user's saved location in Firestore so the 50km feed
+      // centers on their saved coordinates and updates immediately if changed in Account Settings.
+      _userLocationSub?.cancel();
+      _userLocationSub = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((doc) {
+        if (!doc.exists || !mounted) return;
+        final data = doc.data();
+        final loc = LocationHelper.parseCoordinates(data?['location']) ??
+            LocationHelper.parseCoordinates({
+              'lat': data?['latitude'],
+              'lng': data?['longitude'],
+              'name': data?['locationName'],
+            });
+        if (loc != null && LocationHelper.isWithinPhilippines(loc.latitude, loc.longitude)) {
+          setState(() {
+            _currentReferenceLocation = loc;
+          });
+        }
+      });
+
       try {
         final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         if (doc.exists && mounted) {
           final data = doc.data();
-          final loc = LocationHelper.parseCoordinates(data?['location']);
-          if (loc != null) {
+          final loc = LocationHelper.parseCoordinates(data?['location']) ??
+              LocationHelper.parseCoordinates({
+                'lat': data?['latitude'],
+                'lng': data?['longitude'],
+                'name': data?['locationName'],
+              });
+          if (loc != null && LocationHelper.isWithinPhilippines(loc.latitude, loc.longitude)) {
             setState(() {
               _currentReferenceLocation = loc;
             });
@@ -472,6 +489,16 @@ class _ItemListScreenState extends State<ItemListScreen> {
         }
       } catch (_) {}
     }
+
+    // 2. Fallback (for visitors or users without a saved location): retrieve device GPS location
+    try {
+      final deviceLoc = await LocationHelper.getDeviceLocation();
+      if (mounted) {
+        setState(() {
+          _currentReferenceLocation = LocationHelper.sanitizeToPhilippines(deviceLoc);
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _openLocationPicker() async {
@@ -488,12 +515,19 @@ class _ItemListScreenState extends State<ItemListScreen> {
         _selectedRadiusKm = result.radiusKm;
       });
 
-      // Persist to user profile if logged in
+      // Persist structured location to user profile if logged in
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         try {
           await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-            'location': '${result.location.latitude.toStringAsFixed(6)}, ${result.location.longitude.toStringAsFixed(6)}',
+            'location': {
+              'lat': result.location.latitude,
+              'lng': result.location.longitude,
+              'name': result.location.name ?? 'Selected Location',
+              'geohash': '',
+            },
+            'latitude': result.location.latitude,
+            'longitude': result.location.longitude,
             'locationName': result.location.name,
           }, SetOptions(merge: true));
         } catch (_) {}
@@ -519,6 +553,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
 
   @override
   void dispose() {
+    _userLocationSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -762,13 +797,13 @@ class _ItemListScreenState extends State<ItemListScreen> {
                           onPressed: () {
                             setModalState(() {
                               _selectedCategory = 'All';
-                              _selectedRadiusKm = 100.0;
+                              _selectedRadiusKm = LocationHelper.defaultDiscoveryRadiusKm;
                               _searchController.clear();
                               _searchQuery = '';
                             });
                             setState(() {
                               _selectedCategory = 'All';
-                              _selectedRadiusKm = 100.0;
+                              _selectedRadiusKm = LocationHelper.defaultDiscoveryRadiusKm;
                               _searchController.clear();
                               _searchQuery = '';
                             });
@@ -1530,11 +1565,11 @@ class _ItemListScreenState extends State<ItemListScreen> {
                 // Geographical Radius Filter Matching (Feature 4!)
                 final matchesRadius = _selectedRadiusKm >= 100.0 || distanceKm <= _selectedRadiusKm;
 
-                // Mode Matching ('Nearby' tab filters to <= 25km or selected radius)
+                // Mode Matching ('Nearby' tab filters to <= 50km or selected radius)
                 final matchesMode = _selectedMode == 'All' ||
                     (_selectedMode == 'Lend' && data['ownerId'] == user?.uid) ||
                     (_selectedMode == 'Borrow' && data['ownerId'] != user?.uid) ||
-                    (_selectedMode == 'Nearby' && distanceKm <= (_selectedRadiusKm < 25.0 ? _selectedRadiusKm : 25.0));
+                    (_selectedMode == 'Nearby' && distanceKm <= (_selectedRadiusKm < 50.0 ? _selectedRadiusKm : 50.0));
 
                 return matchesSearch &&
                     matchesCategory &&

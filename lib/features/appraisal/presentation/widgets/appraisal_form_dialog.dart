@@ -550,8 +550,18 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            Text('Category: $category • Owner: $ownerName', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                            Text(
+                              title,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Category: $category • Owner: $ownerName',
+                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ],
                         ),
                       ),
@@ -990,11 +1000,13 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                         children: [
                           Icon(Icons.workspace_premium, color: conditionColor, size: 22),
                           const SizedBox(width: 8),
-                          const Text(
-                            'Basis for Appraised Condition',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                          const Expanded(
+                            child: Text(
+                              'Basis for Appraised Condition',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                            ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
