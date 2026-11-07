@@ -4,6 +4,7 @@ import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.
 import 'package:lendly/features/admin/presentation/pages/admin_reports_page.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_user_management_page.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_wallet_page.dart';
+import 'package:lendly/features/admin/presentation/widgets/admin_wallet_summary_card.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 
 class AdminDashboardPage extends StatelessWidget {
@@ -53,7 +54,10 @@ class AdminDashboardPage extends StatelessWidget {
               'Manage your platform from here.',
               style: TextStyle(color: Colors.black54, fontSize: 14),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+            // Admin Dedicated Wallet Card (10% Service Fee Split & Escrow Volume)
+            const AdminWalletSummaryCard(),
+            const SizedBox(height: 20),
             _DashboardCard(
               icon: Icons.people_alt_rounded,
               title: 'User Management',

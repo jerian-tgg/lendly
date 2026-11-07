@@ -783,7 +783,67 @@ async function settleEscrowTransaction(t, db, convoDoc) {
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // 3. Admin wallet: credit 10% commission
+  // 3. Admin wallet: credit 10% service fee to palenciajerjer28@gmail.com
+  const adminEmail = "palenciajerjer28@gmail.com";
+  const adminDedicatedWalletRef = db.collection("wallets").doc(adminEmail);
+  const adminDedicatedWalletDoc = await t.get(adminDedicatedWalletRef);
+
+  const currentAdminBalance = adminDedicatedWalletDoc.exists ?
+    Number(adminDedicatedWalletDoc.data().balance ||
+      adminDedicatedWalletDoc.data().availableBalance || 0) : 0;
+  const currentAdminFees = adminDedicatedWalletDoc.exists ?
+    Number(adminDedicatedWalletDoc.data().totalFeesCollected ||
+      adminDedicatedWalletDoc.data().totalCommission || 0) : 0;
+
+  const newAdminBalance =
+    Math.round((currentAdminBalance + adminCommission) * 100) / 100;
+  const newAdminFees =
+    Math.round((currentAdminFees + adminCommission) * 100) / 100;
+
+  t.set(adminDedicatedWalletRef, {
+    balance: newAdminBalance,
+    availableBalance: newAdminBalance,
+    totalFeesCollected: newAdminFees,
+    totalCommission: newAdminFees,
+    role: "admin",
+    email: adminEmail,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, {merge: true});
+
+  // Mirror balance and admin role to users/palenciajerjer28@gmail.com
+  const adminUserRef = db.collection("users").doc(adminEmail);
+  t.set(adminUserRef, {
+    email: adminEmail,
+    role: "admin",
+    isAdmin: true,
+    balance: newAdminBalance,
+    totalFeesCollected: newAdminFees,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, {merge: true});
+
+  // Write ledger record to transactions and wallet_logs
+  const adminTxRef = adminDedicatedWalletRef.collection("transactions").doc();
+  const adminFeeRecord = {
+    id: adminTxRef.id,
+    type: "service_fee",
+    amount: adminCommission,
+    grossAmount: total,
+    referenceId: convoId,
+    borrowerId: borrowerId,
+    lenderId: lenderId,
+    description: `10% Platform Service Fee from rental completion ` +
+      `(₱${adminCommission} ORC)`,
+    status: "completed",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  t.set(adminTxRef, adminFeeRecord);
+
+  const adminLogRef = adminDedicatedWalletRef
+      .collection("wallet_logs")
+      .doc(adminTxRef.id);
+  t.set(adminLogRef, adminFeeRecord);
+
+  // Synchronize legacy admin_wallet/main for backward compatibility
   const adminWalletRef = db.collection("admin_wallet").doc("main");
   const adminWalletDoc = await t.get(adminWalletRef);
   const adminBalance = adminWalletDoc.exists ?
@@ -1238,3 +1298,58 @@ exports.onReviewWrite = functions.firestore
 
       return Promise.all(promises);
     });
+
+/**
+ * Callable endpoint to initialize or seed the admin user and wallet
+ * documents for palenciajerjer28@gmail.com with role "admin".
+ */
+exports.seedAdminWallet = functions.https.onCall(
+    async (data, context) => {
+      const db = admin.firestore();
+      const adminEmail = "palenciajerjer28@gmail.com";
+
+      const walletRef = db.collection("wallets").doc(adminEmail);
+      const walletSnap = await walletRef.get();
+      if (!walletSnap.exists) {
+        await walletRef.set({
+          balance: 0.0,
+          availableBalance: 0.0,
+          totalFeesCollected: 0.0,
+          totalCommission: 0.0,
+          role: "admin",
+          email: adminEmail,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      const userRef = db.collection("users").doc(adminEmail);
+      const userSnap = await userRef.get();
+      if (!userSnap.exists) {
+        await userRef.set({
+          email: adminEmail,
+          role: "admin",
+          isAdmin: true,
+          balance: 0.0,
+          totalFeesCollected: 0.0,
+          displayName: "System Admin",
+          joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      const legacyRef = db.collection("admin_wallet").doc("main");
+      const legacySnap = await legacyRef.get();
+      if (!legacySnap.exists) {
+        await legacyRef.set({
+          balance: 0.0,
+          totalCommission: 0.0,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      return {
+        success: true,
+        message: "Admin account and wallet seeded successfully.",
+      };
+    },
+);

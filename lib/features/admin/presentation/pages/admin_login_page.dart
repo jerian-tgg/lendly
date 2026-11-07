@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_dashboard_page.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
+import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -70,6 +71,11 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
           );
         }
       }
+
+      // Ensure admin wallet and user documents are seeded
+      try {
+        await WalletRepository().seedAdminWallet();
+      } catch (_) {}
 
       if (mounted) {
         Navigator.pushReplacement(

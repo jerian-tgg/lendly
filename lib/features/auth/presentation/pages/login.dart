@@ -6,6 +6,7 @@ import 'package:lendly/features/auth/presentation/pages/signup.dart';
 import 'package:lendly/features/items/presentation/pages/home_screen.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_login_page.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_dashboard_page.dart';
+import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart';
 
 class LoginPage extends StatefulWidget {
   final String? initialEmail;
@@ -136,6 +137,11 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       }
+
+      // Ensure admin wallet and user documents are seeded
+      try {
+        await WalletRepository().seedAdminWallet();
+      } catch (_) {}
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

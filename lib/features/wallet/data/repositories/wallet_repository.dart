@@ -56,4 +56,13 @@ class WalletRepository {
       'convoId': convoId,
     });
   }
+
+  /// Calls Cloud Function to initialize/seed admin wallet and user.
+  Future<void> seedAdminWallet() async {
+    try {
+      await _functions.httpsCallable('seedAdminWallet').call();
+    } catch (_) {
+      // Best-effort remote seeding
+    }
+  }
 }
