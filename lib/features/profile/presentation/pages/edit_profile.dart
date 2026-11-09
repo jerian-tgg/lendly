@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lendly/core/services/cloudinary/cloudinary_service.dart';
 import 'package:lendly/core/utils/location_helper.dart';
-import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
 import 'package:lendly/features/items/presentation/widgets/location_picker_map_dialog.dart';
 import 'package:lendly/features/profile/data/datasources/firebase_user_service.dart';
 import 'package:lendly/core/utils/image_utils.dart';
@@ -26,6 +25,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String? _uploadedImageUrl;
   bool _isLoading = false;
   bool _isDetectingGps = false;
+  bool _isResettingPassword = false;
   GeoLocation? _selectedGeoLocation;
 
   @override
@@ -161,35 +161,88 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  Future<void> _sendPasswordResetEmail() async {
+  Future<void> _handleResetPassword() async {
     final email = _emailController.text.trim().isNotEmpty
         ? _emailController.text.trim()
-        : (FirebaseAuth.instance.currentUser?.email ?? '');
+        : FirebaseAuth.instance.currentUser?.email ?? '';
 
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No email address found for your account.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter an email address to send the password reset link.')),
+        );
+      }
       return;
     }
 
-    try {
-      await FirebaseAuthService().sendPasswordResetEmail(email);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Password reset link sent to $email. Please check your inbox.'),
-          backgroundColor: const Color(0xFF2E7D32),
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_reset, color: Color(0xFF7B40B5)),
+            SizedBox(width: 8),
+            Text('Reset Password'),
+          ],
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: Colors.red[700],
+        content: Text(
+          'A secure password reset email will be sent to:\n\n$email\n\nWould you like to send it now?',
+          style: const TextStyle(fontSize: 14),
         ),
-      );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7B40B5),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Send Reset Link'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      setState(() => _isResettingPassword = true);
+      try {
+        await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('Password reset link sent to $email. Please check your inbox.'),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF2E7D32),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to send reset link: ${e.toString()}'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isResettingPassword = false);
+        }
+      }
     }
   }
 
@@ -242,7 +295,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   child: Column(
                     children: [
                       Stack(
-                        alignment: Alignment.bottomRight,
+                          alignment: Alignment.bottomRight,
                         children: [
                           CircleAvatar(
                             radius: 50,
@@ -295,7 +348,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.lightBlueAccent,
+                          backgroundColor: const Color(0xFF7B40B5),
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
@@ -304,34 +358,43 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         onPressed: _isLoading ? null : _saveProfile,
                         icon: _isLoading
                             ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
                             : const Icon(Icons.save, color: Colors.white),
                         label: Text(
                           _isLoading ? "Saving..." : "Save Changes",
-                          style: const TextStyle(fontSize: 16, color: Colors.white),
+                          style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF7B40B5),
-                          side: const BorderSide(color: Color(0xFF7B40B5)),
+                          side: const BorderSide(color: Color(0xFF7B40B5), width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        onPressed: _sendPasswordResetEmail,
-                        icon: const Icon(Icons.lock_reset_rounded, size: 20),
-                        label: const Text(
-                          "Reset Password via Email",
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        onPressed: _isResettingPassword ? null : _handleResetPassword,
+                        icon: _isResettingPassword
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF7B40B5),
+                                ),
+                              )
+                            : const Icon(Icons.lock_reset, size: 20),
+                        label: Text(
+                          _isResettingPassword ? "Sending Reset Link..." : "Reset Password",
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),

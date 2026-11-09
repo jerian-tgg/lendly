@@ -54,7 +54,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _emergencyRelationController = TextEditingController();
 
   // ── Account ──
-  final _passwordController       = TextEditingController();
+  final _passwordController        = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword        = true;
   bool _obscureConfirmPassword = true;
@@ -116,15 +116,6 @@ class _SignUpPageState extends State<SignUpPage> {
     );
     if (picked != null) {
       _birthdateController.text = DateFormat('yyyy-MM-dd').format(picked);
-    }
-  }
-
-  GlobalKey<FormState> get _currentFormKey {
-    switch (_currentStep) {
-      case 0: return _step0Key;
-      case 1: return _step1Key;
-      case 2: return _step2Key;
-      default: return _step3Key;
     }
   }
 
@@ -266,7 +257,7 @@ class _SignUpPageState extends State<SignUpPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign up failed: ${e.toString()}')),
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
       }
     } finally {
@@ -274,23 +265,24 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
+  GlobalKey<FormState> get _currentFormKey {
+    switch (_currentStep) {
+      case 0:  return _step0Key;
+      case 1:  return _step1Key;
+      case 2:  return _step2Key;
+      default: return _step3Key;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF6F9),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        title: const Text('Create Account', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF7B40B5),
         elevation: 0,
-        title: const Text(
-          'Create Account',
-          style: TextStyle(color: Color(0xFF1A1A2E), fontWeight: FontWeight.bold),
-        ),
-        leading: _currentStep > 0
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1A1A2E)),
-                onPressed: _cancel,
-              )
-            : null,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
@@ -313,76 +305,79 @@ class _SignUpPageState extends State<SignUpPage> {
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
-        children: List.generate(steps.length, (i) {
-          final isActive    = i == _currentStep;
-          final isCompleted = i < _currentStep;
-          return Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isCompleted
-                              ? const Color(0xFF7B40B5)
-                              : isActive
-                                  ? const Color(0xFF90E0F3)
-                                  : Colors.grey[200],
-                          border: isActive
-                              ? Border.all(color: const Color(0xFF7B40B5), width: 2)
-                              : null,
-                        ),
-                        child: Center(
-                          child: isCompleted
-                              ? const Icon(Icons.check, color: Colors.white, size: 16)
-                              : Text(
-                                  '${i + 1}',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: isActive ? const Color(0xFF7B40B5) : Colors.grey,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        steps[i],
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                          color: isActive ? const Color(0xFF7B40B5) : Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (i < steps.length - 1)
-                  Expanded(
-                    child: Container(
-                      height: 2,
-                      margin: const EdgeInsets.only(bottom: 20),
-                      color: isCompleted ? const Color(0xFF7B40B5) : Colors.grey[300],
+        children: [
+          for (int i = 0; i < steps.length; i++) ...[
+            Expanded(
+              flex: 5,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i < _currentStep
+                          ? const Color(0xFF7B40B5)
+                          : i == _currentStep
+                              ? const Color(0xFF90E0F3)
+                              : Colors.grey[200],
+                      border: i == _currentStep
+                          ? Border.all(color: const Color(0xFF7B40B5), width: 2)
+                          : null,
+                    ),
+                    child: Center(
+                      child: i < _currentStep
+                          ? const Icon(Icons.check, color: Colors.white, size: 16)
+                          : Text(
+                              '${i + 1}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: i == _currentStep
+                                    ? const Color(0xFF7B40B5)
+                                    : Colors.grey,
+                              ),
+                            ),
                     ),
                   ),
-              ],
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      steps[i],
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: i == _currentStep ? FontWeight.bold : FontWeight.normal,
+                        color: i == _currentStep ? const Color(0xFF7B40B5) : Colors.grey,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        }),
+            if (i < steps.length - 1)
+              Expanded(
+                flex: 3,
+                child: Container(
+                  height: 2,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  color: i < _currentStep ? const Color(0xFF7B40B5) : Colors.grey[300],
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }
 
   Widget _buildCurrentStep() {
     switch (_currentStep) {
-      case 0: return _buildPersonalStep();
-      case 1: return _buildContactStep();
-      case 2: return _buildAddressStep();
+      case 0:  return _buildPersonalStep();
+      case 1:  return _buildContactStep();
+      case 2:  return _buildAddressStep();
       default: return _buildAccountStep();
     }
   }
@@ -398,13 +393,33 @@ class _SignUpPageState extends State<SignUpPage> {
         children: [
           _sectionTitle('Personal Information'),
           const SizedBox(height: 16),
-          _buildField(controller: _firstNameController,  hint: 'First Name *',             icon: Icons.person,         validator: _required),
+          _buildField(
+            controller: _firstNameController,
+            hint: 'First Name *',
+            icon: Icons.person,
+            validator: _required,
+          ),
           const SizedBox(height: 12),
-          _buildField(controller: _middleNameController, hint: 'Middle Name',              icon: Icons.person_outline),
+          _buildField(
+            controller: _middleNameController,
+            hint: 'Middle Name * (or N/A)',
+            icon: Icons.person_outline,
+            validator: _required,
+          ),
           const SizedBox(height: 12),
-          _buildField(controller: _lastNameController,   hint: 'Last Name *',              icon: Icons.person,         validator: _required),
+          _buildField(
+            controller: _lastNameController,
+            hint: 'Last Name *',
+            icon: Icons.person,
+            validator: _required,
+          ),
           const SizedBox(height: 12),
-          _buildField(controller: _suffixController,     hint: 'Suffix (e.g. Jr., III)',   icon: Icons.short_text),
+          _buildField(
+            controller: _suffixController,
+            hint: 'Suffix * (e.g. Jr., III, or N/A)',
+            icon: Icons.short_text,
+            validator: _required,
+          ),
           const SizedBox(height: 12),
           _buildField(
             controller: _birthdateController,
@@ -523,7 +538,7 @@ class _SignUpPageState extends State<SignUpPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle('Default Discovery Location'),
+          _sectionTitle('Default Item Discovery Location'),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(14),
@@ -664,7 +679,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   // ══════════════════════════════════════════
-  // STEP 3 – Account Setup
+  // STEP 3 – Account & Appraiser Registration
   // ══════════════════════════════════════════
   Widget _buildAccountStep() {
     return Form(
@@ -672,18 +687,22 @@ class _SignUpPageState extends State<SignUpPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle('Account Setup'),
+          _sectionTitle('Create Password'),
           const SizedBox(height: 16),
           _buildField(
             controller: _passwordController,
-            hint: 'Password *',
+            hint: 'Password (min. 8 chars) *',
             icon: Icons.lock,
             obscureText: _obscurePassword,
             suffixIcon: IconButton(
-              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
             ),
-            validator: (v) => (v == null || v.length < 8) ? 'Minimum 8 characters' : null,
+            validator: (v) {
+              if (v == null || v.isEmpty) return 'Required';
+              if (v.length < 8) return 'Must be at least 8 characters';
+              return null;
+            },
           ),
           const SizedBox(height: 12),
           _buildField(
@@ -692,25 +711,24 @@ class _SignUpPageState extends State<SignUpPage> {
             icon: Icons.lock_outline,
             obscureText: _obscureConfirmPassword,
             suffixIcon: IconButton(
-              icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
+              icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
               onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
             ),
-            validator: (v) => v != _passwordController.text ? 'Passwords do not match' : null,
+            validator: (v) {
+              if (v == null || v.isEmpty) return 'Required';
+              if (v != _passwordController.text) return 'Passwords do not match';
+              return null;
+            },
           ),
           const SizedBox(height: 24),
-
-          // ── Appraiser Toggle ──
+          _sectionTitle('Special Roles (Optional)'),
+          const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _isAppraiser
-                  ? const Color(0xFF7B40B5).withValues(alpha: 0.08)
-                  : Colors.grey[100],
+              color: Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _isAppraiser ? const Color(0xFF7B40B5) : Colors.grey[300]!,
-                width: _isAppraiser ? 1.5 : 1,
-              ),
+              border: Border.all(color: Colors.grey[200]!),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -719,7 +737,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   contentPadding: EdgeInsets.zero,
                   activeThumbColor: const Color(0xFF7B40B5),
                   title: const Text(
-                    'Register as Business / Professional Appraiser',
+                    'Register as a Certified Appraiser',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -775,7 +793,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: _specialization,
+                    initialValue: _specialization,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.category),
                       filled: true,
@@ -793,15 +811,6 @@ class _SignUpPageState extends State<SignUpPage> {
                 ],
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-
-          TextButton(
-            onPressed: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-            ),
-            child: const Text('Already have an account? Login'),
           ),
           const SizedBox(height: 24),
         ],
@@ -857,9 +866,13 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   // ── Helpers ──
-  Widget _sectionTitle(String title) => Text(
-    title,
-    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E)),
+  Widget _sectionTitle(String title) => FittedBox(
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerLeft,
+    child: Text(
+      title,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E)),
+    ),
   );
 
   String? _required(String? v) => (v == null || v.trim().isEmpty) ? 'Required' : null;
@@ -910,7 +923,7 @@ class _SignUpPageState extends State<SignUpPage> {
     required ValueChanged<String?> onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: const Color(0xFF7B40B5)),
         labelText: label,
