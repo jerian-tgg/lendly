@@ -13,6 +13,7 @@ import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart'
 import 'package:lendly/features/items/presentation/pages/electronic_contract_page.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
+import 'package:lendly/features/appraisal/presentation/widgets/appraisal_form_dialog.dart';
 
 class ChatScreen extends StatefulWidget {
   final String convoId;
@@ -555,7 +556,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Text(
                   action == 'handoff'
                       ? '✓ Handoff confirmed! Item exchange complete.'
-                      : '✓ Return confirmed! Transaction concluded.',
+                      : action == 'appraisal_meetup'
+                          ? '✓ In-person meetup confirmed! Appraiser may now inspect and submit the appraisal.'
+                          : '✓ Return confirmed! Transaction concluded.',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -563,7 +566,9 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           backgroundColor: action == 'handoff'
               ? const Color(0xFF3498DB)
-              : const Color(0xFF7B40B5),
+              : action == 'appraisal_meetup'
+                  ? const Color(0xFF059669)
+                  : const Color(0xFF7B40B5),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           duration: const Duration(seconds: 3),
@@ -583,6 +588,25 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         }
       }
+    }
+  }
+
+  void _openAppraisalModalFromChat(
+    Map<String, dynamic> convoData,
+    Map<String, dynamic> itemData,
+    String itemId,
+  ) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AppraisalFormDialog(
+        itemData: itemData,
+        itemId: itemId,
+        convoId: widget.convoId,
+        isMeetupPreVerified: true,
+      ),
+    );
+    if (result == true && mounted) {
+      setState(() {});
     }
   }
 
@@ -643,6 +667,12 @@ class _ChatScreenState extends State<ChatScreen> {
             'contractFinalizedAt': FieldValue.serverTimestamp(),
           }).catchError((_) {});
         }
+
+        final isAppraisalChat = convoData['conversationType'] == 'appraisal';
+        final isMeetupConfirmed = convoData['isMeetupConfirmed'] == true;
+        final isAppraisalCompleted = convoData['isAppraisalCompleted'] == true;
+        final appraiserId = convoData['appraiserId'] as String? ?? '';
+        final isAppraiser = (widget.currentUserId == appraiserId) || (!isOwner && isAppraisalChat);
 
         final ownerId = convoData['ownerId'] ?? convoData['itemOwnerId'] ?? '';
         final borrowerId = convoData['borrowerId'] ??
@@ -718,7 +748,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   },
                 ),
                 actions: [
-                  if (!isOwner && effectiveItemId.isNotEmpty)
+                  if (!isAppraisalChat && !isOwner && effectiveItemId.isNotEmpty)
                     IconButton(
                       icon: const Icon(Icons.star_rounded, color: Colors.amber),
                       tooltip: 'Rate & Review Item',
@@ -757,7 +787,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       }
                     },
                     itemBuilder: (ctx) => [
-                      if (contractSigned)
+                      if (!isAppraisalChat && contractSigned)
                         const PopupMenuItem(
                           value: 'view_contract',
                           child: Row(
@@ -768,7 +798,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             ],
                           ),
                         ),
-                      if (!isOwner && effectiveItemId.isNotEmpty)
+                      if (!isAppraisalChat && !isOwner && effectiveItemId.isNotEmpty)
                         const PopupMenuItem(
                           value: 'review_item',
                           child: Row(
@@ -808,27 +838,41 @@ class _ChatScreenState extends State<ChatScreen> {
                   ? const Center(child: CircularProgressIndicator(color: Color(0xFF7B40B5)))
                   : Column(
                       children: [
-                        // Pinned borrow request & item card
-                        _BorrowRequestCard(
-                          convoData: convoData,
-                          itemId: effectiveItemId,
-                          itemData: itemData,
-                          isOwner: isOwner,
-                          onViewItem: effectiveItemId.isNotEmpty
-                              ? () => _navigateToItemDetail(effectiveItemId, itemData)
-                              : null,
-                          onReviewItem: (!isOwner && effectiveItemId.isNotEmpty)
-                              ? () => _openItemReviewDialog(
-                                    itemId: effectiveItemId,
-                                    itemTitle: itemName,
-                                    ownerId: itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId,
-                                    ownerName: itemOwnerName,
-                                  )
-                              : null,
-                          onViewContract: contractSigned
-                              ? () => _openContractPage(convoData)
-                              : null,
-                        ),
+                        // Pinned header card (Appraisal vs Borrow Request)
+                        if (isAppraisalChat)
+                          _AppraisalHeaderCard(
+                            convoData: convoData,
+                            itemId: effectiveItemId,
+                            itemData: itemData,
+                            isAppraiser: isAppraiser,
+                            isOwner: isOwner,
+                            isMeetupConfirmed: isMeetupConfirmed,
+                            isAppraisalCompleted: isAppraisalCompleted,
+                            onViewItem: effectiveItemId.isNotEmpty
+                                ? () => _navigateToItemDetail(effectiveItemId, itemData)
+                                : null,
+                          )
+                        else
+                          _BorrowRequestCard(
+                            convoData: convoData,
+                            itemId: effectiveItemId,
+                            itemData: itemData,
+                            isOwner: isOwner,
+                            onViewItem: effectiveItemId.isNotEmpty
+                                ? () => _navigateToItemDetail(effectiveItemId, itemData)
+                                : null,
+                            onReviewItem: (!isOwner && effectiveItemId.isNotEmpty)
+                                ? () => _openItemReviewDialog(
+                                      itemId: effectiveItemId,
+                                      itemTitle: itemName,
+                                      ownerId: itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId,
+                                      ownerName: itemOwnerName,
+                                    )
+                                : null,
+                            onViewContract: contractSigned
+                                ? () => _openContractPage(convoData)
+                                : null,
+                          ),
 
                         // Messages
                         Expanded(
@@ -874,6 +918,23 @@ class _ChatScreenState extends State<ChatScreen> {
                                       as Map<String, dynamic>;
                                   final type = msg['type'] ?? 'text';
 
+                                  if (type == 'appraisal_request') {
+                                    return _AppraisalRequestMessage(
+                                      msg: msg,
+                                      isMe: msg['senderId'] == widget.currentUserId,
+                                      onViewItem: effectiveItemId.isNotEmpty
+                                          ? () => _navigateToItemDetail(effectiveItemId, itemData)
+                                          : null,
+                                    );
+                                  }
+
+                                  if (type == 'appraisal_completed') {
+                                    return _AppraisalCompletedMessage(
+                                      msg: msg,
+                                      isMe: msg['senderId'] == widget.currentUserId,
+                                    );
+                                  }
+
                                   if (type == 'borrow_request') {
                                     return _BorrowRequestMessage(
                                       msg: msg,
@@ -908,27 +969,46 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
 
                         // Status banner
-                        _StatusBar(
-                          isApproved: isApproved,
-                          isDenied: isDenied,
-                          isFullyDone: isFullyDone,
-                          isPaid: isPaid,
-                          isReceived: isReceived,
-                          isReturned: isReturned,
-                          isReturnConfirmed: isReturnConfirmed,
-                          isOwner: isOwner,
-                          contractSigned: contractSigned,
-                        ),
+                        if (isAppraisalChat)
+                          _AppraisalStatusBar(
+                            isMeetupConfirmed: isMeetupConfirmed,
+                            isAppraisalCompleted: isAppraisalCompleted,
+                            isAppraiser: isAppraiser,
+                          )
+                        else
+                          _StatusBar(
+                            isApproved: isApproved,
+                            isDenied: isDenied,
+                            isFullyDone: isFullyDone,
+                            isPaid: isPaid,
+                            isReceived: isReceived,
+                            isReturned: isReturned,
+                            isReturnConfirmed: isReturnConfirmed,
+                            isOwner: isOwner,
+                            contractSigned: contractSigned,
+                          ),
 
-                        // Owner: approve / deny
-                        if (!isDenied && !isFullyDone && isOwner && !isApproved)
+                        // Appraisal Action Panel (In-Person Meetup QR Scan + Appraise Item)
+                        if (isAppraisalChat)
+                          _AppraisalActionPanel(
+                            isAppraiser: isAppraiser,
+                            isMeetupConfirmed: isMeetupConfirmed,
+                            isAppraisalCompleted: isAppraisalCompleted,
+                            onConfirmMeetup: () =>
+                                _openQrScreen('appraisal_meetup', convoData),
+                            onAppraiseItem: () =>
+                                _openAppraisalModalFromChat(convoData, itemData, effectiveItemId),
+                          ),
+
+                        // Owner: approve / deny (Rental only)
+                        if (!isAppraisalChat && !isDenied && !isFullyDone && isOwner && !isApproved)
                           _OwnerActionPanel(
                             onApprove: _approveRequest,
                             onDeny: _denyRequest,
                           ),
 
-                        // Contract signing panel — shown after approval until both sign
-                        if (isApproved && !isFullyDone && !contractSigned)
+                        // Contract signing panel — shown after approval until both sign (Rental only)
+                        if (!isAppraisalChat && isApproved && !isFullyDone && !contractSigned)
                           _ContractSigningPanel(
                             contractSigned:  contractSigned,
                             lenderSigned:    lenderSigned,
@@ -937,8 +1017,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             onOpenContract:  () => _openContractPage(convoData),
                           ),
 
-                        // QR handoff/return buttons → only after contract is signed
-                        if (isApproved && !isFullyDone && contractSigned)
+                        // QR handoff/return buttons → only after contract is signed (Rental only)
+                        if (!isAppraisalChat && isApproved && !isFullyDone && contractSigned)
                           _QrActionPanel(
                             isOwner: isOwner,
                             isPaid: isPaid,
@@ -951,8 +1031,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                 _openQrScreen('return', convoData),
                           ),
 
-                        // Review callout panel: shown after completion
-                        if (isFullyDone || (isReturned && isReturnConfirmed))
+                        // Review callout panel: shown after completion (Rental only)
+                        if (!isAppraisalChat && (isFullyDone || (isReturned && isReturnConfirmed)))
                           _CompletedReviewPanel(
                             itemId: effectiveItemId,
                             itemName: itemName,
@@ -2448,6 +2528,611 @@ class _SigChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Appraisal Header Card (Top of chat for appraisal coordination)
+// ────────────────────────────────────────────────────────────────────────────
+
+class _AppraisalHeaderCard extends StatelessWidget {
+  final Map<String, dynamic> convoData;
+  final String itemId;
+  final Map<String, dynamic> itemData;
+  final bool isAppraiser;
+  final bool isOwner;
+  final bool isMeetupConfirmed;
+  final bool isAppraisalCompleted;
+  final VoidCallback? onViewItem;
+
+  const _AppraisalHeaderCard({
+    required this.convoData,
+    required this.itemId,
+    required this.itemData,
+    required this.isAppraiser,
+    required this.isOwner,
+    required this.isMeetupConfirmed,
+    required this.isAppraisalCompleted,
+    this.onViewItem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final itemName = itemData['name'] ?? itemData['title'] ?? convoData['itemName'] ?? 'Item';
+    final imageUrl = (itemData['imageUrls'] is List && itemData['imageUrls'].isNotEmpty)
+        ? itemData['imageUrls'][0]
+        : (itemData['imageUrl'] as String?);
+    final appraiserBiz = convoData['appraiserBusinessName'] ?? 'Licensed Appraiser';
+    final conditionGrade = itemData['conditionGrade'] ?? convoData['conditionGrade'];
+
+    final statusColor = isAppraisalCompleted
+        ? const Color(0xFF059669)
+        : isMeetupConfirmed
+            ? const Color(0xFF0284C7)
+            : const Color(0xFF7B40B5);
+
+    final statusLabel = isAppraisalCompleted
+        ? '✓ Certified'
+        : isMeetupConfirmed
+            ? '✓ Met In-Person'
+            : '1. Coordinate Meetup';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: statusColor.withValues(alpha: 0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (isValidImageUrl(imageUrl))
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    imageUrl!,
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 44,
+                      height: 44,
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.inventory_2_outlined, size: 20, color: Colors.grey),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.verified_outlined, size: 22, color: Color(0xFF7B40B5)),
+                ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      itemName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.business_outlined, size: 12, color: Colors.grey),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            'Appraiser: $appraiserBiz',
+                            style: const TextStyle(fontSize: 11, color: Colors.black54),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Steps progression indicator
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _AppraisalStepIndicator(
+                stepNum: '1',
+                label: 'Message',
+                active: true,
+                done: isMeetupConfirmed || isAppraisalCompleted,
+              ),
+              Expanded(
+                child: Container(
+                  height: 2,
+                  color: isMeetupConfirmed ? const Color(0xFF059669) : Colors.grey[300],
+                ),
+              ),
+              _AppraisalStepIndicator(
+                stepNum: '2',
+                label: 'Scan QR',
+                active: true,
+                done: isMeetupConfirmed,
+              ),
+              Expanded(
+                child: Container(
+                  height: 2,
+                  color: isAppraisalCompleted ? const Color(0xFF059669) : Colors.grey[300],
+                ),
+              ),
+              _AppraisalStepIndicator(
+                stepNum: '3',
+                label: 'Appraise',
+                active: isMeetupConfirmed,
+                done: isAppraisalCompleted,
+              ),
+            ],
+          ),
+
+          if (isAppraisalCompleted && conditionGrade != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.verified, size: 14, color: Color(0xFF059669)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Certified Condition: $conditionGrade',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          if (onViewItem != null) ...[
+            const Divider(height: 14),
+            InkWell(
+              onTap: onViewItem,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF7B40B5)),
+                  SizedBox(width: 4),
+                  Text(
+                    'View Item Listing',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AppraisalStepIndicator extends StatelessWidget {
+  final String stepNum;
+  final String label;
+  final bool active;
+  final bool done;
+
+  const _AppraisalStepIndicator({
+    required this.stepNum,
+    required this.label,
+    required this.active,
+    required this.done,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = done
+        ? const Color(0xFF059669)
+        : active
+            ? const Color(0xFF7B40B5)
+            : Colors.grey;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 18,
+          height: 18,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: done ? const Color(0xFF059669) : Colors.transparent,
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 1.5),
+          ),
+          child: done
+              ? const Icon(Icons.check, size: 11, color: Colors.white)
+              : Text(
+                  stepNum,
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
+                ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: color),
+        ),
+      ],
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Appraisal Status Bar
+// ────────────────────────────────────────────────────────────────────────────
+
+class _AppraisalStatusBar extends StatelessWidget {
+  final bool isMeetupConfirmed;
+  final bool isAppraisalCompleted;
+  final bool isAppraiser;
+
+  const _AppraisalStatusBar({
+    required this.isMeetupConfirmed,
+    required this.isAppraisalCompleted,
+    required this.isAppraiser,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Color bg;
+    IconData icon;
+    String label;
+    Color fg;
+
+    if (isAppraisalCompleted) {
+      bg = const Color(0xFFE8F8F0);
+      icon = Icons.verified_rounded;
+      fg = const Color(0xFF059669);
+      label = 'Official appraisal certified! Condition grade has been published.';
+    } else if (isMeetupConfirmed) {
+      bg = const Color(0xFFEDF7FF);
+      icon = Icons.handshake_rounded;
+      fg = const Color(0xFF0284C7);
+      label = isAppraiser
+          ? 'Physical meetup verified! Inspect the item and complete the rating below.'
+          : 'Physical meetup verified! The appraiser is now inspecting your item.';
+    } else {
+      bg = const Color(0xFFF3E8FF);
+      icon = Icons.qr_code_scanner_rounded;
+      fg = const Color(0xFF7B40B5);
+      label = 'Agree where to meet in person, then scan QR code together to confirm meetup.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: bg,
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: fg,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Appraisal Action Panel
+// ────────────────────────────────────────────────────────────────────────────
+
+class _AppraisalActionPanel extends StatelessWidget {
+  final bool isAppraiser;
+  final bool isMeetupConfirmed;
+  final bool isAppraisalCompleted;
+  final VoidCallback onConfirmMeetup;
+  final VoidCallback onAppraiseItem;
+
+  const _AppraisalActionPanel({
+    required this.isAppraiser,
+    required this.isMeetupConfirmed,
+    required this.isAppraisalCompleted,
+    required this.onConfirmMeetup,
+    required this.onAppraiseItem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Appraisal Anti-Fraud Verification Flow',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black45),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // Step 1: In-Person Meetup QR Scan
+              Expanded(
+                child: _QBtn(
+                  icon: Icons.qr_code_scanner,
+                  label: isMeetupConfirmed ? 'Meetup Done ✓' : 'Scan Meetup QR',
+                  sublabel: isMeetupConfirmed ? 'Verified in-person' : 'Confirm in-person meetup',
+                  done: isMeetupConfirmed,
+                  color: const Color(0xFF0284C7),
+                  onTap: isMeetupConfirmed ? null : onConfirmMeetup,
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Step 2: Appraise & Certify
+              Expanded(
+                child: isAppraiser
+                    ? _QBtn(
+                        icon: Icons.verified_outlined,
+                        label: isAppraisalCompleted ? 'Appraised ✓' : 'Appraise Item',
+                        sublabel: !isMeetupConfirmed
+                            ? 'Locked (Meetup required)'
+                            : isAppraisalCompleted
+                                ? 'Certified & Published'
+                                : 'Rate Function & Cosmetic',
+                        done: isAppraisalCompleted,
+                        color: const Color(0xFF059669),
+                        onTap: (!isMeetupConfirmed)
+                            ? null
+                            : onAppraiseItem,
+                      )
+                    : _QBtn(
+                        icon: Icons.verified_outlined,
+                        label: isAppraisalCompleted ? 'Appraised ✓' : 'Item Inspection',
+                        sublabel: isAppraisalCompleted ? 'Certified & Published' : (isMeetupConfirmed ? 'Appraiser inspecting' : 'Awaiting meetup'),
+                        done: isAppraisalCompleted,
+                        color: const Color(0xFF059669),
+                        onTap: null,
+                      ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Appraisal Request & Completed Message Cards
+// ────────────────────────────────────────────────────────────────────────────
+
+class _AppraisalRequestMessage extends StatelessWidget {
+  final Map<String, dynamic> msg;
+  final bool isMe;
+  final VoidCallback? onViewItem;
+
+  const _AppraisalRequestMessage({
+    required this.msg,
+    required this.isMe,
+    this.onViewItem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final itemName = msg['itemName'] ?? 'Item';
+    final appraiserBiz = msg['appraiserBusinessName'] ?? 'Licensed Appraiser';
+    final text = msg['text'] ?? '';
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        decoration: BoxDecoration(
+          color: isMe ? const Color(0xFF7B40B5).withValues(alpha: 0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.verified_outlined, size: 16, color: Color(0xFF7B40B5)),
+                SizedBox(width: 6),
+                Text(
+                  'Official Appraisal Request',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7B40B5),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _R(icon: Icons.inventory_2_outlined, label: 'Item', value: itemName, bold: true),
+            const SizedBox(height: 6),
+            _R(icon: Icons.business_outlined, label: 'Appraiser', value: appraiserBiz),
+            if (text.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(text, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+            ],
+            if (onViewItem != null) ...[
+              const Divider(height: 14),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: onViewItem,
+                  icon: const Icon(Icons.open_in_new, size: 13),
+                  label: const Text('View Listing', style: TextStyle(fontSize: 11)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF7B40B5),
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AppraisalCompletedMessage extends StatelessWidget {
+  final Map<String, dynamic> msg;
+  final bool isMe;
+
+  const _AppraisalCompletedMessage({
+    required this.msg,
+    required this.isMe,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final grade = msg['conditionGrade'] ?? 'Certified';
+    final fnScore = msg['functionScore'] ?? '-';
+    final cosScore = msg['cosmeticScore'] ?? '-';
+    final certId = msg['certificateId'] ?? 'CERT-APPRAISED';
+    final defectCount = msg['defectCount'] as num? ?? 0;
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.green.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.workspace_premium, size: 18, color: Color(0xFF15803D)),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Appraisal Certified & Submitted',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF15803D),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            Row(
+              children: [
+                const Text('Certified Grade: ', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF059669),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    grade,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('Scores: Function ($fnScore/10) • Cosmetic ($cosScore/10)',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF166534))),
+            const SizedBox(height: 4),
+            Text('Certificate ID: $certId',
+                style: const TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.bold)),
+            if (defectCount > 0) ...[
+              const SizedBox(height: 4),
+              Text('$defectCount defect(s) documented during physical inspection',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+            ],
+          ],
+        ),
       ),
     );
   }

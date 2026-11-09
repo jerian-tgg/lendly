@@ -8,6 +8,9 @@ class Conversation {
   final String itemId;
   final String itemOwnerId;
   final bool approved;
+  final String conversationType; // 'rental' or 'appraisal'
+  final bool isMeetupConfirmed;
+  final bool isAppraisalCompleted;
 
   Conversation({
     required this.id,
@@ -17,6 +20,9 @@ class Conversation {
     required this.itemId,
     required this.itemOwnerId,
     required this.approved,
+    this.conversationType = 'rental',
+    this.isMeetupConfirmed = false,
+    this.isAppraisalCompleted = false,
   });
 
   factory Conversation.fromDoc(DocumentSnapshot doc) {
@@ -29,6 +35,9 @@ class Conversation {
       itemId: data['itemId'] ?? '',
       itemOwnerId: data['itemOwnerId'] ?? '',
       approved: data['approved'] ?? false,
+      conversationType: data['conversationType'] ?? 'rental',
+      isMeetupConfirmed: data['isMeetupConfirmed'] == true,
+      isAppraisalCompleted: data['isAppraisalCompleted'] == true,
     );
   }
 }

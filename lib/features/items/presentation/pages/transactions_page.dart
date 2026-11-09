@@ -100,7 +100,12 @@ class _TransactionsPageState extends State<TransactionsPage>
             return _buildEmptyState();
           }
 
-          final docs = snapshot.data!.docs;
+          final allDocs = snapshot.data!.docs;
+          // Exclude appraisal coordination chats from rental transactions
+          final docs = allDocs.where((d) {
+            final data = d.data() as Map<String, dynamic>;
+            return data['conversationType'] != 'appraisal';
+          }).toList();
 
           final borrow = docs.where((d) {
             final data = d.data() as Map<String, dynamic>;

@@ -50,35 +50,43 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
   void _openAppraisalModal(BuildContext context, Map<String, dynamic> itemData, String itemId) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (_) => AppraisalFormDialog(itemData: itemData, itemId: itemId),
+      builder: (_) => AppraisalFormDialog(
+        itemData: itemData,
+        itemId: itemId,
+        isMeetupPreVerified: itemData['isOwnerMeetupVerified'] == true,
+      ),
     );
     if (result == true) {
       setState(() {});
     }
   }
 
-  Future<void> _messageOwnerForMeetup(BuildContext context, Map<String, dynamic> itemData, String itemId) async {
+  Future<void> _startAppraisalFlow(BuildContext context, Map<String, dynamic> itemData, String itemId) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final ownerId = (itemData['ownerId'] ?? '').toString();
     final ownerName = (itemData['ownerName'] ?? 'Owner').toString();
+    final itemName = (itemData['name'] ?? itemData['title'] ?? 'Item').toString();
 
     if (currentUserId.isEmpty || ownerId.isEmpty) return;
     if (currentUserId == ownerId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You cannot message yourself for an appraisal.')),
+        const SnackBar(content: Text('Self-Appraisal Prohibited: You cannot appraise your own item listing.')),
       );
       return;
     }
 
     try {
-      final convoId = await createOrGetConversation(
-        currentUserId: currentUserId,
-        otherUserId: ownerId,
+      // Fetch appraiser's verified business name
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
+      final userData = userDoc.data() ?? {};
+      final businessName = (userData['businessName'] as String?) ?? 'Licensed Appraiser';
+
+      final convoId = await createOrGetAppraisalConversation(
+        appraiserId: currentUserId,
+        ownerId: ownerId,
         itemId: itemId,
-        startDate: DateTime.now(),
-        endDate: DateTime.now().add(const Duration(days: 1)),
-        totalDays: 1,
-        totalPrice: 0,
+        appraiserBusinessName: businessName,
+        itemName: itemName,
       );
 
       if (context.mounted) {
@@ -98,7 +106,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error opening chat: $e')),
+          SnackBar(content: Text('Error opening appraisal chat: $e')),
         );
       }
     }
@@ -434,6 +442,10 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
         final allDocs = snapshot.data?.docs ?? [];
         final filteredDocs = allDocs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
+          final ownerId = (data['ownerId'] ?? '').toString();
+          // Exclude appraiser's own items from being appraised by themselves
+          if (uid.isNotEmpty && ownerId == uid) return false;
+
           final isCertified = data['appraisalStatus'] == 'certified';
           final isRequested = data['appraisalRequested'] == true;
           final category = (data['category'] ?? '').toString();
@@ -649,21 +661,9 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
 
                     const SizedBox(height: 10),
 
-                    // Action Buttons (Rate Item, Meetup Chat, & View Item)
+                    // Action Buttons (View Item & Message to Appraise)
                     Row(
                       children: [
-                        OutlinedButton.icon(
-                          onPressed: () => _messageOwnerForMeetup(context, itemData, doc.id),
-                          icon: const Icon(Icons.chat_bubble_outline, size: 14),
-                          label: const Text('Meetup', style: TextStyle(fontSize: 11)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF7B40B5),
-                            side: const BorderSide(color: Color(0xFF7B40B5)),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {
@@ -684,14 +684,17 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Expanded(
                           flex: 2,
                           child: ElevatedButton.icon(
-                            onPressed: () => _openAppraisalModal(context, itemData, doc.id),
-                            icon: const Icon(Icons.star_rate_rounded, size: 15),
+                            onPressed: () => _startAppraisalFlow(context, itemData, doc.id),
+                            icon: Icon(
+                              isCertified ? Icons.edit_note_rounded : Icons.handshake_outlined,
+                              size: 15,
+                            ),
                             label: Text(
-                              isCertified ? 'Re-Appraise' : 'Rate & Appraise',
+                              isCertified ? 'Re-Appraise (Chat)' : 'Message & Appraise',
                               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(

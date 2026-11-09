@@ -11,11 +11,15 @@ import 'package:lendly/features/items/data/repositories/item_repository_impl.dar
 class AppraisalFormDialog extends StatefulWidget {
   final Map<String, dynamic> itemData;
   final String itemId;
+  final String? convoId;
+  final bool isMeetupPreVerified;
 
   const AppraisalFormDialog({
     super.key,
     required this.itemData,
     required this.itemId,
+    this.convoId,
+    this.isMeetupPreVerified = false,
   });
 
   @override
@@ -39,7 +43,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
 
   // Owner Meetup Verification
   bool _isOwnerMeetupVerified = false;
-  String _meetupMethod = 'in_person_confirmation'; // 'qr_scan' or 'in_person_confirmation'
+  String _meetupMethod = 'qr_scan'; // Enforce strict QR scan verification
   DateTime? _meetupVerifiedAt;
 
   // Documented Defects
@@ -85,12 +89,14 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
       _certIdController = TextEditingController(text: 'CERT-2026-APP$randomCode');
     }
 
-    // Existing meetup verification state
-    if (widget.itemData['isOwnerMeetupVerified'] == true) {
+    // Existing meetup verification state or pre-verified from chat QR scan
+    if (widget.isMeetupPreVerified || widget.itemData['isOwnerMeetupVerified'] == true) {
       _isOwnerMeetupVerified = true;
-      _meetupMethod = widget.itemData['meetupVerificationMethod'] ?? 'in_person_confirmation';
+      _meetupMethod = 'qr_scan';
       if (widget.itemData['meetupVerifiedAt'] is Timestamp) {
         _meetupVerifiedAt = (widget.itemData['meetupVerifiedAt'] as Timestamp).toDate();
+      } else {
+        _meetupVerifiedAt = DateTime.now();
       }
     }
 
@@ -361,9 +367,18 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
   }
 
   Future<void> _submitAppraisal() async {
-    // 1. Enforce Owner Meetup Requirement
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final ownerId = (widget.itemData['ownerId'] ?? '').toString();
+
+    // Prevent fraudulent self-appraisal
+    if (uid.isNotEmpty && uid == ownerId) {
+      _showAppraisalError('Self-Appraisal Prohibited: You cannot certify or appraise your own item listing.');
+      return;
+    }
+
+    // 1. Enforce Owner Meetup Requirement via QR scan
     if (!_isOwnerMeetupVerified) {
-      _showAppraisalError('Owner Meetup Required: You must verify your in-person meeting with the owner before certifying this appraisal.');
+      _showAppraisalError('Owner Meetup Required: You must verify your in-person physical meeting with the owner via QR scan before certifying this appraisal.');
       return;
     }
 
@@ -372,7 +387,6 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
     setState(() => _isSubmitting = true);
 
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
       final businessName = _appraiserProfile?['businessName'] as String? ?? 'Licensed Professional Appraiser';
       final licenseNo = _appraiserProfile?['licenseNumber'] as String? ?? 'APP-2026-VERIFIED';
 
@@ -406,6 +420,35 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
       // NOTE: Intentionally DO NOT overwrite 'price' so only the owner controls daily rate!
 
       await FirebaseFirestore.instance.collection('items').doc(widget.itemId).update(updateMap);
+
+      // Update appraisal conversation if opened from chat
+      if (widget.convoId != null && widget.convoId!.isNotEmpty) {
+        final convoRef = FirebaseFirestore.instance.collection('conversations').doc(widget.convoId!);
+        await convoRef.update({
+          'isAppraisalCompleted': true,
+          'appraisalCompletedAt': FieldValue.serverTimestamp(),
+          'certifiedCondition': _conditionGrade,
+          'conditionGrade': _conditionGrade,
+          'appraisalCertificateId': _certIdController.text.trim(),
+          'appraisalValue': estimatedVal,
+          'lastMessageText': 'Official appraisal certified: Grade $_conditionGrade',
+          'lastUpdated': FieldValue.serverTimestamp(),
+        }).catchError((_) {});
+
+        await convoRef.collection('messages').add({
+          'senderId': uid,
+          'type': 'appraisal_completed',
+          'conditionGrade': _conditionGrade,
+          'functionScore': _functionScore,
+          'cosmeticScore': _cosmeticScore,
+          'estimatedValue': estimatedVal,
+          'certificateId': _certIdController.text.trim(),
+          'hasDefects': _hasDefects && _defects.isNotEmpty,
+          'defectCount': _defects.length,
+          'notes': _notesController.text.trim(),
+          'timestamp': FieldValue.serverTimestamp(),
+        }).catchError((_) {});
+      }
 
       if (mounted) {
         Navigator.pop(context, true);
@@ -639,60 +682,34 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                       const SizedBox(height: 6),
                       Text(
                         _isOwnerMeetupVerified
-                            ? 'Physical meetup with $ownerName verified via ${_meetupMethod == 'qr_scan' ? "owner's QR code scan" : "in-person inspection confirmation"}.'
-                            : 'Appraisals require an in-person meeting with the item owner ($ownerName) to inspect the physical hardware.',
+                            ? 'Physical meetup with $ownerName verified via in-person QR code scan.'
+                            : 'Appraisals require an in-person meeting with the item owner ($ownerName) to inspect the physical hardware. QR scan is required to prevent fraud.',
                         style: TextStyle(fontSize: 11, color: Colors.grey[700], height: 1.3),
                       ),
                       const SizedBox(height: 10),
                       if (!_isOwnerMeetupVerified) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _scanOwnerQr,
-                                icon: const Icon(Icons.qr_code_scanner, size: 16),
-                                label: const Text('Scan Owner QR', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF7B40B5),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _scanOwnerQr,
+                            icon: const Icon(Icons.qr_code_scanner, size: 16),
+                            label: const Text('Scan Owner QR to Verify Meetup', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7B40B5),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _isOwnerMeetupVerified = true;
-                                    _meetupMethod = 'in_person_confirmation';
-                                    _meetupVerifiedAt = DateTime.now();
-                                  });
-                                },
-                                icon: const Icon(Icons.how_to_reg, size: 16),
-                                label: const Text('Confirm Meetup', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF7B40B5),
-                                  side: const BorderSide(color: Color(0xFF7B40B5)),
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ] else ...[
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            const Icon(Icons.verified, size: 14, color: Color(0xFF16A34A)),
+                            const SizedBox(width: 4),
                             Text(
-                              'Verified at: ${_meetupVerifiedAt != null ? "${_meetupVerifiedAt!.hour.toString().padLeft(2, '0')}:${_meetupVerifiedAt!.minute.toString().padLeft(2, '0')}" : "Today"}',
-                              style: const TextStyle(fontSize: 10, color: Color(0xFF16A34A), fontWeight: FontWeight.bold),
-                            ),
-                            InkWell(
-                              onTap: () => setState(() => _isOwnerMeetupVerified = false),
-                              child: const Text('Change / Reset', style: TextStyle(fontSize: 10, color: Colors.grey, decoration: TextDecoration.underline)),
+                              'Verified in-person at ${_meetupVerifiedAt != null ? "${_meetupVerifiedAt!.hour.toString().padLeft(2, '0')}:${_meetupVerifiedAt!.minute.toString().padLeft(2, '0')}" : "Today"}',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF16A34A), fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),

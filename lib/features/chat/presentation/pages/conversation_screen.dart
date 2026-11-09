@@ -262,20 +262,34 @@ class ConversationScreen extends StatelessWidget {
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                                color: convo.conversationType == 'appraisal'
+                                                    ? const Color(0xFF059669).withValues(alpha: 0.12)
+                                                    : const Color(0xFF7B40B5).withValues(alpha: 0.1),
                                                 borderRadius: BorderRadius.circular(4),
                                               ),
-                                              child: const Row(
+                                              child: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Icon(Icons.inventory_2_outlined, size: 10, color: Color(0xFF7B40B5)),
-                                                  SizedBox(width: 3),
+                                                  Icon(
+                                                    convo.conversationType == 'appraisal'
+                                                        ? Icons.verified_outlined
+                                                        : Icons.inventory_2_outlined,
+                                                    size: 10,
+                                                    color: convo.conversationType == 'appraisal'
+                                                        ? const Color(0xFF059669)
+                                                        : const Color(0xFF7B40B5),
+                                                  ),
+                                                  const SizedBox(width: 3),
                                                   Text(
-                                                    'Rental',
+                                                    convo.conversationType == 'appraisal'
+                                                        ? 'Appraisal'
+                                                        : 'Rental',
                                                     style: TextStyle(
                                                       fontSize: 9,
                                                       fontWeight: FontWeight.bold,
-                                                      color: Color(0xFF7B40B5),
+                                                      color: convo.conversationType == 'appraisal'
+                                                          ? const Color(0xFF059669)
+                                                          : const Color(0xFF7B40B5),
                                                     ),
                                                   ),
                                                 ],

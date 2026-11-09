@@ -18,13 +18,13 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-/// [action] must be one of: 'handoff' | 'return'
+/// [action] must be one of: 'handoff' | 'return' | 'appraisal_meetup'
 class QrHandoffScreen extends StatefulWidget {
   final String convoId;
   final String currentUserId;
   final String currentUserName;
   final String itemName;
-  final String action; // 'handoff' or 'return'
+  final String action; // 'handoff', 'return', or 'appraisal_meetup'
 
   const QrHandoffScreen({
     super.key,
@@ -84,9 +84,11 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
       final data = snap.data();
       if (data == null) return;
 
-      final bool isConfirmed = _isHandoff()
-          ? (data['isPaid'] == true && data['isReceived'] == true)
-          : (data['isReturned'] == true && data['isReturnConfirmed'] == true);
+      final bool isConfirmed = _isAppraisal()
+          ? (data['isMeetupConfirmed'] == true)
+          : _isHandoff()
+              ? (data['isPaid'] == true && data['isReceived'] == true)
+              : (data['isReturned'] == true && data['isReturnConfirmed'] == true);
 
       if (isConfirmed && !_isExiting) {
         _exitWithSuccess();
@@ -103,16 +105,25 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
   }
 
   bool _isHandoff() => widget.action == 'handoff';
+  bool _isAppraisal() => widget.action == 'appraisal_meetup';
 
-  Color get _accentColor =>
-      _isHandoff() ? const Color(0xFF3498DB) : const Color(0xFF7B40B5);
+  Color get _accentColor => _isHandoff()
+      ? const Color(0xFF3498DB)
+      : _isAppraisal()
+          ? const Color(0xFF7B40B5)
+          : const Color(0xFF7B40B5);
 
-  String get _title =>
-      _isHandoff() ? 'Item Handoff' : 'Item Return';
+  String get _title => _isHandoff()
+      ? 'Item Handoff'
+      : _isAppraisal()
+          ? 'Appraisal Meetup'
+          : 'Item Return';
 
   String get _description => _isHandoff()
       ? 'The borrower scans the lender\'s QR — or the lender scans the borrower\'s — to confirm the item has changed hands.'
-      : 'Both parties scan to confirm the item has been returned and the transaction is complete.';
+      : _isAppraisal()
+          ? 'The owner scans the appraiser\'s QR — or the appraiser scans the owner\'s — to verify in-person meetup for inspection.'
+          : 'Both parties scan to confirm the item has been returned and the transaction is complete.';
 
   /// Automatically exits the QR code screen and returns back to messaging
   void _exitWithSuccess() {
@@ -163,22 +174,62 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
       _scanTabKey.currentState?.pauseScanner();
 
       // Write to Firestore
-      final Map<String, dynamic> update = _isHandoff()
-          ? {
-              'isPaid': true,
-              'isReceived': true,
-              'handoffConfirmedAt': FieldValue.serverTimestamp(),
-            }
-          : {
-              'isReturned': true,
-              'isReturnConfirmed': true,
-              'returnConfirmedAt': FieldValue.serverTimestamp(),
-            };
+      if (_isAppraisal()) {
+        final convoDoc = await FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(widget.convoId)
+            .get();
+        final convoData = convoDoc.data() ?? {};
+        final itemId = convoData['itemId'] as String? ?? '';
 
-      await FirebaseFirestore.instance
-          .collection('conversations')
-          .doc(widget.convoId)
-          .update(update);
+        await FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(widget.convoId)
+            .update({
+          'isMeetupConfirmed': true,
+          'meetupConfirmedAt': FieldValue.serverTimestamp(),
+          'meetupVerificationMethod': 'qr_scan',
+          'lastMessageText': '✓ In-person meetup verified via QR scan.',
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+
+        if (itemId.isNotEmpty) {
+          await FirebaseFirestore.instance.collection('items').doc(itemId).update({
+            'isOwnerMeetupVerified': true,
+            'meetupVerificationMethod': 'qr_scan',
+            'meetupVerifiedAt': FieldValue.serverTimestamp(),
+            'appraisalStatus': 'in_review',
+          }).catchError((_) {});
+        }
+
+        await FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(widget.convoId)
+            .collection('messages')
+            .add({
+          'senderId': widget.currentUserId,
+          'type': 'text',
+          'text': '✓ In-person meetup verified via QR code scan! Physical inspection is now authorized.',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      } else {
+        final Map<String, dynamic> update = _isHandoff()
+            ? {
+                'isPaid': true,
+                'isReceived': true,
+                'handoffConfirmedAt': FieldValue.serverTimestamp(),
+              }
+            : {
+                'isReturned': true,
+                'isReturnConfirmed': true,
+                'returnConfirmedAt': FieldValue.serverTimestamp(),
+              };
+
+        await FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(widget.convoId)
+            .update(update);
+      }
 
       // Automatic exit and return back to messaging!
       _exitWithSuccess();
@@ -342,7 +393,9 @@ class _MyQrTab extends StatelessWidget {
                   child: Text(
                     action == 'handoff'
                         ? '📦  HANDOFF QR'
-                        : '↩️  RETURN QR',
+                        : action == 'appraisal_meetup'
+                            ? '🔍  APPRAISAL MEETUP QR'
+                            : '↩️  RETURN QR',
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -505,7 +558,9 @@ class _ScanTabState extends State<_ScanTab> {
             Text(
               widget.action == 'handoff'
                   ? 'Point your camera at the other person\'s handoff QR.'
-                  : 'Point your camera at the other person\'s return QR.',
+                  : widget.action == 'appraisal_meetup'
+                      ? 'Point your camera at the other person\'s appraisal meetup QR.'
+                      : 'Point your camera at the other person\'s return QR.',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: Colors.black45),
             ),

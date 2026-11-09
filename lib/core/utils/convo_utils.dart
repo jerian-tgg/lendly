@@ -79,3 +79,58 @@ Future<String> createOrGetConversation({
     return convoId;
   }
 }
+
+/// Creates or retrieves a dedicated in-person appraisal conversation between an
+/// accredited appraiser and an item owner.
+/// Keeps appraisal discussions and meetup QR verifications completely separate
+/// from borrowing/lending rental contracts.
+Future<String> createOrGetAppraisalConversation({
+  required String appraiserId,
+  required String ownerId,
+  required String itemId,
+  String? appraiserBusinessName,
+  String? itemName,
+}) async {
+  final convoRef = FirebaseFirestore.instance.collection('conversations');
+  final convoId = 'appraisal_${getConvoId(appraiserId, ownerId)}_$itemId';
+  final docRef = convoRef.doc(convoId);
+  final docSnap = await docRef.get();
+
+  if (docSnap.exists) {
+    return convoId;
+  }
+
+  // Create new appraisal conversation document
+  await docRef.set({
+    'conversationType': 'appraisal',
+    'participants': [appraiserId, ownerId],
+    'appraiserId': appraiserId,
+    'ownerId': ownerId,
+    'itemOwnerId': ownerId,
+    'borrowerId': appraiserId,
+    'itemId': itemId,
+    'itemName': itemName ?? 'Item',
+    'appraiserBusinessName': appraiserBusinessName ?? 'Licensed Appraiser',
+    'approved': true, // Appraisal doesn't use borrow rental approval flow
+    'denied': false,
+    'isMeetupConfirmed': false,
+    'isAppraisalCompleted': false,
+    'lastMessageText': 'Appraisal meetup requested for ${itemName ?? 'item'}',
+    'lastUpdated': FieldValue.serverTimestamp(),
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+
+  // Post the first system message in the appraisal conversation
+  await docRef.collection('messages').add({
+    'senderId': appraiserId,
+    'type': 'appraisal_request',
+    'itemId': itemId,
+    'itemName': itemName ?? 'Item',
+    'appraiserBusinessName': appraiserBusinessName ?? 'Licensed Appraiser',
+    'text': 'Hello! I am an accredited appraiser interested in inspecting and certifying your item. Let\'s coordinate where and when to meet in person to inspect the item.',
+    'timestamp': FieldValue.serverTimestamp(),
+  });
+
+  return convoId;
+}
+

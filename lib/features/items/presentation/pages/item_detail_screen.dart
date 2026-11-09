@@ -55,10 +55,69 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   void _openAppraisalDialog(BuildContext context, Map<String, dynamic> itemData) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (_) => AppraisalFormDialog(itemData: itemData, itemId: widget.itemId),
+      builder: (_) => AppraisalFormDialog(
+        itemData: itemData,
+        itemId: widget.itemId,
+        isMeetupPreVerified: itemData['isOwnerMeetupVerified'] == true,
+      ),
     );
     if (result == true && mounted) {
       setState(() {});
+    }
+  }
+
+  Future<void> _messageOwnerToAppraise(
+    BuildContext context,
+    Map<String, dynamic> itemData,
+    String ownerId,
+    String ownerName,
+  ) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (currentUserId.isEmpty) {
+      _showLoginRequiredDialog(context, 'message the owner to appraise this item');
+      return;
+    }
+    if (currentUserId == ownerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Self-Appraisal Prohibited: You cannot appraise your own item listing.')),
+      );
+      return;
+    }
+
+    try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
+      final userData = userDoc.data() ?? {};
+      final businessName = (userData['businessName'] as String?) ?? 'Licensed Appraiser';
+      final itemName = (itemData['name'] ?? itemData['title'] ?? 'Item').toString();
+
+      final convoId = await createOrGetAppraisalConversation(
+        appraiserId: currentUserId,
+        ownerId: ownerId,
+        itemId: widget.itemId,
+        appraiserBusinessName: businessName,
+        itemName: itemName,
+      );
+
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(
+              convoId: convoId,
+              currentUserId: currentUserId,
+              otherUserId: ownerId,
+              otherUserName: ownerName,
+              itemId: widget.itemId,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening appraisal chat: $e')),
+        );
+      }
     }
   }
 
@@ -1327,23 +1386,39 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     ),
 
                     // Appraiser action button for certified item
-                    if (isViewerAppraiser || isViewerAdmin) ...[
+                    if (!isOwner && (isViewerAppraiser || isViewerAdmin)) ...[
                       const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _openAppraisalDialog(context, itemData),
-                          icon: const Icon(Icons.edit_note, color: Color(0xFF7B40B5)),
-                          label: const Text(
-                            'Update / Re-Appraise (Function & Cosmetic)',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF7B40B5)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName),
+                              icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF7B40B5)),
+                              label: const Text('Appraisal Chat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFF7B40B5)),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
                           ),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF7B40B5)),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _openAppraisalDialog(context, itemData),
+                              icon: const Icon(Icons.edit_note, color: Colors.white, size: 16),
+                              label: const Text(
+                                'Re-Appraise',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF7B40B5),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ] else if (isUnderReview) ...[
@@ -1497,16 +1572,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               ),
                             ),
                           ],
-                          if (isViewerAppraiser || isViewerAdmin) ...[
+                          if (!isOwner && (isViewerAppraiser || isViewerAdmin)) ...[
                             const SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => _openAppraisalDialog(context, itemData),
-                                icon: const Icon(Icons.star_rate_rounded, color: Colors.white, size: 18),
+                                onPressed: () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName),
+                                icon: const Icon(Icons.handshake_outlined, color: Colors.white, size: 18),
                                 label: const Text(
-                                  'Appraise this Item (Function: 1-10, Cosmetic: 1-10)',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                                  'Coordinate Meetup & Appraise',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF7B40B5),
@@ -1619,16 +1694,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               ),
                             ),
                           ],
-                          if (isViewerAppraiser || isViewerAdmin) ...[
+                          if (!isOwner && (isViewerAppraiser || isViewerAdmin)) ...[
                             const SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => _openAppraisalDialog(context, itemData),
-                                icon: const Icon(Icons.star_rate_rounded, color: Colors.white, size: 18),
+                                onPressed: () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName),
+                                icon: const Icon(Icons.handshake_outlined, color: Colors.white, size: 18),
                                 label: const Text(
-                                  'Appraise this Item (Function: 1-10, Cosmetic: 1-10)',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                                  'Coordinate Meetup & Appraise',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF7B40B5),
