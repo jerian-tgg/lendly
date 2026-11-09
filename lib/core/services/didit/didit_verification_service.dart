@@ -132,7 +132,8 @@ class DiditVerificationService {
       body: jsonEncode({
         'workflow_id': DiditAppConfig.workflowId,
         'vendor_data': userId,
-        'callback': 'https://lendly.app/verify/done',
+        'callback': DiditAppConfig.callbackUrl,
+        'callback_method': 'both',
       }),
     ).timeout(const Duration(seconds: 15));
 

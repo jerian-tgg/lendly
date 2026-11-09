@@ -4,8 +4,9 @@ import 'package:lendly/core/services/didit/didit_verification_service.dart';
 
 void main() {
   group('Didit Verification Integration Tests', () {
-    test('DiditAppConfig exposes correct workflow ID and function name', () {
+    test('DiditAppConfig exposes correct workflow ID, callback URL, and function names', () {
       expect(DiditAppConfig.workflowId, equals('99c79fd1-9b53-4c2d-a1b7-341b4a893c3b'));
+      expect(DiditAppConfig.callbackUrl, equals('lendly://verify/done'));
       expect(DiditAppConfig.createSessionFunctionName, equals('createDiditVerificationSession'));
       expect(DiditAppConfig.getSessionFunctionName, equals('getDiditVerificationSession'));
     });

@@ -281,7 +281,8 @@ exports.createDiditVerificationSession = functions.https.onCall(
           body: JSON.stringify({
             workflow_id: DIDIT_WORKFLOW_ID,
             vendor_data: vendorData,
-            callback: "https://lendly.app/verify/done",
+            callback: "lendly://verify/done",
+            callback_method: "both",
           }),
         });
 
