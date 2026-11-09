@@ -7,7 +7,6 @@ import 'package:lendly/core/services/didit/didit_verification_service.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
-import 'package:lendly/features/auth/data/datasources/firebase_auth_service.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
 import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
@@ -20,7 +19,6 @@ import 'package:lendly/core/utils/image_utils.dart';
 import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
 import 'package:lendly/core/services/review_service.dart';
 import 'package:lendly/features/profile/presentation/widgets/trust_score_card.dart';
-import 'package:lendly/features/wallet/presentation/pages/orc_wallet_screen.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String? userId; // If null, displays current logged-in user's profile
@@ -266,19 +264,18 @@ class _UserProfilePageState extends State<UserProfilePage>
         itemId: '',
       );
 
-      if (context.mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChatScreen(
-              convoId: convoId,
-              currentUserId: currentUserId,
-              otherUserId: _targetUserId,
-              otherUserName: targetName,
-            ),
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            convoId: convoId,
+            currentUserId: currentUserId,
+            otherUserId: _targetUserId,
+            otherUserName: targetName,
           ),
-        );
-      }
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -288,57 +285,6 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
   }
 
-  Widget _buildVerifyButton() {
-    if (_isVerifying) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0077B6).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF0077B6)),
-        ),
-
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFF0077B6),
-              ),
-            ),
-            SizedBox(width: 8),
-            Text(
-              'Verifying...',
-              style: TextStyle(
-                color: Color(0xFF0077B6),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ElevatedButton.icon(
-      onPressed: _handleStartVerification,
-      icon: const Icon(Icons.verified_user_outlined, size: 16),
-      label: const Text(
-        'Verify',
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-      ),
-      style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.white,
-        backgroundColor: const Color(0xFF0077B6),
-        elevation: 2,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
-    );
-  }
 
   Widget _buildVerifiedBadge() {
     return Container(
@@ -437,209 +383,6 @@ class _UserProfilePageState extends State<UserProfilePage>
         );
       }
     }
-  }
-
-  void _showResetPasswordDialog(BuildContext context, String defaultEmail) {
-    final emailCtrl = TextEditingController(
-      text: defaultEmail.isNotEmpty
-          ? defaultEmail
-          : (FirebaseAuth.instance.currentUser?.email ?? ''),
-    );
-    bool isSending = false;
-    String? feedback;
-    bool isSuccess = false;
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.lock_reset_rounded,
-                      color: Color(0xFF7B40B5),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'Reset Password via Email',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'We\'ll send a password reset link to your email address so you can securely set a new password.',
-                    style: TextStyle(fontSize: 13, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    enabled: !isSending && !isSuccess,
-                    decoration: InputDecoration(
-                      hintText: 'Your email address',
-                      prefixIcon: const Icon(
-                        Icons.email_outlined,
-                        color: Color(0xFF7B40B5),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF7FAFC),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF7B40B5),
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (feedback != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isSuccess
-                            ? const Color(0xFFE8F5E9)
-                            : const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isSuccess
-                              ? const Color(0xFF2ECC71).withValues(alpha: 0.4)
-                              : Colors.red.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSuccess
-                                ? Icons.check_circle_outline
-                                : Icons.error_outline,
-                            size: 18,
-                            color: isSuccess
-                                ? const Color(0xFF2E7D32)
-                                : Colors.red[700],
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              feedback!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isSuccess
-                                    ? const Color(0xFF2E7D32)
-                                    : Colors.red[700],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSending ? null : () => Navigator.pop(dialogCtx),
-                  child: Text(
-                    isSuccess ? 'Done' : 'Cancel',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ),
-                if (!isSuccess)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7B40B5),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: isSending
-                        ? null
-                        : () async {
-                            final email = emailCtrl.text.trim();
-                            if (email.isEmpty) {
-                              setDialogState(() {
-                                isSuccess = false;
-                                feedback = 'Please enter your email address.';
-                              });
-                              return;
-                            }
-                            setDialogState(() {
-                              isSending = true;
-                              feedback = null;
-                            });
-                            try {
-                              await FirebaseAuthService()
-                                  .sendPasswordResetEmail(email);
-                              setDialogState(() {
-                                isSending = false;
-                                isSuccess = true;
-                                feedback =
-                                    'Password reset link sent to $email. Please check your inbox.';
-                              });
-                            } catch (e) {
-                              setDialogState(() {
-                                isSending = false;
-                                isSuccess = false;
-                                feedback = e
-                                    .toString()
-                                    .replaceFirst('Exception: ', '');
-                              });
-                            }
-                          },
-                    child: isSending
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Send Link'),
-                  ),
-              ],
-            );
-          },
-        );
-      },
-    );
   }
 
   @override
@@ -1018,85 +761,9 @@ class _UserProfilePageState extends State<UserProfilePage>
 
                     const SizedBox(height: 16),
 
-                    // Action Buttons (Edit Profile if Self, Message/Contact if Viewing Another User)
+                    // Action Buttons (Identity Verification if Self & unverified, Message/Contact if Viewing Another User)
                     if (_isSelf) ...[
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const EditProfilePage(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.edit, size: 18),
-                            label: const Text('Edit Profile'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7B40B5),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
-                              ),
-                            ),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const OrcWalletScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
-                            label: const Text('ORC Wallet'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2ECC71),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
-                              ),
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              final email = (userData['email'] ?? '').toString();
-                              _showResetPasswordDialog(context, email);
-                            },
-                            icon: const Icon(Icons.lock_reset_rounded, size: 18),
-                            label: const Text('Reset Password'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF7B40B5),
-                              side: const BorderSide(color: Color(0xFF7B40B5)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                            ),
-                          ),
-                          if (!isVerified) _buildVerifyButton(),
-                        ],
-                      ),
                       if (!isVerified) ...[
-                        const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
@@ -1594,6 +1261,44 @@ class _UserProfilePageState extends State<UserProfilePage>
                     ),
                     const SizedBox(height: 10),
                     _buildUserReviewsList(_targetUserId),
+
+                    if (_isSelf) ...[
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final updated = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const EditProfilePage(),
+                              ),
+                            );
+                            if (updated == true && mounted) {
+                              setState(() {});
+                            }
+                          },
+                          icon: const Icon(Icons.edit, size: 18),
+                          label: const Text(
+                            'Edit Profile',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF7B40B5),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ],
                 );
               },
