@@ -200,6 +200,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       context: context,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 60)),
+      initialDateRange: (_startDate != null && _endDate != null)
+          ? DateTimeRange(start: _startDate!, end: _endDate!)
+          : null,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -1835,17 +1838,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   ],
                                 ),
                               ),
-                              if (!isOwner)
-                                OutlinedButton.icon(
-                                  onPressed: () => _handleMessageOwner(context, ownerId, ownerName),
-                                  icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                                  label: const Text('Chat'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF7B40B5),
-                                    side: const BorderSide(color: Color(0xFF7B40B5)),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                ),
                             ],
                           ),
                         ),
@@ -1857,9 +1849,37 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
                   // BORROW DATE PICKER & ACTION
                   if (!isOwner) ...[
-                    const Text(
-                      'Select Borrow Duration',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Select Borrow Duration',
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                        if (_startDate != null && _endDate != null)
+                          TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _startDate = null;
+                                _endDate = null;
+                              });
+                            },
+                            icon: const Icon(Icons.close, size: 16, color: Color(0xFF7B40B5)),
+                            label: const Text(
+                              'Clear Date',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF7B40B5),
+                              ),
+                            ),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     InkWell(
@@ -1907,7 +1927,25 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 ],
                               ),
                             ),
-                            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                            if (_startDate != null && _endDate != null)
+                              Tooltip(
+                                message: 'Clear selected dates',
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _startDate = null;
+                                      _endDate = null;
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(4.0),
+                                    child: Icon(Icons.cancel_rounded, color: Colors.grey, size: 20),
+                                  ),
+                                ),
+                              )
+                            else
+                              const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -2549,7 +2587,7 @@ class _BorrowRequestSheet extends StatelessWidget {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Your request will be sent to the lender. They may negotiate or deny it in the chat.',
+                    'Your request will be sent to the lender. They may accept or deny it in the chat.',
                     style: TextStyle(
                         fontSize: 11, color: Color(0xFFE67E22)),
                   ),

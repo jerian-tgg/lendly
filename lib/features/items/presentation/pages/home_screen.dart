@@ -98,10 +98,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: const Color(0xFFEFE8FA),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
-                      Icons.local_florist,
-                      color: Color(0xFF7B40B5),
-                      size: 24,
+                    child: Image.asset(
+                      'assets/logos/orchid_logo_purple.png',
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.contain,
                     ),
                   ),
                   const SizedBox(width: 10),

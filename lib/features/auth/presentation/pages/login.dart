@@ -406,9 +406,18 @@ class _LoginPageState extends State<LoginPage> {
                     label: const Text('Skip', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
                   ),
                 ),
+                Center(
+                  child: Image.asset(
+                    'assets/logos/orchid_logo_purple.png',
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 const Text('Welcome to', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                const Text('Lendly', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF90E0F3))),
-                const SizedBox(height: 32),
+                const Text('Lendly', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
+                const SizedBox(height: 28),
 
                 TextField(
                   controller: emailController,

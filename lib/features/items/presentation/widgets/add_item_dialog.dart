@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lendly/core/utils/location_helper.dart';
@@ -29,7 +28,6 @@ class _AddItemDialogState extends State<AddItemDialog> {
   late TextEditingController _cityController;
   final ImagePicker _picker = ImagePicker();
 
-  DateTimeRange? _availability;
   String _condition = 'Pending Appraisal';
   String _selectedCategory = 'Electronics';
   List<String> _imagePaths = [];
@@ -82,15 +80,6 @@ class _AddItemDialogState extends State<AddItemDialog> {
           (widget.initialData!['lat'] as num?)?.toDouble();
       _itemLongitude = (widget.initialData!['longitude'] as num?)?.toDouble() ??
           (widget.initialData!['lng'] as num?)?.toDouble();
-
-      final fromTimestamp = widget.initialData!['availableFrom'];
-      final toTimestamp = widget.initialData!['availableTo'];
-
-      if (fromTimestamp != null && toTimestamp != null) {
-        DateTime start = fromTimestamp is DateTime ? fromTimestamp : (fromTimestamp as dynamic).toDate();
-        DateTime end = toTimestamp is DateTime ? toTimestamp : (toTimestamp as dynamic).toDate();
-        _availability = DateTimeRange(start: start, end: end);
-      }
 
       final images = widget.initialData!['imageUrls'];
       if (images != null && images is List<dynamic>) {
@@ -225,30 +214,6 @@ class _AddItemDialogState extends State<AddItemDialog> {
     });
   }
 
-  Future<void> _selectDates() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(DateTime.now().year + 1),
-      initialDateRange: _availability,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF7B40B5),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() => _availability = picked);
-    }
-  }
-
   Future<void> _submitForm() async {
     // Validate required camera photo
     if (_imagePaths.isEmpty) {
@@ -315,8 +280,16 @@ class _AddItemDialogState extends State<AddItemDialog> {
         category: _selectedCategory,
         quantity: int.parse(_quantityController.text.trim().isEmpty ? '1' : _quantityController.text.trim()),
         price: double.parse(_priceController.text.trim()),
-        availableFrom: _availability?.start ?? now,
-        availableTo: _availability?.end ?? now.add(const Duration(days: 30)),
+        availableFrom: widget.itemId != null && widget.initialData?['availableFrom'] != null
+            ? (widget.initialData!['availableFrom'] is DateTime
+                ? widget.initialData!['availableFrom']
+                : (widget.initialData!['availableFrom'] as dynamic).toDate())
+            : now,
+        availableTo: widget.itemId != null && widget.initialData?['availableTo'] != null
+            ? (widget.initialData!['availableTo'] is DateTime
+                ? widget.initialData!['availableTo']
+                : (widget.initialData!['availableTo'] as dynamic).toDate())
+            : now.add(const Duration(days: 365)),
         condition: _condition,
         imageUrls: imageUrls,
         ownerId: user.uid,
@@ -791,43 +764,6 @@ class _AddItemDialogState extends State<AddItemDialog> {
                               ),
                             ),
                           ],
-
-                          const SizedBox(height: 14),
-
-                          // Available Dates Button
-                          InkWell(
-                            onTap: _selectDates,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade400),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_month_outlined, color: Color(0xFF7B40B5), size: 20),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _availability != null
-                                          ? 'Availability: ${DateFormat('MMM d').format(_availability!.start)} - ${DateFormat('MMM d').format(_availability!.end)}'
-                                          : 'Select Available Dates (Optional)',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: _availability != null ? Colors.black87 : Colors.grey[600],
-                                        fontWeight: _availability != null ? FontWeight.bold : FontWeight.normal,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
-                                ],
-                              ),
-                            ),
-                          ),
 
                           const SizedBox(height: 18),
 
