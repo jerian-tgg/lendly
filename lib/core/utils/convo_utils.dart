@@ -39,6 +39,18 @@ Future<String> createOrGetConversation({
         'totalPrice': totalPrice,
         'approved': false,
         'denied': false,
+        'contractSigned': false,
+        'contractLenderSigned': false,
+        'contractBorrowerSigned': false,
+        'contractPdfUrl': null,
+        'isPaid': false,
+        'isReceived': false,
+        'isReturned': false,
+        'isReturnConfirmed': false,
+        'ownerId': otherUserId,
+        'itemOwnerId': otherUserId,
+        'borrowerId': currentUserId,
+        'lastUpdated': FieldValue.serverTimestamp(),
       });
     }
     return existingConvo.id;
@@ -54,6 +66,9 @@ Future<String> createOrGetConversation({
       'itemId': itemId,
       'approved': false,
       'denied': false,
+      'contractSigned': false,
+      'contractLenderSigned': false,
+      'contractBorrowerSigned': false,
       'startDate': startDate?.toIso8601String(),
       'endDate': endDate?.toIso8601String(),
       'totalDays': totalDays,

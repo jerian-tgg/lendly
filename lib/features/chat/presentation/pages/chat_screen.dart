@@ -241,11 +241,6 @@ class _ChatScreenState extends State<ChatScreen> {
     if (currentUser == null) return;
 
     final itemId = _getEffectiveItemId(convoData);
-    final lenderId   = convoData['ownerId'] ?? convoData['lenderId'] ?? '';
-    final borrowerId = convoData['participants']?.firstWhere(
-      (id) => id != lenderId,
-      orElse: () => '',
-    ) ?? '';
 
     // Fetch item data
     Map<String, dynamic> itemData = {};
@@ -253,6 +248,17 @@ class _ChatScreenState extends State<ChatScreen> {
       final snap = await FirebaseFirestore.instance.collection('items').doc(itemId).get();
       itemData = snap.data() ?? {};
     }
+
+    final lenderId = convoData['itemOwnerId'] ??
+        convoData['ownerId'] ??
+        convoData['lenderId'] ??
+        itemData['ownerId'] ??
+        '';
+    final borrowerId = convoData['borrowerId'] ??
+        ((convoData['participants'] as List<dynamic>?)?.firstWhere(
+          (id) => id != lenderId,
+          orElse: () => '',
+        ) as String? ?? '');
 
     // Fetch lender and borrower user docs
     Future<Map<String, dynamic>> fetchUser(String uid) async {
@@ -272,7 +278,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final isLender = currentUser.uid == lenderId;
 
     if (!mounted) return;
-    await Navigator.push(
+    final signedResult = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => ElectronicContractPage(
@@ -288,6 +294,45 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
+
+    if (signedResult == true && mounted) {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(widget.convoId)
+            .get();
+        final updatedData = snap.data() ?? {};
+        final bool isFullySigned = updatedData['contractSigned'] == true ||
+            (updatedData['contractLenderSigned'] == true &&
+                updatedData['contractBorrowerSigned'] == true);
+        final bool handoffDone =
+            updatedData['isPaid'] == true && updatedData['isReceived'] == true;
+
+        if (isFullySigned && !handoffDone && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.qr_code_scanner, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Both parties signed! Tap "Confirm Handoff" below to scan QR and exchange item.',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF2ECC71),
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> _openItemReviewDialog({
@@ -582,10 +627,22 @@ class _ChatScreenState extends State<ChatScreen> {
         final isFullyDone =
             isPaid && isReceived && isReturned && isReturnConfirmed;
         // Contract state
-        final contractSigned     = convoData['contractSigned']         == true;
         final lenderSigned       = convoData['contractLenderSigned']   == true;
         final borrowerSigned     = convoData['contractBorrowerSigned'] == true;
+        final contractSigned     = convoData['contractSigned'] == true ||
+            (lenderSigned && borrowerSigned);
         final iHaveSigned        = isOwner ? lenderSigned : borrowerSigned;
+
+        // Self-heal Firestore if both signed but contractSigned flag was not set
+        if (lenderSigned && borrowerSigned && convoData['contractSigned'] != true) {
+          FirebaseFirestore.instance
+              .collection('conversations')
+              .doc(widget.convoId)
+              .update({
+            'contractSigned': true,
+            'contractFinalizedAt': FieldValue.serverTimestamp(),
+          }).catchError((_) {});
+        }
 
         final ownerId = convoData['ownerId'] ?? convoData['itemOwnerId'] ?? '';
         final borrowerId = convoData['borrowerId'] ??
@@ -675,7 +732,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Color(0xFF1A1A2E)),
                     onSelected: (val) async {
-                      if (val == 'review_item') {
+                      if (val == 'view_contract') {
+                        _openContractPage(convoData);
+                      } else if (val == 'review_item') {
                         _openItemReviewDialog(
                           itemId: effectiveItemId,
                           itemTitle: itemName,
@@ -698,6 +757,17 @@ class _ChatScreenState extends State<ChatScreen> {
                       }
                     },
                     itemBuilder: (ctx) => [
+                      if (contractSigned)
+                        const PopupMenuItem(
+                          value: 'view_contract',
+                          child: Row(
+                            children: [
+                              Icon(Icons.description_outlined, color: Color(0xFF2E7D32), size: 18),
+                              SizedBox(width: 8),
+                              Text('View Signed Contract'),
+                            ],
+                          ),
+                        ),
                       if (!isOwner && effectiveItemId.isNotEmpty)
                         const PopupMenuItem(
                           value: 'review_item',
@@ -754,6 +824,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                     ownerId: itemOwnerId.isNotEmpty ? itemOwnerId : widget.otherUserId,
                                     ownerName: itemOwnerName,
                                   )
+                              : null,
+                          onViewContract: contractSigned
+                              ? () => _openContractPage(convoData)
                               : null,
                         ),
 
@@ -844,6 +917,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           isReturned: isReturned,
                           isReturnConfirmed: isReturnConfirmed,
                           isOwner: isOwner,
+                          contractSigned: contractSigned,
                         ),
 
                         // Owner: approve / deny
@@ -934,6 +1008,7 @@ class _BorrowRequestCard extends StatelessWidget {
   final bool isOwner;
   final VoidCallback? onViewItem;
   final VoidCallback? onReviewItem;
+  final VoidCallback? onViewContract;
 
   const _BorrowRequestCard({
     required this.convoData,
@@ -942,6 +1017,7 @@ class _BorrowRequestCard extends StatelessWidget {
     required this.isOwner,
     this.onViewItem,
     this.onReviewItem,
+    this.onViewContract,
   });
 
   @override
@@ -1113,7 +1189,7 @@ class _BorrowRequestCard extends StatelessWidget {
             ),
           ],
 
-          // Action row: View Listing & Review Item
+          // Action row: View Listing & Review Item & Signed Contract
           const Divider(height: 16),
           Row(
             children: [
@@ -1136,6 +1212,36 @@ class _BorrowRequestCard extends StatelessWidget {
                     ),
                   ),
                 ),
+              if (onViewContract != null) ...[
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: onViewContract,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF4CAF50).withValues(alpha: 0.5)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.description_outlined, size: 13, color: Color(0xFF2E7D32)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Signed Contract',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const Spacer(),
               if (!isOwner && onReviewItem != null)
                 InkWell(
@@ -1465,6 +1571,7 @@ class _StatusBar extends StatelessWidget {
   final bool isApproved, isDenied, isFullyDone;
   final bool isPaid, isReceived, isReturned, isReturnConfirmed;
   final bool isOwner;
+  final bool contractSigned;
 
   const _StatusBar({
     required this.isApproved,
@@ -1475,6 +1582,7 @@ class _StatusBar extends StatelessWidget {
     required this.isReturned,
     required this.isReturnConfirmed,
     this.isOwner = false,
+    this.contractSigned = false,
   });
 
   @override
@@ -1497,10 +1605,14 @@ class _StatusBar extends StatelessWidget {
       bg = const Color(0xFFEDF7FF);
       icon = Icons.inventory_2_outlined;
       label = 'Item borrowed — return pending.';
+    } else if (isApproved && contractSigned) {
+      bg = const Color(0xFFE8F8F0);
+      icon = Icons.handshake_outlined;
+      label = 'Contract signed — meet up & scan QR for item handoff.';
     } else if (isApproved) {
       bg = const Color(0xFFF0E8FF);
-      icon = Icons.handshake_outlined;
-      label = 'Request accepted — meet to exchange.';
+      icon = Icons.description_outlined;
+      label = 'Request accepted — sign electronic contract to proceed.';
     } else {
       bg = const Color(0xFFFFF3E0);
       icon = Icons.hourglass_empty;
@@ -1512,7 +1624,7 @@ class _StatusBar extends StatelessWidget {
         : isFullyDone
             ? const Color(0xFF2ECC71)
             : isApproved
-                ? const Color(0xFF7B40B5)
+                ? (contractSigned ? const Color(0xFF2E7D32) : const Color(0xFF7B40B5))
                 : const Color(0xFFE67E22);
 
     return Container(

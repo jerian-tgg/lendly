@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lendly/core/utils/image_utils.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
+import 'package:lendly/features/items/presentation/pages/contract_service.dart';
+import 'package:lendly/features/items/presentation/pages/electronic_contract_page.dart';
 
 class TransactionsPage extends StatefulWidget {
   const TransactionsPage({super.key});
@@ -528,7 +530,9 @@ class _TransactionCard extends StatelessWidget {
             convo['lenderId'] == currentUserId;
 
         // Contract state
-        final contractSigned = convo['contractSigned'] == true;
+        final contractSigned = convo['contractSigned'] == true ||
+            (convo['contractLenderSigned'] == true &&
+             convo['contractBorrowerSigned'] == true);
         final contractPdfUrl = convo['contractPdfUrl'] as String?;
 
         return Container(
@@ -604,12 +608,18 @@ class _TransactionCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: _ProgressStepper(step: step),
                   ),
-                  // Contract badge
+                  // Contract badge (interactive: tap to view signed contract or PDF)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
                     child: _ContractBadge(
                       signed: contractSigned,
                       pdfUrl: contractPdfUrl,
+                      onTap: contractSigned
+                          ? () => _openContract(context, convo, itemData)
+                          : null,
+                      onPdfTap: contractSigned
+                          ? () => _viewPdf(context, convo, itemData)
+                          : null,
                     ),
                   ),
                   if (returnDue != null) ...[
@@ -646,7 +656,7 @@ class _TransactionCard extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
                     child: _buildRecordFooter(
-                        context, convo, itemId, isCompleted, step),
+                        context, convo, itemId, itemData, isCompleted, step, contractSigned),
                   ),
                 ],
               ),
@@ -657,8 +667,15 @@ class _TransactionCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRecordFooter(BuildContext context, Map<String, dynamic> convo,
-      String itemId, bool isCompleted, int step) {
+  Widget _buildRecordFooter(
+    BuildContext context,
+    Map<String, dynamic> convo,
+    String itemId,
+    Map<String, dynamic> itemData,
+    bool isCompleted,
+    int step,
+    bool contractSigned,
+  ) {
     return Row(
       children: [
         Icon(
@@ -680,15 +697,33 @@ class _TransactionCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
+        if (contractSigned) ...[
+          OutlinedButton.icon(
+            onPressed: () => _openContract(context, convo, itemData),
+            icon: const Icon(Icons.description_outlined, size: 13),
+            label: const Text('Contract', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF2E7D32),
+              side: const BorderSide(color: Color(0xFF2E7D32)),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
         OutlinedButton.icon(
           onPressed: () => _openChat(context, convo, itemId),
           icon: const Icon(Icons.chat_bubble_outline, size: 13),
-          label: const Text('View Chat', style: TextStyle(fontSize: 12)),
+          label: const Text('Chat', style: TextStyle(fontSize: 11)),
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(0xFF7B40B5),
             side: const BorderSide(color: Color(0xFF7B40B5)),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             minimumSize: Size.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             shape: RoundedRectangleBorder(
@@ -698,6 +733,178 @@ class _TransactionCard extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _openContract(
+    BuildContext context,
+    Map<String, dynamic> convo,
+    Map<String, dynamic> itemData,
+  ) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+      ),
+    );
+
+    try {
+      final lenderId = convo['itemOwnerId'] ??
+          convo['ownerId'] ??
+          convo['lenderId'] ??
+          itemData['ownerId'] ??
+          '';
+      final borrowerId = convo['borrowerId'] ??
+          ((convo['participants'] as List<dynamic>?)?.firstWhere(
+            (id) => id != lenderId,
+            orElse: () => '',
+          ) as String? ?? '');
+
+      Future<Map<String, dynamic>> fetchUser(String uid) async {
+        if (uid.isEmpty) return {};
+        final snap =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        return snap.data() ?? {};
+      }
+
+      final lenderDoc = await fetchUser(lenderId);
+      final borrowerDoc = await fetchUser(borrowerId);
+
+      String displayName(Map<String, dynamic> doc, String fallback) =>
+          doc['displayName'] ?? doc['name'] ?? doc['username'] ?? fallback;
+      String email(Map<String, dynamic> doc, String fallback) =>
+          doc['email'] ?? fallback;
+
+      final isLender = currentUserId == lenderId;
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // Dismiss loading dialog
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ElectronicContractPage(
+            convoId: convoDoc.id,
+            currentUserId: currentUserId,
+            isLender: isLender,
+            convoData: convo,
+            itemData: itemData,
+            lenderName: displayName(lenderDoc, convo['lenderName'] ?? 'Lender'),
+            lenderEmail: email(lenderDoc, convo['lenderEmail'] ?? ''),
+            borrowerName: displayName(borrowerDoc, convo['borrowerName'] ?? 'Borrower'),
+            borrowerEmail: email(borrowerDoc, convo['borrowerEmail'] ?? ''),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open contract: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _viewPdf(
+    BuildContext context,
+    Map<String, dynamic> convo,
+    Map<String, dynamic> itemData,
+  ) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+      ),
+    );
+
+    try {
+      final lenderId = convo['itemOwnerId'] ??
+          convo['ownerId'] ??
+          convo['lenderId'] ??
+          itemData['ownerId'] ??
+          '';
+      final borrowerId = convo['borrowerId'] ??
+          ((convo['participants'] as List<dynamic>?)?.firstWhere(
+            (id) => id != lenderId,
+            orElse: () => '',
+          ) as String? ?? '');
+
+      Future<Map<String, dynamic>> fetchUser(String uid) async {
+        if (uid.isEmpty) return {};
+        final snap =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        return snap.data() ?? {};
+      }
+
+      final lenderDoc = await fetchUser(lenderId);
+      final borrowerDoc = await fetchUser(borrowerId);
+
+      String displayName(Map<String, dynamic> doc, String fallback) =>
+          doc['displayName'] ?? doc['name'] ?? doc['username'] ?? fallback;
+      String email(Map<String, dynamic> doc, String fallback) =>
+          doc['email'] ?? fallback;
+
+      final startStr = convo['startDate'] as String? ?? '';
+      final endStr = convo['endDate'] as String? ?? '';
+      final start = DateTime.tryParse(startStr) ?? DateTime.now();
+      final end = DateTime.tryParse(endStr) ?? DateTime.now();
+      final retTs = convo['returnDate'];
+      String? retFmt;
+      if (retTs != null) {
+        retFmt = DateFormat('MMM d, yyyy – h:mm a')
+            .format((retTs as Timestamp).toDate());
+      }
+
+      final rawDefects = itemData['documentedDefects'];
+      List<String> defectsList = [];
+      if (rawDefects is List && rawDefects.isNotEmpty) {
+        for (var d in rawDefects) {
+          if (d is Map) {
+            final cat = d['category'] ?? 'Defect';
+            final sev = d['severity'] ?? 'Minor';
+            final desc = d['description'] ?? '';
+            defectsList.add('[$sev] $cat: $desc');
+          }
+        }
+      }
+
+      final contractData = ContractData(
+        convoId: convoDoc.id,
+        itemName: itemData['name'] ?? 'Item',
+        itemDescription: itemData['description'] ?? '',
+        lenderName: displayName(lenderDoc, convo['lenderName'] ?? 'Lender'),
+        lenderEmail: email(lenderDoc, convo['lenderEmail'] ?? ''),
+        borrowerName: displayName(borrowerDoc, convo['borrowerName'] ?? 'Borrower'),
+        borrowerEmail: email(borrowerDoc, convo['borrowerEmail'] ?? ''),
+        totalPrice: (convo['totalPrice'] as num?)?.toDouble() ?? 0,
+        totalDays: convo['totalDays'] as int? ?? 0,
+        startDate: start,
+        endDate: end,
+        returnDateFormatted: retFmt,
+        documentedDefects: defectsList,
+      );
+
+      final pdfBytes = await ContractService.generatePdfBytes(contractData);
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // Dismiss loading dialog
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PdfPreviewPage(pdfBytes: pdfBytes),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open contract PDF: $e')),
+        );
+      }
+    }
   }
 
   Widget _placeholder() => Container(
@@ -1043,58 +1250,103 @@ class _StatusBadge extends StatelessWidget {
 class _ContractBadge extends StatelessWidget {
   final bool signed;
   final String? pdfUrl;
-  const _ContractBadge({required this.signed, this.pdfUrl});
+  final VoidCallback? onTap;
+  final VoidCallback? onPdfTap;
+
+  const _ContractBadge({
+    required this.signed,
+    this.pdfUrl,
+    this.onTap,
+    this.onPdfTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: signed ? const Color(0xFFE8F5E9) : const Color(0xFFFFF8E1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: signed
-              ? const Color(0xFF4CAF50).withValues(alpha: 0.5)
-              : Colors.orange.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            signed ? Icons.verified_outlined : Icons.description_outlined,
-            size: 14,
-            color: signed ? const Color(0xFF2E7D32) : Colors.orange,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              signed
-                  ? 'Electronic Contract Signed (RA 8792)'
-                  : 'Awaiting Contract Signatures',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: signed ? const Color(0xFF2E7D32) : Colors.orange.shade800,
-              ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: signed ? onTap : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: signed ? const Color(0xFFE8F5E9) : const Color(0xFFFFF8E1),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: signed
+                  ? const Color(0xFF4CAF50).withValues(alpha: 0.5)
+                  : Colors.orange.withValues(alpha: 0.5),
             ),
           ),
-          if (signed && pdfUrl != null)
-            const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.picture_as_pdf_outlined, size: 12, color: Color(0xFF2E7D32)),
-                SizedBox(width: 3),
-                Text(
-                  'PDF',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E7D32),
+          child: Row(
+            children: [
+              Icon(
+                signed ? Icons.verified_user_outlined : Icons.description_outlined,
+                size: 16,
+                color: signed ? const Color(0xFF2E7D32) : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      signed
+                          ? 'Electronic Contract Signed (RA 8792)'
+                          : 'Awaiting Contract Signatures',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: signed ? const Color(0xFF2E7D32) : Colors.orange.shade800,
+                      ),
+                    ),
+                    if (signed)
+                      const Text(
+                        'Tap to review signed copy & legal terms',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Color(0xFF388E3C),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (signed) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: onPdfTap ?? onTap,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.picture_as_pdf_outlined, size: 12, color: Color(0xFF2E7D32)),
+                        SizedBox(width: 4),
+                        Text(
+                          'PDF',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right, size: 16, color: Color(0xFF2E7D32)),
               ],
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

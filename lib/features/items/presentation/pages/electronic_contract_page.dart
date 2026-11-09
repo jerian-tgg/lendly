@@ -95,7 +95,7 @@ class _ElectronicContractPageState extends State<ElectronicContractPage> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => _PdfPreviewPage(pdfBytes: bytes),
+          builder: (_) => PdfPreviewPage(pdfBytes: bytes),
         ),
       );
     } finally {
@@ -114,13 +114,30 @@ class _ElectronicContractPageState extends State<ElectronicContractPage> {
         role:   widget.isLender ? 'lender' : 'borrower',
       );
       if (mounted) {
+        // Check if both parties have signed
+        final convoDoc = await FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(widget.convoId)
+            .get();
+        if (!mounted) return;
+        final cData = convoDoc.data() ?? {};
+        final bool nowBothSigned = cData['contractSigned'] == true ||
+            (cData['contractLenderSigned'] == true &&
+             cData['contractBorrowerSigned'] == true);
+
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(children: [
-              Icon(Icons.verified_outlined, color: Colors.white, size: 16),
-              SizedBox(width: 8),
-              Text('Contract signed successfully!'),
+            content: Row(children: [
+              const Icon(Icons.verified_outlined, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  nowBothSigned
+                      ? 'Contract signed by both parties! Ready for meetup & QR handoff.'
+                      : 'Contract signed successfully! Waiting for other party.',
+                ),
+              ),
             ]),
             backgroundColor: _purple,
             behavior: SnackBarBehavior.floating,
@@ -187,11 +204,23 @@ class _ElectronicContractPageState extends State<ElectronicContractPage> {
             .doc(widget.convoId)
             .snapshots(),
         builder: (context, snap) {
-          final convo      = snap.data?.data() as Map<String, dynamic>? ?? widget.convoData;
+          final convo          = snap.data?.data() as Map<String, dynamic>? ?? widget.convoData;
           final lenderSigned   = convo['contractLenderSigned']   == true;
           final borrowerSigned = convo['contractBorrowerSigned'] == true;
-          final bothSigned     = convo['contractSigned']         == true;
-          final mySignField = widget.isLender ? lenderSigned : borrowerSigned;
+          final bothSigned     = convo['contractSigned'] == true ||
+              (lenderSigned && borrowerSigned);
+          final mySignField    = widget.isLender ? lenderSigned : borrowerSigned;
+
+          // Self-heal Firestore if both signed but contractSigned flag was missed
+          if (lenderSigned && borrowerSigned && convo['contractSigned'] != true) {
+            FirebaseFirestore.instance
+                .collection('conversations')
+                .doc(widget.convoId)
+                .update({
+              'contractSigned': true,
+              'contractFinalizedAt': FieldValue.serverTimestamp(),
+            }).catchError((_) {});
+          }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -260,7 +289,9 @@ class _ElectronicContractPageState extends State<ElectronicContractPage> {
 
                 // ── Signature section ──
                 if (bothSigned)
-                  _AlreadySignedBanner()
+                  _AlreadySignedBanner(
+                    onProceed: () => Navigator.pop(context, true),
+                  )
                 else if (mySignField)
                   _WaitingBanner(isLender: widget.isLender)
                 else
@@ -792,6 +823,9 @@ class _SignatureSection extends StatelessWidget {
 }
 
 class _AlreadySignedBanner extends StatelessWidget {
+  final VoidCallback? onProceed;
+  const _AlreadySignedBanner({this.onProceed});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -801,24 +835,48 @@ class _AlreadySignedBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF4CAF50).withValues(alpha: 0.5)),
       ),
-      child: const Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.verified, color: Color(0xFF2E7D32), size: 36),
-          SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Contract Fully Executed',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2E7D32)),
+          const Row(
+            children: [
+              Icon(Icons.verified, color: Color(0xFF2E7D32), size: 36),
+              SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Contract Fully Executed',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2E7D32)),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Both parties have signed. You may now proceed to meeting up and confirming item handoff via QR scan.',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF388E3C), height: 1.4),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'Both parties have signed. The contract PDF has been generated and stored securely. The transaction may now proceed.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF388E3C), height: 1.4),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onProceed ?? () => Navigator.pop(context, true),
+              icon: const Icon(Icons.qr_code_scanner, size: 18, color: Colors.white),
+              label: const Text(
+                'Proceed to Meetup & QR Handoff',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2E7D32),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+              ),
             ),
           ),
         ],
@@ -869,9 +927,9 @@ class _WaitingBanner extends StatelessWidget {
 
 // ── PDF Preview Page ──────────────────────────────────────────────────────────
 
-class _PdfPreviewPage extends StatelessWidget {
+class PdfPreviewPage extends StatelessWidget {
   final Uint8List pdfBytes;
-  const _PdfPreviewPage({required this.pdfBytes});
+  const PdfPreviewPage({super.key, required this.pdfBytes});
 
   @override
   Widget build(BuildContext context) {
