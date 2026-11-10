@@ -12,6 +12,7 @@ import 'package:lendly/features/chat/presentation/pages/qr_handoff_screen.dart';
 import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:lendly/features/items/presentation/pages/electronic_contract_page.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
+import 'package:lendly/features/items/presentation/pages/report_screen.dart';
 import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
 import 'package:lendly/features/appraisal/presentation/widgets/appraisal_form_dialog.dart';
 
@@ -402,6 +403,139 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _openReportOptions({
+    required String itemId,
+    required String itemName,
+  }) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to submit a report.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                children: [
+                  Icon(Icons.report_problem_outlined, color: Color(0xFFE74C3C), size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'Submit a Report',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Help us keep Lendly safe and trusted. What would you like to report?',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 16),
+              if (itemId.isNotEmpty) ...[
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.inventory_2_outlined, color: Color(0xFFE74C3C), size: 20),
+                  ),
+                  title: Text(
+                    'Report Item: "$itemName"',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  subtitle: const Text(
+                    'Defective, counterfeit, illegal, or misrepresented item',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReportScreen(
+                          targetId: itemId,
+                          targetType: 'item',
+                          targetName: itemName,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 16),
+              ],
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.person_outline, color: Color(0xFFE74C3C), size: 20),
+                ),
+                title: Text(
+                  'Report User: "${widget.otherUserName}"',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                subtitle: const Text(
+                  'Harassment, scam, no-show, or suspicious behavior',
+                  style: TextStyle(fontSize: 11),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ReportScreen(
+                        targetId: widget.otherUserId,
+                        targetType: 'user',
+                        targetName: widget.otherUserName,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _navigateToItemDetail(String itemId, Map<String, dynamic> itemData) async {
     if (itemId.isEmpty) return;
     Map<String, dynamic> data = Map<String, dynamic>.from(itemData);
@@ -773,6 +907,11 @@ class _ChatScreenState extends State<ChatScreen> {
                         );
                       } else if (val == 'view_item') {
                         _navigateToItemDetail(effectiveItemId, itemData);
+                      } else if (val == 'report') {
+                        _openReportOptions(
+                          itemId: effectiveItemId,
+                          itemName: itemName,
+                        );
                       } else if (val == 'clear_chat') {
                         final ok = await _showConfirmDialog(
                           title: 'Clear Chat',
@@ -821,6 +960,16 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                         ),
                       const PopupMenuItem(
+                        value: 'report',
+                        child: Row(
+                          children: [
+                            Icon(Icons.flag_outlined, color: Color(0xFFE74C3C), size: 18),
+                            SizedBox(width: 8),
+                            Text('Report'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
                         value: 'clear_chat',
                         child: Row(
                           children: [
@@ -851,6 +1000,10 @@ class _ChatScreenState extends State<ChatScreen> {
                             onViewItem: effectiveItemId.isNotEmpty
                                 ? () => _navigateToItemDetail(effectiveItemId, itemData)
                                 : null,
+                            onReport: () => _openReportOptions(
+                              itemId: effectiveItemId,
+                              itemName: itemName,
+                            ),
                           )
                         else
                           _BorrowRequestCard(
@@ -872,6 +1025,10 @@ class _ChatScreenState extends State<ChatScreen> {
                             onViewContract: contractSigned
                                 ? () => _openContractPage(convoData)
                                 : null,
+                            onReport: () => _openReportOptions(
+                              itemId: effectiveItemId,
+                              itemName: itemName,
+                            ),
                           ),
 
                         // Messages
@@ -1089,6 +1246,7 @@ class _BorrowRequestCard extends StatelessWidget {
   final VoidCallback? onViewItem;
   final VoidCallback? onReviewItem;
   final VoidCallback? onViewContract;
+  final VoidCallback? onReport;
 
   const _BorrowRequestCard({
     required this.convoData,
@@ -1098,6 +1256,7 @@ class _BorrowRequestCard extends StatelessWidget {
     this.onViewItem,
     this.onReviewItem,
     this.onViewContract,
+    this.onReport,
   });
 
   @override
@@ -1269,9 +1428,82 @@ class _BorrowRequestCard extends StatelessWidget {
             ),
           ],
 
-          // Action row: View Listing & Review Item & Signed Contract
+          // Action area: Status Pills (Signed Contract, Rate & Review) and Utility links (View Listing, Report)
           const Divider(height: 16),
+          if (onViewContract != null || (!isOwner && onReviewItem != null)) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (onViewContract != null)
+                  InkWell(
+                    onTap: onViewContract,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF4CAF50).withValues(alpha: 0.5)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.description_outlined, size: 13, color: Color(0xFF2E7D32)),
+                          SizedBox(width: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Signed Contract',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E7D32),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (!isOwner && onReviewItem != null)
+                  InkWell(
+                    onTap: onReviewItem,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+                          const SizedBox(width: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Rate & Review',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               if (onViewItem != null)
                 InkWell(
@@ -1286,65 +1518,35 @@ class _BorrowRequestCard extends StatelessWidget {
                         SizedBox(width: 4),
                         Text(
                           'View Listing',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              if (onViewContract != null) ...[
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: onViewContract,
-                  borderRadius: BorderRadius.circular(6),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F5E9),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF4CAF50).withValues(alpha: 0.5)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.description_outlined, size: 13, color: Color(0xFF2E7D32)),
-                        SizedBox(width: 4),
-                        Text(
-                          'Signed Contract',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E7D32),
+                            color: Color(0xFF7B40B5),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-              const Spacer(),
-              if (!isOwner && onReviewItem != null)
+                )
+              else
+                const SizedBox.shrink(),
+              if (onReport != null)
                 InkWell(
-                  onTap: onReviewItem,
+                  onTap: onReport,
                   borderRadius: BorderRadius.circular(6),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.shade300),
-                    ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+                        Icon(Icons.flag_outlined, size: 13, color: Colors.red.shade400),
                         const SizedBox(width: 4),
                         Text(
-                          'Rate & Review',
+                          'Report',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: Colors.amber.shade900,
+                            color: Colors.red.shade700,
                           ),
                         ),
                       ],
@@ -2546,6 +2748,7 @@ class _AppraisalHeaderCard extends StatelessWidget {
   final bool isMeetupConfirmed;
   final bool isAppraisalCompleted;
   final VoidCallback? onViewItem;
+  final VoidCallback? onReport;
 
   const _AppraisalHeaderCard({
     required this.convoData,
@@ -2556,6 +2759,7 @@ class _AppraisalHeaderCard extends StatelessWidget {
     required this.isMeetupConfirmed,
     required this.isAppraisalCompleted,
     this.onViewItem,
+    this.onReport,
   });
 
   @override
@@ -2738,21 +2942,44 @@ class _AppraisalHeaderCard extends StatelessWidget {
             ),
           ],
 
-          if (onViewItem != null) ...[
+          if (onViewItem != null || onReport != null) ...[
             const Divider(height: 14),
-            InkWell(
-              onTap: onViewItem,
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF7B40B5)),
-                  SizedBox(width: 4),
-                  Text(
-                    'View Item Listing',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (onViewItem != null)
+                  InkWell(
+                    onTap: onViewItem,
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF7B40B5)),
+                        SizedBox(width: 4),
+                        Text(
+                          'View Item Listing',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+                if (onReport != null)
+                  InkWell(
+                    onTap: onReport,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.flag_outlined, size: 13, color: Colors.red.shade400),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Report',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red.shade700),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+              ],
             ),
           ],
         ],
