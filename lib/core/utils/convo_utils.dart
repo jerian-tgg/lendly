@@ -33,12 +33,16 @@ Future<String> createOrGetConversation({
     // Update borrow details if provided (borrower re-requested with new dates)
     if (startDate != null && endDate != null) {
       await existingConvo.reference.update({
+        'itemId': itemId,
         'startDate': startDate.toIso8601String(),
         'endDate': endDate.toIso8601String(),
         'totalDays': totalDays,
         'totalPrice': totalPrice,
         'approved': false,
         'denied': false,
+        'isSettled': false,
+        'escrowStatus': 'none',
+        'escrowAmount': 0,
         'contractSigned': false,
         'contractLenderSigned': false,
         'contractBorrowerSigned': false,

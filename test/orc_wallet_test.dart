@@ -94,5 +94,46 @@ void main() {
 
       expect(orcReceived, 1250.0);
     });
+
+    test('Escrow hold, 90% payout, and 10% admin commission conserve total ORC', () {
+      for (final price in [99.99, 150.0, 333.33, 1250.75, 5000.0]) {
+        final double adminCommission = (price * 0.10 * 100).round() / 100;
+        final double lenderEarnings = ((price - adminCommission) * 100).round() / 100;
+        final double sum = ((adminCommission + lenderEarnings) * 100).round() / 100;
+
+        expect(sum, price);
+        expect(adminCommission, greaterThan(0));
+        expect(lenderEarnings, greaterThan(adminCommission));
+      }
+    });
+
+    test('Admin ledger transaction types parse and map properly', () {
+      final holdTx = WalletTransaction.fromFirestore('hold_convo_1', {
+        'type': 'escrow_hold',
+        'amount': 500.0,
+        'referenceId': 'convo_1',
+        'description': 'Escrow Hold: Camera Lens (500.00 ORC)',
+        'status': 'held',
+      });
+      final payoutTx = WalletTransaction.fromFirestore('payout_convo_1', {
+        'type': 'user_payout',
+        'amount': 450.0,
+        'referenceId': 'convo_1',
+        'description': 'Lender Payout (90% of 500.00 ORC): Camera Lens',
+        'status': 'completed',
+      });
+      final feeTx = WalletTransaction.fromFirestore('fee_convo_1', {
+        'type': 'platform_fee',
+        'amount': 50.0,
+        'referenceId': 'convo_1',
+        'description': '10% Platform Commission: Camera Lens (500.00 ORC total)',
+        'status': 'completed',
+      });
+
+      expect(holdTx.type, 'escrow_hold');
+      expect(payoutTx.type, 'user_payout');
+      expect(feeTx.type, 'platform_fee');
+      expect(payoutTx.amount + feeTx.amount, holdTx.amount);
+    });
   });
 }

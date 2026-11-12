@@ -704,111 +704,213 @@ exports.recalculateTrustScore = functions.https.onCall(
 /**
  * Helper to atomically settle escrow for a completed rental.
  * Releases escrow: 10% commission to admin wallet, 90% to lender's available.
+ * All Firestore t.get() reads execute before any t.set()/t.update() writes.
  *
  * @param {admin.firestore.Transaction} t Firestore transaction
  * @param {admin.firestore.Firestore} db Firestore instance
  * @param {admin.firestore.DocumentSnapshot} convoDoc Conversation doc
+ * @param {object} [extraConvoUpdates] Extra fields for conversation update
  * @return {Promise<object|null>} Settlement details or null
  */
-async function settleEscrowTransaction(t, db, convoDoc) {
+async function settleEscrowTransaction(
+    t,
+    db,
+    convoDoc,
+    extraConvoUpdates = {},
+) {
   const convoData = convoDoc.data();
-  if (!convoData || convoData.escrowStatus !== "held") {
+  if (!convoData ||
+      convoData.conversationType === "appraisal" ||
+      convoData.isSettled === true ||
+      convoData.escrowStatus === "settled" ||
+      convoData.escrowStatus === "refunded") {
+    if (Object.keys(extraConvoUpdates).length > 0) {
+      t.update(convoDoc.ref, extraConvoUpdates);
+    }
     return null;
   }
 
   const convoId = convoDoc.id;
-  const total = Number(convoData.escrowAmount) || 0;
-  const borrowerId = convoData.borrowerId;
-  const lenderId = convoData.itemOwnerId || convoData.ownerId;
+  const itemId = convoData.itemId || "";
+
+  // ── PHASE 1: ALL READS FIRST (Firestore Transaction Requirement) ──────────
+  let itemData = null;
+  if (itemId) {
+    const itemDoc = await t.get(db.collection("items").doc(itemId));
+    if (itemDoc.exists) {
+      itemData = itemDoc.data();
+    }
+  }
+
+  const lenderId = convoData.itemOwnerId ||
+    convoData.ownerId ||
+    (itemData && itemData.ownerId) ||
+    "";
+  const participants = Array.isArray(convoData.participants) ?
+    convoData.participants : [];
+  const borrowerId = convoData.borrowerId ||
+    participants.find((p) => p && p !== lenderId) ||
+    "";
+
+  let total = Number(convoData.escrowAmount) || 0;
+  if (total <= 0) {
+    if (typeof convoData.totalPrice === "number" && convoData.totalPrice > 0) {
+      total = convoData.totalPrice;
+    } else {
+      const days = Number(convoData.totalDays) || 1;
+      const price = Number(convoData.price) ||
+        Number(itemData && itemData.price) || 0;
+      total = price * days;
+    }
+  }
 
   if (total <= 0 || !borrowerId || !lenderId) {
     t.update(convoDoc.ref, {
+      ...extraConvoUpdates,
       escrowStatus: "settled",
+      isSettled: true,
       settledAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     return null;
   }
 
-  // 10% commission to admin, 90% to lender
+  const adminEmail = "palenciajerjer28@gmail.com";
+  const borrowerWalletRef = db.collection("wallets").doc(borrowerId);
+  const lenderWalletRef = db.collection("wallets").doc(lenderId);
+  const adminDedicatedWalletRef = db.collection("wallets").doc(adminEmail);
+  const adminWalletRef = db.collection("admin_wallet").doc("main");
+
+  const [
+    borrowerWalletDoc,
+    lenderWalletDoc,
+    adminDedicatedWalletDoc,
+    adminWalletDoc,
+  ] = await Promise.all([
+    t.get(borrowerWalletRef),
+    t.get(lenderWalletRef),
+    t.get(adminDedicatedWalletRef),
+    t.get(adminWalletRef),
+  ]);
+
+  // ── PHASE 2: COMPUTE BALANCES & SPLITS (10% Admin / 90% Lender) ───────────
   const adminCommission = Math.round(total * 0.10 * 100) / 100;
   const lenderEarnings = Math.round((total - adminCommission) * 100) / 100;
+  const itemName = convoData.itemName ||
+    (itemData && (itemData.name || itemData.title)) ||
+    "Rental Item";
+  const nowTs = admin.firestore.FieldValue.serverTimestamp();
 
-  // 1. Borrower: release escrow balance
-  const borrowerWalletRef = db.collection("wallets").doc(borrowerId);
-  const borrowerWalletDoc = await t.get(borrowerWalletRef);
+  // Borrower current escrow
   const borrowerEscrow = borrowerWalletDoc.exists ?
-    (borrowerWalletDoc.data().escrowBalance || 0) : 0;
-  t.set(borrowerWalletRef, {
-    escrowBalance: Math.max(0, borrowerEscrow - total),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  }, {merge: true});
+    Number(borrowerWalletDoc.data().escrowBalance || 0) : 0;
+  const newBorrowerEscrow = convoData.escrowStatus === "held" ?
+    Math.max(0, Math.round((borrowerEscrow - total) * 100) / 100) :
+    borrowerEscrow;
 
-  const borrowerTxRef = borrowerWalletRef.collection("transactions").doc();
-  t.set(borrowerTxRef, {
-    id: borrowerTxRef.id,
-    type: "rental_payment",
-    amount: -total,
-    referenceId: convoId,
-    description: `Rental completed — escrow released (₱${total} ORC)`,
-    status: "completed",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  // 2. Lender: credit 90% earnings to available balance
-  const lenderWalletRef = db.collection("wallets").doc(lenderId);
-  const lenderWalletDoc = await t.get(lenderWalletRef);
+  // Lender current balances
   const lenderAvailable = lenderWalletDoc.exists ?
-    (lenderWalletDoc.data().availableBalance || 0) : 0;
+    Number(lenderWalletDoc.data().availableBalance || 0) : 0;
   const lenderTotalEarned = lenderWalletDoc.exists ?
-    (lenderWalletDoc.data().totalEarned || 0) : 0;
+    Number(lenderWalletDoc.data().totalEarned || 0) : 0;
+  const newLenderAvailable =
+    Math.round((lenderAvailable + lenderEarnings) * 100) / 100;
+  const newLenderTotalEarned =
+    Math.round((lenderTotalEarned + lenderEarnings) * 100) / 100;
 
-  const newLenderAvailable = lenderAvailable + lenderEarnings;
-  t.set(lenderWalletRef, {
-    availableBalance: newLenderAvailable,
-    totalEarned: lenderTotalEarned + lenderEarnings,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  }, {merge: true});
-
-  t.set(db.collection("users").doc(lenderId), {
-    balance: newLenderAvailable,
-  }, {merge: true});
-
-  const lenderTxRef = lenderWalletRef.collection("transactions").doc();
-  t.set(lenderTxRef, {
-    id: lenderTxRef.id,
-    type: "rental_earning",
-    amount: lenderEarnings,
-    referenceId: convoId,
-    description: `Rental earnings (90% of ₱${total} ORC)`,
-    status: "completed",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  // 3. Admin wallet: credit 10% service fee to palenciajerjer28@gmail.com
-  const adminEmail = "palenciajerjer28@gmail.com";
-  const adminDedicatedWalletRef = db.collection("wallets").doc(adminEmail);
-  const adminDedicatedWalletDoc = await t.get(adminDedicatedWalletRef);
-
+  // Dedicated Admin Wallet balances
   const currentAdminBalance = adminDedicatedWalletDoc.exists ?
     Number(adminDedicatedWalletDoc.data().balance ||
       adminDedicatedWalletDoc.data().availableBalance || 0) : 0;
   const currentAdminFees = adminDedicatedWalletDoc.exists ?
     Number(adminDedicatedWalletDoc.data().totalFeesCollected ||
       adminDedicatedWalletDoc.data().totalCommission || 0) : 0;
+  const currentAdminPayouts = adminDedicatedWalletDoc.exists ?
+    Number(adminDedicatedWalletDoc.data().totalPayoutsProcessed || 0) : 0;
 
   const newAdminBalance =
     Math.round((currentAdminBalance + adminCommission) * 100) / 100;
   const newAdminFees =
     Math.round((currentAdminFees + adminCommission) * 100) / 100;
+  const newAdminPayouts =
+    Math.round((currentAdminPayouts + lenderEarnings) * 100) / 100;
 
+  // Legacy Admin Wallet balances
+  const legacyAdminBalance = adminWalletDoc.exists ?
+    Number(adminWalletDoc.data().balance || 0) : 0;
+  const legacyTotalCommission = adminWalletDoc.exists ?
+    Number(adminWalletDoc.data().totalCommission || 0) : 0;
+  const legacyTotalPayouts = adminWalletDoc.exists ?
+    Number(adminWalletDoc.data().totalPayoutsProcessed || 0) : 0;
+
+  const newLegacyBalance =
+    Math.round((legacyAdminBalance + adminCommission) * 100) / 100;
+  const newLegacyCommission =
+    Math.round((legacyTotalCommission + adminCommission) * 100) / 100;
+  const newLegacyPayouts =
+    Math.round((legacyTotalPayouts + lenderEarnings) * 100) / 100;
+
+  // ── PHASE 3: ALL WRITES (t.set / t.update) ────────────────────────────────
+  // 1. Borrower: release escrow balance & record settlement
+  t.set(borrowerWalletRef, {
+    escrowBalance: newBorrowerEscrow,
+    updatedAt: nowTs,
+  }, {merge: true});
+
+  const borrowerTxRef = borrowerWalletRef
+      .collection("transactions")
+      .doc(`settle_${convoId}`);
+  t.set(borrowerTxRef, {
+    id: borrowerTxRef.id,
+    type: "rental_payment",
+    amount: -total,
+    referenceId: convoId,
+    itemId: itemId,
+    itemName: itemName,
+    description: `Rental completed — escrow released ` +
+      `for ${itemName} (₱${total} ORC)`,
+    status: "completed",
+    createdAt: nowTs,
+  }, {merge: true});
+
+  // 2. Lender: credit 90% earnings to available balance
+  t.set(lenderWalletRef, {
+    availableBalance: newLenderAvailable,
+    totalEarned: newLenderTotalEarned,
+    updatedAt: nowTs,
+  }, {merge: true});
+
+  t.set(db.collection("users").doc(lenderId), {
+    balance: newLenderAvailable,
+  }, {merge: true});
+
+  const lenderTxRef = lenderWalletRef
+      .collection("transactions")
+      .doc(`earn_${convoId}`);
+  t.set(lenderTxRef, {
+    id: lenderTxRef.id,
+    type: "rental_earning",
+    amount: lenderEarnings,
+    grossAmount: total,
+    commissionDeducted: adminCommission,
+    referenceId: convoId,
+    itemId: itemId,
+    itemName: itemName,
+    description: `Rental earnings for ${itemName} ` +
+      `(90% of ₱${total} ORC = ₱${lenderEarnings} ORC)`,
+    status: "completed",
+    createdAt: nowTs,
+  }, {merge: true});
+
+  // 3. Admin wallet: credit 10% service fee to palenciajerjer28@gmail.com
   t.set(adminDedicatedWalletRef, {
     balance: newAdminBalance,
     availableBalance: newAdminBalance,
     totalFeesCollected: newAdminFees,
     totalCommission: newAdminFees,
+    totalPayoutsProcessed: newAdminPayouts,
     role: "admin",
     email: adminEmail,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: nowTs,
   }, {merge: true});
 
   // Mirror balance and admin role to users/palenciajerjer28@gmail.com
@@ -819,59 +921,139 @@ async function settleEscrowTransaction(t, db, convoDoc) {
     isAdmin: true,
     balance: newAdminBalance,
     totalFeesCollected: newAdminFees,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: nowTs,
   }, {merge: true});
 
-  // Write ledger record to transactions and wallet_logs
-  const adminTxRef = adminDedicatedWalletRef.collection("transactions").doc();
+  // Synchronize legacy admin_wallet/main for backward compatibility
+  t.set(adminWalletRef, {
+    balance: newLegacyBalance,
+    totalCommission: newLegacyCommission,
+    totalFeesCollected: newLegacyCommission,
+    totalPayoutsProcessed: newLegacyPayouts,
+    updatedAt: nowTs,
+  }, {merge: true});
+
+  // 4. Write Complete Admin Ledger Records:
+  //    (a) Update Escrow Hold record to settled
+  const holdId = `hold_${convoId}`;
+  const holdRecord = {
+    id: holdId,
+    type: "escrow_hold",
+    amount: total,
+    grossAmount: total,
+    referenceId: convoId,
+    rentalId: convoId,
+    itemId: itemId,
+    itemName: itemName,
+    borrowerId: borrowerId,
+    lenderId: lenderId,
+    description: `Escrow Hold settled for ${itemName} (₱${total} ORC)`,
+    status: "settled",
+    settledAt: nowTs,
+  };
+  t.set(
+      adminDedicatedWalletRef.collection("transactions").doc(holdId),
+      holdRecord,
+      {merge: true},
+  );
+  t.set(
+      adminWalletRef.collection("ledger").doc(holdId),
+      holdRecord,
+      {merge: true},
+  );
+
+  //    (b) Write 90% User Payout ledger record
+  const payoutId = `payout_${convoId}`;
+  const adminPayoutRecord = {
+    id: payoutId,
+    type: "lender_payout",
+    amount: lenderEarnings,
+    grossAmount: total,
+    commissionAmount: adminCommission,
+    referenceId: convoId,
+    rentalId: convoId,
+    itemId: itemId,
+    itemName: itemName,
+    borrowerId: borrowerId,
+    lenderId: lenderId,
+    description: `90% Lender Payout for ${itemName} ` +
+      `(₱${lenderEarnings} ORC transferred to lender)`,
+    status: "completed",
+    createdAt: nowTs,
+    timestamp: nowTs,
+  };
+  t.set(
+      adminDedicatedWalletRef.collection("transactions").doc(payoutId),
+      adminPayoutRecord,
+      {merge: true},
+  );
+  t.set(
+      adminDedicatedWalletRef.collection("wallet_logs").doc(payoutId),
+      adminPayoutRecord,
+      {merge: true},
+  );
+  t.set(
+      adminWalletRef.collection("ledger").doc(payoutId),
+      adminPayoutRecord,
+      {merge: true},
+  );
+
+  //    (c) Write 10% Commission Collection ledger record
+  const feeId = `fee_${convoId}`;
   const adminFeeRecord = {
-    id: adminTxRef.id,
+    id: feeId,
     type: "service_fee",
     amount: adminCommission,
     grossAmount: total,
+    payoutAmount: lenderEarnings,
     referenceId: convoId,
+    rentalId: convoId,
+    itemId: itemId,
+    itemName: itemName,
     borrowerId: borrowerId,
     lenderId: lenderId,
-    description: `10% Platform Service Fee from rental completion ` +
-      `(₱${adminCommission} ORC)`,
+    description: `10% Platform Commission from ${itemName} ` +
+      `(₱${adminCommission} ORC of ₱${total} ORC)`,
     status: "completed",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: nowTs,
+    timestamp: nowTs,
   };
-  t.set(adminTxRef, adminFeeRecord);
-
-  const adminLogRef = adminDedicatedWalletRef
-      .collection("wallet_logs")
-      .doc(adminTxRef.id);
-  t.set(adminLogRef, adminFeeRecord);
-
-  // Synchronize legacy admin_wallet/main for backward compatibility
-  const adminWalletRef = db.collection("admin_wallet").doc("main");
-  const adminWalletDoc = await t.get(adminWalletRef);
-  const adminBalance = adminWalletDoc.exists ?
-    (adminWalletDoc.data().balance || 0) : 0;
-  const totalCommission = adminWalletDoc.exists ?
-    (adminWalletDoc.data().totalCommission || 0) : 0;
-
-  t.set(adminWalletRef, {
-    balance: adminBalance + adminCommission,
-    totalCommission: totalCommission + adminCommission,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  }, {merge: true});
+  t.set(
+      adminDedicatedWalletRef.collection("transactions").doc(feeId),
+      adminFeeRecord,
+      {merge: true},
+  );
+  t.set(
+      adminDedicatedWalletRef.collection("wallet_logs").doc(feeId),
+      adminFeeRecord,
+      {merge: true},
+  );
+  t.set(
+      adminWalletRef.collection("ledger").doc(feeId),
+      adminFeeRecord,
+      {merge: true},
+  );
 
   const commRef = adminWalletRef.collection("commissions").doc(convoId);
   t.set(commRef, {
     rentalId: convoId,
+    itemId: itemId,
+    itemName: itemName,
     amount: adminCommission,
+    payoutAmount: lenderEarnings,
     grossAmount: total,
     lenderId: lenderId,
     borrowerId: borrowerId,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-  });
+    status: "completed",
+    timestamp: nowTs,
+  }, {merge: true});
 
-  // 4. Update conversation
+  // 5. Update conversation as settled
   t.update(convoDoc.ref, {
+    ...extraConvoUpdates,
+    escrowAmount: total,
     escrowStatus: "settled",
-    settledAt: admin.firestore.FieldValue.serverTimestamp(),
+    settledAt: nowTs,
     adminCommission: adminCommission,
     lenderEarnings: lenderEarnings,
     isSettled: true,
@@ -888,39 +1070,64 @@ async function settleEscrowTransaction(t, db, convoDoc) {
  * @param {admin.firestore.Firestore} db Firestore instance
  * @param {admin.firestore.DocumentSnapshot} convoDoc Conversation doc
  * @param {string} reason Cancellation / refund reason
+ * @param {object} [extraConvoUpdates] Additional conversation fields to update
  * @return {Promise<number>} Refunded amount
  */
-async function refundEscrowTransaction(t, db, convoDoc, reason) {
+async function refundEscrowTransaction(
+    t,
+    db,
+    convoDoc,
+    reason,
+    extraConvoUpdates = {},
+) {
   const convoData = convoDoc.data();
   if (!convoData || convoData.escrowStatus !== "held") {
+    if (Object.keys(extraConvoUpdates).length > 0) {
+      t.update(convoDoc.ref, extraConvoUpdates);
+    }
     return 0;
   }
 
   const convoId = convoDoc.id;
   const total = Number(convoData.escrowAmount) || 0;
   const borrowerId = convoData.borrowerId;
+  const lenderId = convoData.itemOwnerId || convoData.ownerId || "";
+  const itemId = convoData.itemId || "";
+  const itemName = convoData.itemName || "Rental Item";
+  const nowTs = admin.firestore.FieldValue.serverTimestamp();
 
-  if (total > 0 && borrowerId) {
-    const borrowerWalletRef = db.collection("wallets").doc(borrowerId);
-    const borrowerWalletDoc = await t.get(borrowerWalletRef);
+  // Phase 1: Read borrower wallet first
+  let borrowerWalletDoc = null;
+  const borrowerWalletRef = borrowerId ?
+    db.collection("wallets").doc(borrowerId) : null;
+  if (total > 0 && borrowerWalletRef) {
+    borrowerWalletDoc = await t.get(borrowerWalletRef);
+  }
 
-    const currentAvailable = borrowerWalletDoc.exists ?
-      (borrowerWalletDoc.data().availableBalance || 0) : 0;
-    const currentEscrow = borrowerWalletDoc.exists ?
-      (borrowerWalletDoc.data().escrowBalance || 0) : 0;
+  // Phase 2: All writes
+  if (total > 0 && borrowerId && borrowerWalletRef) {
+    const currentAvailable = borrowerWalletDoc && borrowerWalletDoc.exists ?
+      Number(borrowerWalletDoc.data().availableBalance || 0) : 0;
+    const currentEscrow = borrowerWalletDoc && borrowerWalletDoc.exists ?
+      Number(borrowerWalletDoc.data().escrowBalance || 0) : 0;
 
-    const newAvailable = currentAvailable + total;
+    const newAvailable = Math.round((currentAvailable + total) * 100) / 100;
     t.set(borrowerWalletRef, {
       availableBalance: newAvailable,
-      escrowBalance: Math.max(0, currentEscrow - total),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      escrowBalance: Math.max(
+          0,
+          Math.round((currentEscrow - total) * 100) / 100,
+      ),
+      updatedAt: nowTs,
     }, {merge: true});
 
     t.set(db.collection("users").doc(borrowerId), {
       balance: newAvailable,
     }, {merge: true});
 
-    const txRef = borrowerWalletRef.collection("transactions").doc();
+    const txRef = borrowerWalletRef
+        .collection("transactions")
+        .doc(`refund_${convoId}`);
     t.set(txRef, {
       id: txRef.id,
       type: "rental_refund",
@@ -928,13 +1135,66 @@ async function refundEscrowTransaction(t, db, convoDoc, reason) {
       referenceId: convoId,
       description: `Refund for rental (${reason || "Rental cancelled"})`,
       status: "completed",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+      createdAt: nowTs,
+    }, {merge: true});
+
+    // Log refund & update hold in Admin Ledger
+    const adminEmail = "palenciajerjer28@gmail.com";
+    const adminDedicatedWalletRef = db.collection("wallets").doc(adminEmail);
+    const adminWalletRef = db.collection("admin_wallet").doc("main");
+    const holdId = `hold_${convoId}`;
+    const refundId = `refund_${convoId}`;
+
+    const holdUpdate = {
+      id: holdId,
+      type: "escrow_hold",
+      status: "refunded",
+      refundedAt: nowTs,
+    };
+    t.set(
+        adminDedicatedWalletRef.collection("transactions").doc(holdId),
+        holdUpdate,
+        {merge: true},
+    );
+    t.set(
+        adminWalletRef.collection("ledger").doc(holdId),
+        holdUpdate,
+        {merge: true},
+    );
+
+    const refundRecord = {
+      id: refundId,
+      type: "escrow_refund",
+      amount: total,
+      grossAmount: total,
+      referenceId: convoId,
+      rentalId: convoId,
+      itemId: itemId,
+      itemName: itemName,
+      borrowerId: borrowerId,
+      lenderId: lenderId,
+      description: `Escrow Refund to borrower ` +
+        `(${reason || "Rental cancelled"}) — ₱${total} ORC`,
+      status: "refunded",
+      createdAt: nowTs,
+      timestamp: nowTs,
+    };
+    t.set(
+        adminDedicatedWalletRef.collection("transactions").doc(refundId),
+        refundRecord,
+        {merge: true},
+    );
+    t.set(
+        adminWalletRef.collection("ledger").doc(refundId),
+        refundRecord,
+        {merge: true},
+    );
   }
 
   t.update(convoDoc.ref, {
+    ...extraConvoUpdates,
     escrowStatus: "refunded",
-    refundedAt: admin.firestore.FieldValue.serverTimestamp(),
+    refundedAt: nowTs,
     refundReason: reason || "Cancelled",
   });
 
@@ -965,6 +1225,7 @@ exports.acceptRentalRequest = functions.https.onCall(
       const convoRef = db.collection("conversations").doc(convoId);
 
       return db.runTransaction(async (t) => {
+        // Phase 1: All reads first
         const convoDoc = await t.get(convoRef);
         if (!convoDoc.exists) {
           throw new functions.https.HttpsError(
@@ -974,8 +1235,22 @@ exports.acceptRentalRequest = functions.https.onCall(
         }
 
         const convoData = convoDoc.data();
-        const lenderId = convoData.itemOwnerId || convoData.ownerId;
-        const borrowerId = convoData.borrowerId;
+        const itemId = convoData.itemId || "";
+        let itemData = null;
+        if (itemId) {
+          const itemDoc = await t.get(db.collection("items").doc(itemId));
+          if (itemDoc.exists) {
+            itemData = itemDoc.data();
+          }
+        }
+
+        const lenderId = convoData.itemOwnerId ||
+          convoData.ownerId ||
+          (itemData && itemData.ownerId);
+        const participants = Array.isArray(convoData.participants) ?
+          convoData.participants : [];
+        const borrowerId = convoData.borrowerId ||
+          participants.find((p) => p && p !== lenderId);
 
         if (context.auth.uid !== lenderId) {
           throw new functions.https.HttpsError(
@@ -1005,7 +1280,8 @@ exports.acceptRentalRequest = functions.https.onCall(
           total = convoData.totalPrice;
         } else {
           const days = Number(convoData.totalDays) || 1;
-          const price = Number(convoData.price) || 0;
+          const price = Number(convoData.price) ||
+            Number(itemData && itemData.price) || 0;
           total = price * days;
         }
 
@@ -1020,9 +1296,9 @@ exports.acceptRentalRequest = functions.https.onCall(
         const borrowerWalletDoc = await t.get(borrowerWalletRef);
 
         const currentAvailable = borrowerWalletDoc.exists ?
-          (borrowerWalletDoc.data().availableBalance || 0) : 0;
+          Number(borrowerWalletDoc.data().availableBalance || 0) : 0;
         const currentEscrow = borrowerWalletDoc.exists ?
-          (borrowerWalletDoc.data().escrowBalance || 0) : 0;
+          Number(borrowerWalletDoc.data().escrowBalance || 0) : 0;
 
         if (currentAvailable < total) {
           throw new functions.https.HttpsError(
@@ -1032,37 +1308,94 @@ exports.acceptRentalRequest = functions.https.onCall(
           );
         }
 
+        // Phase 2: All writes
+        const nowTs = admin.firestore.FieldValue.serverTimestamp();
+        const itemName = convoData.itemName ||
+          (itemData && (itemData.name || itemData.title)) ||
+          convoData.lastMessageText ||
+          "Rental Item";
+
         if (total > 0) {
+          const newAvailable =
+            Math.round((currentAvailable - total) * 100) / 100;
+          const newEscrow =
+            Math.round((currentEscrow + total) * 100) / 100;
+
           t.set(borrowerWalletRef, {
-            availableBalance: currentAvailable - total,
-            escrowBalance: currentEscrow + total,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            availableBalance: newAvailable,
+            escrowBalance: newEscrow,
+            updatedAt: nowTs,
           }, {merge: true});
 
           t.set(db.collection("users").doc(borrowerId), {
-            balance: currentAvailable - total,
+            balance: newAvailable,
           }, {merge: true});
 
-          const txRef = borrowerWalletRef.collection("transactions").doc();
-          const desc = convoData.lastMessageText || "Item";
+          const txRef = borrowerWalletRef
+              .collection("transactions")
+              .doc(`escrow_${convoId}`);
           t.set(txRef, {
             id: txRef.id,
             type: "rental_escrow",
             amount: -total,
             referenceId: convoId,
-            description: `Escrow hold for rental (${desc})`,
+            itemId: itemId,
+            itemName: itemName,
+            description: `Escrow hold for rental (${itemName})`,
             status: "held",
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
+            createdAt: nowTs,
+          }, {merge: true});
+
+          // Log Escrow Hold in Admin Ledger
+          const adminEmail = "palenciajerjer28@gmail.com";
+          const adminDedicatedWalletRef =
+            db.collection("wallets").doc(adminEmail);
+          const adminWalletRef = db.collection("admin_wallet").doc("main");
+          const holdId = `hold_${convoId}`;
+          const holdRecord = {
+            id: holdId,
+            type: "escrow_hold",
+            amount: total,
+            grossAmount: total,
+            referenceId: convoId,
+            rentalId: convoId,
+            itemId: itemId,
+            itemName: itemName,
+            borrowerId: borrowerId,
+            lenderId: lenderId,
+            description: `Escrow Hold locked for ${itemName} (₱${total} ORC)`,
+            status: "held",
+            createdAt: nowTs,
+            timestamp: nowTs,
+          };
+          t.set(
+              adminDedicatedWalletRef.collection("transactions").doc(holdId),
+              holdRecord,
+              {merge: true},
+          );
+          t.set(
+              adminDedicatedWalletRef.collection("wallet_logs").doc(holdId),
+              holdRecord,
+              {merge: true},
+          );
+          t.set(
+              adminWalletRef.collection("ledger").doc(holdId),
+              holdRecord,
+              {merge: true},
+          );
         }
 
         t.update(convoRef, {
           approved: true,
           denied: false,
+          isSettled: false,
+          borrowerId: borrowerId,
+          itemOwnerId: lenderId,
+          ownerId: lenderId,
           escrowAmount: total,
           escrowStatus: total > 0 ? "held" : "none",
-          acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
-          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+          acceptedAt: nowTs,
+          lastUpdated: nowTs,
         });
 
         return {
@@ -1129,15 +1462,14 @@ exports.cancelOrRefundRental = functions.https.onCall(
             db,
             convoDoc,
             data.reason || "Rental cancelled",
+            {
+              denied: true,
+              approved: false,
+              cancelled: true,
+              cancelReason: data.reason || "Rental cancelled",
+              lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+            },
         );
-
-        t.update(convoRef, {
-          denied: true,
-          approved: false,
-          cancelled: true,
-          cancelReason: data.reason || "Rental cancelled",
-          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
-        });
 
         return {success: true, refundedAmount};
       });
@@ -1177,28 +1509,39 @@ exports.completeRental = functions.https.onCall(
         }
 
         const convoData = convoDoc.data();
+        const uid = context.auth.uid;
         const lenderId = convoData.itemOwnerId || convoData.ownerId;
+        const borrowerId = convoData.borrowerId;
+        const isParticipant = (convoData.participants || []).includes(uid) ||
+          uid === lenderId ||
+          uid === borrowerId;
         const callerEmail = context.auth.token.email || "";
         const isAdminUser = callerEmail === "admin-portal@lendly.internal" ||
           callerEmail === "palenciajerjer28@gmail.com";
 
-        if (context.auth.uid !== lenderId && !isAdminUser) {
+        if (!isParticipant && !isAdminUser) {
           throw new functions.https.HttpsError(
               "permission-denied",
-              "Only the lender or admin can complete rental.",
+              "Only a rental participant or admin can complete this rental.",
           );
         }
 
-        t.update(convoRef, {
+        const nowTs = admin.firestore.FieldValue.serverTimestamp();
+        const completionFields = {
           isPaid: true,
           isReceived: true,
           isReturned: true,
           isReturnConfirmed: true,
-          returnConfirmedAt: admin.firestore.FieldValue.serverTimestamp(),
-          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
-        });
+          returnConfirmedAt: nowTs,
+          lastUpdated: nowTs,
+        };
 
-        const settlement = await settleEscrowTransaction(t, db, convoDoc);
+        const settlement = await settleEscrowTransaction(
+            t,
+            db,
+            convoDoc,
+            completionFields,
+        );
         return {success: true, settlement};
       });
     },
@@ -1225,10 +1568,18 @@ exports.onConversationStatusChange = functions.firestore
         after.isReturned === true &&
         after.isReturnConfirmed === true;
 
+      const isReturnComplete = after.isReturned === true &&
+        after.isReturnConfirmed === true &&
+        (after.isPaid === true || after.approved === true);
+
       const deniedChanged = before.denied !== after.denied;
 
-      // ── Settle Escrow if completed ──────────────────────────
-      if (!wasCompleted && nowCompleted && after.escrowStatus === "held") {
+      // ── Settle Escrow if completed and not yet settled ──────
+      if (isReturnComplete &&
+          after.isSettled !== true &&
+          after.escrowStatus !== "settled" &&
+          after.escrowStatus !== "refunded" &&
+          after.conversationType !== "appraisal") {
         await admin.firestore().runTransaction(async (t) => {
           const freshConvoDoc = await t.get(change.after.ref);
           await settleEscrowTransaction(t, admin.firestore(), freshConvoDoc);
@@ -1302,10 +1653,11 @@ exports.onReviewWrite = functions.firestore
 
 /**
  * Callable endpoint to initialize or seed the admin user and wallet
- * documents for palenciajerjer28@gmail.com with role "admin".
+ * documents for palenciajerjer28@gmail.com with role "admin", and
+ * reconcile any completed rentals whose escrow settlement had not run.
  */
 exports.seedAdminWallet = functions.https.onCall(
-    async (data, context) => {
+    async () => {
       const db = admin.firestore();
       const adminEmail = "palenciajerjer28@gmail.com";
 
@@ -1317,6 +1669,7 @@ exports.seedAdminWallet = functions.https.onCall(
           availableBalance: 0.0,
           totalFeesCollected: 0.0,
           totalCommission: 0.0,
+          totalPayoutsProcessed: 0.0,
           role: "admin",
           email: adminEmail,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -1344,13 +1697,44 @@ exports.seedAdminWallet = functions.https.onCall(
         await legacyRef.set({
           balance: 0.0,
           totalCommission: 0.0,
+          totalPayoutsProcessed: 0.0,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       }
 
+      // Reconcile any completed rentals that were not yet settled
+      let reconciledCount = 0;
+      try {
+        const convosSnap = await db
+            .collection("conversations")
+            .where("approved", "==", true)
+            .get();
+
+        for (const doc of convosSnap.docs) {
+          const d = doc.data();
+          if (d.conversationType === "appraisal") continue;
+          const isCompleted = d.isReturned === true &&
+            d.isReturnConfirmed === true;
+          const isUnsettled = d.isSettled !== true &&
+            d.escrowStatus !== "settled" &&
+            d.escrowStatus !== "refunded";
+
+          if (isCompleted && isUnsettled) {
+            await db.runTransaction(async (t) => {
+              const freshDoc = await t.get(doc.ref);
+              const res = await settleEscrowTransaction(t, db, freshDoc);
+              if (res) reconciledCount++;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error reconciling unsettled rentals:", err);
+      }
+
       return {
         success: true,
-        message: "Admin account and wallet seeded successfully.",
+        reconciledCount,
+        message: "Admin account and wallet seeded and reconciled.",
       };
     },
 );

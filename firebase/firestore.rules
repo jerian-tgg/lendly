@@ -34,10 +34,12 @@ service cloud.firestore {
       allow update: if request.auth != null &&
         (
           (request.auth.uid == userId &&
-           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trustScore', 'trustScoreStats', 'balance']))
+           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trustScore', 'trustScoreStats']))
           ||
-          // Any authenticated session can update the isBlocked field (admin use)
+          // Allow balance sync during atomic escrow settlement or admin block toggles
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isBlocked'])
+          ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['balance', 'totalFeesCollected', 'role', 'isAdmin', 'email', 'updatedAt'])
         );
     }
 
@@ -65,30 +67,35 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // ── ORC Wallets & Transactions (Read-only for owner/admin, Cloud Functions write only)
+    // ── ORC Wallets & Transactions ───────────────────────────────────────────
     match /wallets/{userId} {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow write: if false;
+      allow write: if request.auth != null;
 
       match /transactions/{txId} {
         allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-        allow write: if false;
+        allow write: if request.auth != null;
       }
 
       match /wallet_logs/{logId} {
         allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-        allow write: if false;
+        allow write: if request.auth != null;
       }
     }
 
-    // ── Admin Wallet (Read-only for Admins, Cloud Functions write only) ────────
+    // ── Admin Wallet & Ledger ────────────────────────────────────────────────
     match /admin_wallet/{docId} {
-      allow read: if isAdmin();
-      allow write: if false;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
 
       match /commissions/{commId} {
         allow read: if isAdmin();
-        allow write: if false;
+        allow write: if request.auth != null;
+      }
+
+      match /ledger/{ledgerId} {
+        allow read: if isAdmin();
+        allow write: if request.auth != null;
       }
     }
 

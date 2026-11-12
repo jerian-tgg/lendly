@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -212,23 +213,30 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
           'text': '✓ In-person meetup verified via QR code scan! Physical inspection is now authorized.',
           'timestamp': FieldValue.serverTimestamp(),
         });
-      } else {
-        final Map<String, dynamic> update = _isHandoff()
-            ? {
-                'isPaid': true,
-                'isReceived': true,
-                'handoffConfirmedAt': FieldValue.serverTimestamp(),
-              }
-            : {
-                'isReturned': true,
-                'isReturnConfirmed': true,
-                'returnConfirmedAt': FieldValue.serverTimestamp(),
-              };
-
+      } else if (_isHandoff()) {
         await FirebaseFirestore.instance
             .collection('conversations')
             .doc(widget.convoId)
-            .update(update);
+            .update({
+          'isPaid': true,
+          'isReceived': true,
+          'handoffConfirmedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Item Return: mark return confirmed and atomically settle escrow
+        // (90% payout to lender, 10% commission to admin wallet)
+        await FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(widget.convoId)
+            .update({
+          'isPaid': true,
+          'isReceived': true,
+          'isReturned': true,
+          'isReturnConfirmed': true,
+          'returnConfirmedAt': FieldValue.serverTimestamp(),
+        });
+
+        await WalletRepository().completeRental(widget.convoId);
       }
 
       // Automatic exit and return back to messaging!

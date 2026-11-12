@@ -17,6 +17,12 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
   final WalletRepository _repository = WalletRepository();
   String _selectedFilter = 'all'; // 'all', 'cash_in', 'escrow', 'earning', 'refund'
 
+  @override
+  void initState() {
+    super.initState();
+    _repository.reconcileRentalsAndAdminLedger();
+  }
+
   String _formatCurrency(double amount) {
     return '₱${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
   }

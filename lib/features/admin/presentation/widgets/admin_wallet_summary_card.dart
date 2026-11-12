@@ -2,15 +2,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_wallet_page.dart';
+import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart';
 
 /// Admin Wallet Summary Card displayed on the Admin Dashboard.
 /// Visual styling, typography, and layout match the user-facing Wallet Card
 /// on the User Home Page (LinearGradient purple, amber badge, ORC balance,
 /// and live metrics).
-class AdminWalletSummaryCard extends StatelessWidget {
+class AdminWalletSummaryCard extends StatefulWidget {
   const AdminWalletSummaryCard({super.key});
 
-  static const String adminEmail = 'palenciajerjer28@gmail.com';
+  static const String adminEmail = WalletRepository.adminEmail;
+
+  @override
+  State<AdminWalletSummaryCard> createState() => _AdminWalletSummaryCardState();
+}
+
+class _AdminWalletSummaryCardState extends State<AdminWalletSummaryCard> {
+  @override
+  void initState() {
+    super.initState();
+    WalletRepository().reconcileRentalsAndAdminLedger();
+  }
 
   String _formatAmount(num amount) {
     return amount.toStringAsFixed(2).replaceAllMapped(
@@ -25,7 +37,7 @@ class AdminWalletSummaryCard extends StatelessWidget {
 
     // Stream 1: Dedicated Admin Wallet document stream
     return StreamBuilder<DocumentSnapshot>(
-      stream: db.collection('wallets').doc(adminEmail).snapshots(),
+      stream: db.collection('wallets').doc(AdminWalletSummaryCard.adminEmail).snapshots(),
       builder: (context, adminWalletSnap) {
         // Stream 2: Fallback / legacy admin wallet for unified totals
         return StreamBuilder<DocumentSnapshot>(
@@ -401,7 +413,7 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Recent 10% Fee Inflows',
+                          'Recent Admin Ledger Activity',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -419,14 +431,14 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                             );
                           },
                           icon: const Icon(Icons.open_in_new, size: 14),
-                          label: const Text('All Revenue', style: TextStyle(fontSize: 12)),
+                          label: const Text('Full Ledger', style: TextStyle(fontSize: 12)),
                         ),
                       ],
                     ),
 
                     const SizedBox(height: 8),
 
-                    // Live fee inflow transactions stream
+                    // Live ledger transactions stream
                     StreamBuilder<QuerySnapshot>(
                       stream: transactionsQuery.snapshots(),
                       builder: (context, txSnap) {
@@ -460,6 +472,7 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                                   final data = d.data() as Map<String, dynamic>;
                                   return _buildCommissionItem(
                                     txId: d.id,
+                                    type: 'service_fee',
                                     feeAmount: (data['amount'] as num?)?.toDouble() ?? 0.0,
                                     grossAmount: (data['grossAmount'] as num?)?.toDouble() ?? 0.0,
                                     lenderId: data['lenderId'] as String?,
@@ -475,16 +488,18 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                         return Column(
                           children: docs.map((d) {
                             final data = d.data() as Map<String, dynamic>;
+                            final type = (data['type'] as String?) ?? 'service_fee';
                             final feeAmount = (data['amount'] as num?)?.toDouble() ?? 0.0;
                             final grossAmount = (data['grossAmount'] as num?)?.toDouble() ??
-                                (feeAmount > 0 ? feeAmount / 0.10 : 0.0);
+                                (type == 'service_fee' && feeAmount > 0 ? feeAmount / 0.10 : feeAmount);
                             final referenceId = data['referenceId'] as String? ?? d.id;
                             final borrowerId = data['borrowerId'] as String?;
                             final lenderId = data['lenderId'] as String?;
-                            final timestamp = data['createdAt'] as Timestamp?;
+                            final timestamp = (data['createdAt'] ?? data['timestamp']) as Timestamp?;
 
                             return _buildCommissionItem(
                               txId: referenceId,
+                              type: type,
                               feeAmount: feeAmount,
                               grossAmount: grossAmount,
                               lenderId: lenderId,
@@ -549,6 +564,7 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
 
   Widget _buildCommissionItem({
     required String txId,
+    required String type,
     required double feeAmount,
     required double grossAmount,
     required String? lenderId,
@@ -558,6 +574,34 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
     final dateStr = timestamp != null
         ? DateFormat('MMM d, yyyy • h:mm a').format(timestamp.toDate())
         : 'Just now';
+
+    String badgeLabel;
+    Color badgeColor;
+    String amountPrefix;
+
+    switch (type) {
+      case 'escrow_hold':
+        badgeLabel = 'Escrow Hold';
+        badgeColor = const Color(0xFF7B40B5);
+        amountPrefix = '';
+        break;
+      case 'lender_payout':
+        badgeLabel = '90% User Payout';
+        badgeColor = const Color(0xFF007799);
+        amountPrefix = '';
+        break;
+      case 'escrow_refund':
+        badgeLabel = 'Escrow Refund';
+        badgeColor = const Color(0xFFE67E22);
+        amountPrefix = '';
+        break;
+      case 'service_fee':
+      default:
+        badgeLabel = '10% Platform Fee';
+        badgeColor = const Color(0xFF27AE60);
+        amountPrefix = '+';
+        break;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -573,7 +617,7 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row: Rental ID & 10% Fee Pill
+          // Top row: Rental ID & Type Pill
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -599,26 +643,26 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.1),
+                      color: badgeColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Text(
-                      '10% Platform Fee',
+                    child: Text(
+                      badgeLabel,
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                        color: badgeColor,
                       ),
                     ),
                   ),
                 ],
               ),
               Text(
-                '+₱${feeAmount.toStringAsFixed(2)} ORC',
-                style: const TextStyle(
+                '$amountPrefix₱${feeAmount.toStringAsFixed(2)} ORC',
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF27AE60),
+                  color: badgeColor,
                 ),
               ),
             ],

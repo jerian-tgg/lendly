@@ -1,5 +1,6 @@
 /**
- * Standalone provisioning script for Admin Account & Wallet: palenciajerjer28@gmail.com
+ * Standalone provisioning script for Admin Account & Wallet:
+ * palenciajerjer28@gmail.com
  *
  * Run with: node seed_admin.js
  */
@@ -14,10 +15,17 @@ const db = admin.firestore();
 const auth = admin.auth();
 
 const ADMIN_EMAIL = "palenciajerjer28@gmail.com";
-const DEFAULT_AUTH_PASSWORD = "Lendly@Admin2024!"; // Meets Firebase Auth 6+ char rule
+// Meets Firebase Auth 6+ char rule
+const DEFAULT_AUTH_PASSWORD = "Lendly@Admin2024!";
 
+/**
+ * Seeds the admin account, Firestore user, and dedicated wallet.
+ * @return {Promise<void>}
+ */
 async function seedAdmin() {
-  console.log(`[Seed] Provisioning Admin account & wallet for: ${ADMIN_EMAIL}...`);
+  console.log(
+      `[Seed] Provisioning Admin account & wallet for: ${ADMIN_EMAIL}...`,
+  );
 
   // 1. Firebase Auth user
   let userRecord;
@@ -90,7 +98,10 @@ async function seedAdmin() {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    console.log(`[Seed] Initialized wallet: wallets/${ADMIN_EMAIL} (balance: 0.0, totalFeesCollected: 0.0)`);
+    console.log(
+        `[Seed] Initialized wallet: wallets/${ADMIN_EMAIL} ` +
+        "(balance: 0.0, totalFeesCollected: 0.0)",
+    );
   } else {
     console.log(`[Seed] Wallet already exists: wallets/${ADMIN_EMAIL}`);
   }
@@ -109,7 +120,9 @@ async function seedAdmin() {
 
   console.log("[Seed] Completed successfully! Credentials mapping:");
   console.log(`       UI Login: ${ADMIN_EMAIL} / admin`);
-  console.log(`       Firebase Auth: ${ADMIN_EMAIL} / ${DEFAULT_AUTH_PASSWORD}`);
+  console.log(
+      `       Firebase Auth: ${ADMIN_EMAIL} / ${DEFAULT_AUTH_PASSWORD}`,
+  );
 }
 
 seedAdmin().catch((err) => {

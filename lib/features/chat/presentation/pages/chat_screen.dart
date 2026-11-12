@@ -41,6 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   late Stream<DocumentSnapshot> _conversationStream;
   late Stream<DocumentSnapshot> _userStream;
+  bool _isSettlingEscrow = false;
 
   @override
   void initState() {
@@ -807,6 +808,21 @@ class _ChatScreenState extends State<ChatScreen> {
         final isAppraisalCompleted = convoData['isAppraisalCompleted'] == true;
         final appraiserId = convoData['appraiserId'] as String? ?? '';
         final isAppraiser = (widget.currentUserId == appraiserId) || (!isOwner && isAppraisalChat);
+
+        // Self-heal escrow & 10% commission settlement if return is confirmed but not yet settled
+        final isSettled = convoData['isSettled'] == true ||
+            convoData['escrowStatus'] == 'settled' ||
+            convoData['escrowStatus'] == 'refunded';
+        if (!isAppraisalChat &&
+            isReturned &&
+            isReturnConfirmed &&
+            !isSettled &&
+            !_isSettlingEscrow) {
+          _isSettlingEscrow = true;
+          WalletRepository()
+              .completeRental(widget.convoId)
+              .whenComplete(() => _isSettlingEscrow = false);
+        }
 
         final ownerId = convoData['ownerId'] ?? convoData['itemOwnerId'] ?? '';
         final borrowerId = convoData['borrowerId'] ??
