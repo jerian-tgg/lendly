@@ -175,7 +175,7 @@ class AppraisalModel {
     } else if (grade.startsWith('Excellent')) {
       return const Color(0xFF0284C7); // Sky/Blue
     } else if (grade.startsWith('Good')) {
-      return const Color(0xFF7B40B5); // Lendly Purple
+      return const Color(0xFF98259A); // Orchid Purple
     } else if (grade.startsWith('Fair')) {
       return const Color(0xFFD97706); // Amber/Orange
     } else {

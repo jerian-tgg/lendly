@@ -8,8 +8,15 @@ class FirebaseAuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
-  static const String defaultAdminEmail = 'admin@lendly.com';
+  static const String defaultAdminEmail = 'admin@orchid.com';
+  static const String legacyAdminEmail = 'admin@lendly.com';
   static const String defaultAdminPassword = 'AdminPassword123!';
+
+  static bool isSystemAdminEmail(String? email) {
+    if (email == null) return false;
+    final lower = email.trim().toLowerCase();
+    return lower == defaultAdminEmail || lower == legacyAdminEmail;
+  }
 
   // Sign Up with Email and Password
   Future<User?> signUp({
@@ -50,7 +57,7 @@ class FirebaseAuthService {
       User? user = result.user;
 
       if (user != null) {
-        final bool isSystemAdmin = email.trim().toLowerCase() == defaultAdminEmail;
+        final bool isSystemAdmin = isSystemAdminEmail(email);
 
         // Send email verification (unless system admin)
         if (!isSystemAdmin) {
@@ -173,7 +180,7 @@ class FirebaseAuthService {
       if (user != null &&
           user.email != 'palenciajerjer28@gmail.com' &&
           user.email != 'admin-portal@lendly.internal' &&
-          user.email != defaultAdminEmail) {
+          !isSystemAdminEmail(user.email)) {
         final doc = await _firestore.collection('users').doc(user.uid).get();
         if (doc.exists && doc.data()?['isBlocked'] == true) {
           await _auth.signOut(); // Sign them back out immediately
@@ -183,7 +190,7 @@ class FirebaseAuthService {
         }
       }
 
-      if (user != null && email.trim().toLowerCase() == defaultAdminEmail) {
+      if (user != null && isSystemAdminEmail(email)) {
         await _firestore.collection('users').doc(user.uid).set({
           'isAdmin': true,
           'role': 'admin',
@@ -230,7 +237,7 @@ class FirebaseAuthService {
       final user = result.user;
       if (user != null) {
         await _firestore.collection('users').doc(user.uid).set({
-          'firstName': 'Lendly',
+          'firstName': 'Orchid',
           'lastName': 'Admin',
           'username': 'admin',
           'email': user.email,

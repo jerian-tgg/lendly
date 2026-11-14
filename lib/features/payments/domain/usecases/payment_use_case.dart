@@ -15,7 +15,7 @@ class PaymentUseCase {
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
-          merchantDisplayName: 'Lendly',
+          merchantDisplayName: 'Orchid',
         ),
       );
 

@@ -286,10 +286,10 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                    color: const Color(0xFF98259A).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.location_on, color: Color(0xFF7B40B5), size: 20),
+                  child: const Icon(Icons.location_on, color: Color(0xFF98259A), size: 20),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -338,7 +338,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                           decoration: InputDecoration(
                             hintText: 'Search PH city (e.g. Bacolod, Cebu, Manila)...',
                             hintStyle: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                            prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF7B40B5)),
+                            prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF98259A)),
                             suffixIcon: textVal.text.isNotEmpty
                                 ? IconButton(
                                     icon: const Icon(Icons.clear, size: 18),
@@ -368,11 +368,11 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                       child: Container(
                         padding: const EdgeInsets.all(11),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF7B40B5),
+                          color: const Color(0xFF98259A),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF7B40B5).withValues(alpha: 0.25),
+                              color: const Color(0xFF98259A).withValues(alpha: 0.25),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -416,7 +416,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                     final loc = results[idx];
                     return ListTile(
                       dense: true,
-                      leading: const Icon(Icons.location_city, color: Color(0xFF7B40B5), size: 18),
+                      leading: const Icon(Icons.location_city, color: Color(0xFF98259A), size: 18),
                       title: Text(
                         loc.name ?? '${loc.latitude}, ${loc.longitude}',
                         style: const TextStyle(fontSize: 13),
@@ -453,7 +453,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                       // OpenStreetMap Tiles with buffer caching for smooth panning
                       TileLayer(
                         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.lendly.app',
+                        userAgentPackageName: 'com.orchid.app',
                         maxZoom: _maxZoom,
                         minZoom: _minZoom,
                         keepBuffer: 3,
@@ -474,8 +474,8 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                                   point: pin,
                                   radius: rad * 1000,
                                   useRadiusInMeter: true,
-                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.16),
-                                  borderColor: const Color(0xFF7B40B5),
+                                  color: const Color(0xFF98259A).withValues(alpha: 0.16),
+                                  borderColor: const Color(0xFF98259A),
                                   borderStrokeWidth: 2.0,
                                 ),
                               ],
@@ -601,10 +601,10 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                     Container(
                       padding: const EdgeInsets.all(7),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                        color: const Color(0xFF98259A).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.push_pin, color: Color(0xFF7B40B5), size: 18),
+                      child: const Icon(Icons.push_pin, color: Color(0xFF98259A), size: 18),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -632,7 +632,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                                       height: 10,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 1.5,
-                                        color: Color(0xFF7B40B5),
+                                        color: Color(0xFF98259A),
                                       ),
                                     ),
                                   );
@@ -696,7 +696,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                             children: [
                               const Row(
                                 children: [
-                                  Icon(Icons.radar, size: 16, color: Color(0xFF7B40B5)),
+                                  Icon(Icons.radar, size: 16, color: Color(0xFF98259A)),
                                   SizedBox(width: 6),
                                   Text(
                                     'Search Radius:',
@@ -707,7 +707,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                                  color: const Color(0xFF98259A).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -715,7 +715,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF7B40B5),
+                                    color: Color(0xFF98259A),
                                   ),
                                 ),
                               ),
@@ -725,9 +725,9 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                             data: SliderTheme.of(context).copyWith(
                               trackHeight: 4,
                               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                              activeTrackColor: const Color(0xFF7B40B5),
-                              thumbColor: const Color(0xFF7B40B5),
-                              inactiveTrackColor: Colors.purple.shade50,
+                              activeTrackColor: const Color(0xFF98259A),
+                              thumbColor: const Color(0xFF98259A),
+                              inactiveTrackColor: const Color(0xFFFBEBFB),
                             ),
                             child: Slider(
                               value: radiusKm,
@@ -750,7 +750,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                                     visualDensity: VisualDensity.compact,
                                     label: Text(label, style: const TextStyle(fontSize: 11)),
                                     selected: isSelected,
-                                    selectedColor: const Color(0xFF7B40B5),
+                                    selectedColor: const Color(0xFF98259A),
                                     labelStyle: TextStyle(
                                       color: isSelected ? Colors.white : Colors.black87,
                                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -785,8 +785,8 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                       icon: const Icon(Icons.my_location, size: 16),
                       label: const Text('My Location', style: TextStyle(fontSize: 12)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF7B40B5),
-                        side: const BorderSide(color: Color(0xFF7B40B5)),
+                        foregroundColor: const Color(0xFF98259A),
+                        side: const BorderSide(color: Color(0xFF98259A)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
@@ -809,7 +809,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7B40B5),
+                              backgroundColor: const Color(0xFF98259A),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

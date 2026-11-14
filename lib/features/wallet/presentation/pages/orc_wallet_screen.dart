@@ -55,7 +55,7 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline, color: Color(0xFF7B40B5)),
+            icon: const Icon(Icons.info_outline, color: Color(0xFF98259A)),
             tooltip: 'About ORC Wallet',
             onPressed: () => _showAboutDialog(context),
           ),
@@ -114,7 +114,7 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
                       return const Center(
                         child: Padding(
                           padding: EdgeInsets.all(40),
-                          child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+                          child: CircularProgressIndicator(color: Color(0xFF98259A)),
                         ),
                       );
                     }
@@ -151,14 +151,14 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
+          colors: [Color(0xFF98259A), Color(0xFF6B156C)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF7B40B5).withValues(alpha: 0.35),
+            color: const Color(0xFF98259A).withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -282,11 +282,11 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
               // Cash In Button
               ElevatedButton.icon(
                 onPressed: () => CashInDialog.show(context),
-                icon: const Icon(Icons.add, size: 18, color: Color(0xFF7B40B5)),
+                icon: const Icon(Icons.add, size: 18, color: Color(0xFF98259A)),
                 label: const Text(
                   'Cash In',
                   style: TextStyle(
-                    color: Color(0xFF7B40B5),
+                    color: Color(0xFF98259A),
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -329,7 +329,7 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
               onSelected: (val) {
                 if (val) setState(() => _selectedFilter = f['key']!);
               },
-              selectedColor: const Color(0xFF7B40B5),
+              selectedColor: const Color(0xFF98259A),
               backgroundColor: Colors.white,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : Colors.grey[700],
@@ -339,7 +339,7 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
                 side: BorderSide(
-                  color: isSelected ? const Color(0xFF7B40B5) : Colors.grey[300]!,
+                  color: isSelected ? const Color(0xFF98259A) : Colors.grey[300]!,
                 ),
               ),
             ),
@@ -395,14 +395,14 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
         break;
       case 'rental_refund':
         icon = Icons.undo;
-        iconBg = const Color(0xFF3498DB).withValues(alpha: 0.12);
-        iconColor = const Color(0xFF3498DB);
+        iconBg = const Color(0xFF98259A).withValues(alpha: 0.12);
+        iconColor = const Color(0xFF98259A);
         displayTitle = 'Escrow Refund';
         break;
       case 'rental_payment':
         icon = Icons.check_circle_outline;
-        iconBg = const Color(0xFF7B40B5).withValues(alpha: 0.12);
-        iconColor = const Color(0xFF7B40B5);
+        iconBg = const Color(0xFF98259A).withValues(alpha: 0.12);
+        iconColor = const Color(0xFF98259A);
         displayTitle = 'Rental Settled';
         break;
       default:
@@ -539,7 +539,7 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.shield_outlined, color: Color(0xFF7B40B5)),
+            Icon(Icons.shield_outlined, color: Color(0xFF98259A)),
             SizedBox(width: 8),
             Text('How ORC Escrow Works', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ],
@@ -561,7 +561,7 @@ class _OrcWalletScreenState extends State<OrcWalletScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Got it', style: TextStyle(color: Color(0xFF7B40B5), fontWeight: FontWeight.bold)),
+            child: const Text('Got it', style: TextStyle(color: Color(0xFF98259A), fontWeight: FontWeight.bold)),
           ),
         ],
       ),

@@ -123,7 +123,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                 ),
               ],
             ),
-            backgroundColor: const Color(0xFF7B40B5),
+            backgroundColor: const Color(0xFF98259A),
           ),
         );
       }
@@ -288,7 +288,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.verified_user_outlined, size: 14, color: Color(0xFF7B40B5)),
+                    const Icon(Icons.verified_user_outlined, size: 14, color: Color(0xFF98259A)),
                     const SizedBox(width: 4),
                     Text(
                       'Your review helps update this ${isItemReview ? 'item' : 'lender'}\'s rating in Firebase.',
@@ -314,7 +314,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7B40B5),
+                      backgroundColor: const Color(0xFF98259A),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

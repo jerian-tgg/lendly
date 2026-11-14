@@ -18,6 +18,6 @@ class DiditAppConfig {
   /// Hosted verification base URL. Session token is appended as the last path segment.
   static const String hostedSessionBaseUrl = 'https://verify.didit.me/session';
 
-  /// Deep-link callback URL to return to the Lendly app after verification completes.
-  static const String callbackUrl = 'lendly://verify/done';
+  /// Deep-link callback URL to return to the Orchid app after verification completes.
+  static const String callbackUrl = 'orchid://verify/done';
 }

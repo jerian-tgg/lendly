@@ -25,7 +25,7 @@ class RibbonBanner extends StatelessWidget {
       case RibbonType.boosted:
         return const RibbonBanner(
           text: 'BOOSTED',
-          color: Color(0xFF7B40B5),
+          color: Color(0xFF98259A),
           icon: Icons.bolt_rounded,
         );
       case RibbonType.newArrival:

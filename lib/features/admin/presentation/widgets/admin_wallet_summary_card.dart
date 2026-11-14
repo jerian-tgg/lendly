@@ -95,14 +95,14 @@ class _AdminWalletSummaryCardState extends State<AdminWalletSummaryCard> {
                     ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
+                        colors: [Color(0xFF98259A), Color(0xFF6B156C)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                          color: const Color(0xFF98259A).withValues(alpha: 0.3),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -230,12 +230,12 @@ class _AdminWalletSummaryCardState extends State<AdminWalletSummaryCard> {
                           icon: const Icon(
                             Icons.receipt_long,
                             size: 16,
-                            color: Color(0xFF7B40B5),
+                            color: Color(0xFF98259A),
                           ),
                           label: const Text(
                             'View Details',
                             style: TextStyle(
-                              color: Color(0xFF7B40B5),
+                              color: Color(0xFF98259A),
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -348,7 +348,7 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF007799),
+                            color: Color(0xFF98259A),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -390,7 +390,7 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                           child: _buildMetricTile(
                             'Total Collected',
                             _formatAmount(totalFees),
-                            const Color(0xFF007799),
+                            const Color(0xFF98259A),
                             Icons.pie_chart,
                           ),
                         ),
@@ -399,7 +399,7 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                           child: _buildMetricTile(
                             'Active Escrow',
                             _formatAmount(activeEscrow),
-                            const Color(0xFF7B40B5),
+                            const Color(0xFF98259A),
                             Icons.lock_clock,
                           ),
                         ),
@@ -582,12 +582,12 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
     switch (type) {
       case 'escrow_hold':
         badgeLabel = 'Escrow Hold';
-        badgeColor = const Color(0xFF7B40B5);
+        badgeColor = const Color(0xFF98259A);
         amountPrefix = '';
         break;
       case 'lender_payout':
         badgeLabel = '90% User Payout';
-        badgeColor = const Color(0xFF007799);
+        badgeColor = const Color(0xFF98259A);
         amountPrefix = '';
         break;
       case 'escrow_refund':
@@ -626,7 +626,7 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF007799).withValues(alpha: 0.1),
+                      color: const Color(0xFF98259A).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -635,7 +635,7 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                         fontFamily: 'monospace',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF007799),
+                        color: Color(0xFF98259A),
                       ),
                     ),
                   ),

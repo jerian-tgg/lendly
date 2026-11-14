@@ -134,7 +134,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
         builder: (context, userSnapshot) {
           if (userSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+              child: CircularProgressIndicator(color: Color(0xFF98259A)),
             );
           }
 
@@ -152,13 +152,13 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                        color: const Color(0xFF98259A).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.lock_outline_rounded,
                         size: 64,
-                        color: Color(0xFF7B40B5),
+                        color: Color(0xFF98259A),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -192,7 +192,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                         style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7B40B5),
+                        backgroundColor: const Color(0xFF98259A),
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -219,7 +219,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                 padding: const EdgeInsets.all(20),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF4A1A7E), Color(0xFF7B40B5)],
+                    colors: [Color(0xFF4A1A7E), Color(0xFF98259A)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -307,7 +307,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                       onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
                       decoration: InputDecoration(
                         hintText: 'Search items, owners, or keywords to appraise...',
-                        prefixIcon: const Icon(Icons.search, color: Color(0xFF7B40B5)),
+                        prefixIcon: const Icon(Icons.search, color: Color(0xFF98259A)),
                         filled: true,
                         fillColor: const Color(0xFFF7FAFC),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -347,7 +347,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                             child: ChoiceChip(
                               label: Text(cat, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87)),
                               selected: isSelected,
-                              selectedColor: const Color(0xFF7B40B5),
+                              selectedColor: const Color(0xFF98259A),
                               backgroundColor: Colors.grey.shade100,
                               onSelected: (val) {
                                 if (val) setState(() => _selectedCategory = cat);
@@ -366,9 +366,9 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                 color: Colors.white,
                 child: TabBar(
                   controller: _tabController,
-                  labelColor: const Color(0xFF7B40B5),
+                  labelColor: const Color(0xFF98259A),
                   unselectedLabelColor: Colors.grey,
-                  indicatorColor: const Color(0xFF7B40B5),
+                  indicatorColor: const Color(0xFF98259A),
                   indicatorWeight: 3,
                   tabs: const [
                     Tab(text: 'Browse & Rate Items'),
@@ -402,10 +402,10 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF7B40B5).withValues(alpha: 0.12) : Colors.transparent,
+          color: isSelected ? const Color(0xFF98259A).withValues(alpha: 0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFF7B40B5) : Colors.grey.shade300,
+            color: isSelected ? const Color(0xFF98259A) : Colors.grey.shade300,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -414,7 +414,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
           style: TextStyle(
             fontSize: 11,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? const Color(0xFF7B40B5) : Colors.grey.shade700,
+            color: isSelected ? const Color(0xFF98259A) : Colors.grey.shade700,
           ),
         ),
       ),
@@ -436,7 +436,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
       stream: FirebaseFirestore.instance.collection('items').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF7B40B5)));
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF98259A)));
         }
 
         final allDocs = snapshot.data?.docs ?? [];
@@ -593,7 +593,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                                 children: [
                                   Text(
                                     price,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7B40B5), fontSize: 13),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF98259A), fontSize: 13),
                                   ),
                                   if (isCertified && condition != null) ...[
                                     const SizedBox(width: 8),
@@ -637,7 +637,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                           alignment: WrapAlignment.spaceBetween,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Text('Function: $fnScore/10', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
+                            Text('Function: $fnScore/10', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF98259A))),
                             Text('Cosmetic: $cosScore/10', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
                             if (itemData['appraisalValue'] != null)
                               Text('Est. Value: ₱${itemData['appraisalValue']} (Private)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
@@ -698,7 +698,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7B40B5),
+                              backgroundColor: const Color(0xFF98259A),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -725,7 +725,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF7B40B5)));
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF98259A)));
         }
 
         final docs = snapshot.data?.docs ?? [];
@@ -771,10 +771,10 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: const BoxDecoration(
-                            color: Color(0xFFEFE8FA),
+                            color: Color(0xFFFBEBFB),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.verified, color: Color(0xFF7B40B5)),
+                          child: const Icon(Icons.verified, color: Color(0xFF98259A)),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -817,7 +817,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                       alignment: WrapAlignment.spaceBetween,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text('Function: $fnScore/10', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
+                        Text('Function: $fnScore/10', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF98259A))),
                         Text('Cosmetic: $cosScore/10', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -866,7 +866,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                             icon: const Icon(Icons.edit_note, size: 16),
                             label: const Text('Edit Valuation', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7B40B5),
+                              backgroundColor: const Color(0xFF98259A),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 6),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

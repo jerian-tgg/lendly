@@ -363,7 +363,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
+                  colors: [Color(0xFF98259A), Color(0xFF6B156C)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -439,7 +439,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                               color: _photoError ? Colors.red.shade50 : const Color(0xFFF9F5FE),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: _photoError ? Colors.redAccent : const Color(0xFF7B40B5).withValues(alpha: 0.35),
+                                color: _photoError ? Colors.redAccent : const Color(0xFF98259A).withValues(alpha: 0.35),
                                 width: _photoError ? 2 : 1.2,
                               ),
                             ),
@@ -448,14 +448,14 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.camera_alt_rounded, color: Color(0xFF7B40B5), size: 18),
+                                    const Icon(Icons.camera_alt_rounded, color: Color(0xFF98259A), size: 18),
                                     const SizedBox(width: 6),
                                     const Text(
                                       'Item Photos (Camera Only)',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
-                                        color: Color(0xFF7B40B5),
+                                        color: Color(0xFF98259A),
                                       ),
                                     ),
                                     const SizedBox(width: 6),
@@ -549,7 +549,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF7B40B5),
+                                    backgroundColor: const Color(0xFF98259A),
                                     foregroundColor: Colors.white,
                                     elevation: 0,
                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -586,7 +586,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                             decoration: InputDecoration(
                               labelText: 'Item Name',
                               hintText: 'e.g. Sony Alpha A7 III Camera',
-                              prefixIcon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF7B40B5), size: 20),
+                              prefixIcon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF98259A), size: 20),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             ),
@@ -602,7 +602,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                             decoration: InputDecoration(
                               labelText: 'Description',
                               hintText: 'Describe item features, included accessories, usage guidelines...',
-                              prefixIcon: const Icon(Icons.description_outlined, color: Color(0xFF7B40B5), size: 20),
+                              prefixIcon: const Icon(Icons.description_outlined, color: Color(0xFF98259A), size: 20),
                               alignLabelWithHint: true,
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -619,7 +619,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                               isExpanded: true,
                               decoration: InputDecoration(
                                 labelText: 'Category',
-                                prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF7B40B5), size: 20),
+                                prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF98259A), size: 20),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               ),
@@ -642,7 +642,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                     decoration: InputDecoration(
                                       labelText: 'Price / Day',
                                       prefixText: '₱ ',
-                                      prefixIcon: const Icon(Icons.payments_outlined, color: Color(0xFF7B40B5), size: 20),
+                                      prefixIcon: const Icon(Icons.payments_outlined, color: Color(0xFF98259A), size: 20),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                     ),
@@ -657,7 +657,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
                                       labelText: 'Qty',
-                                      prefixIcon: const Icon(Icons.inventory_2_outlined, color: Color(0xFF7B40B5), size: 18),
+                                      prefixIcon: const Icon(Icons.inventory_2_outlined, color: Color(0xFF98259A), size: 18),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                                     ),
@@ -669,18 +669,18 @@ class _AddItemDialogState extends State<AddItemDialog> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF7B40B5).withValues(alpha: 0.06),
+                                color: const Color(0xFF98259A).withValues(alpha: 0.06),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.15)),
+                                border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.15)),
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.verified_outlined, size: 16, color: Color(0xFF7B40B5)),
+                                  Icon(Icons.verified_outlined, size: 16, color: Color(0xFF98259A)),
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'Official condition rating is evaluated and assigned by a certified appraiser.',
-                                      style: TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF98259A), fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ],
@@ -697,7 +697,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                     isExpanded: true,
                                     decoration: InputDecoration(
                                       labelText: 'Category',
-                                      prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF7B40B5), size: 20),
+                                      prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF98259A), size: 20),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                     ),
@@ -719,7 +719,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                     decoration: InputDecoration(
                                       labelText: 'Price / Day',
                                       prefixText: '₱ ',
-                                      prefixIcon: const Icon(Icons.payments_outlined, color: Color(0xFF7B40B5), size: 20),
+                                      prefixIcon: const Icon(Icons.payments_outlined, color: Color(0xFF98259A), size: 20),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                     ),
@@ -734,7 +734,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
                                       labelText: 'Qty',
-                                      prefixIcon: const Icon(Icons.inventory_2_outlined, color: Color(0xFF7B40B5), size: 18),
+                                      prefixIcon: const Icon(Icons.inventory_2_outlined, color: Color(0xFF98259A), size: 18),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                                     ),
@@ -746,18 +746,18 @@ class _AddItemDialogState extends State<AddItemDialog> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF7B40B5).withValues(alpha: 0.06),
+                                color: const Color(0xFF98259A).withValues(alpha: 0.06),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.15)),
+                                border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.15)),
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.verified_outlined, size: 16, color: Color(0xFF7B40B5)),
+                                  Icon(Icons.verified_outlined, size: 16, color: Color(0xFF98259A)),
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'Official condition rating is evaluated and assigned by a certified appraiser.',
-                                      style: TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF98259A), fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ],
@@ -775,7 +775,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                               color: const Color(0xFFF9F5FE),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                                color: const Color(0xFF98259A).withValues(alpha: 0.3),
                                 width: 1.2,
                               ),
                             ),
@@ -787,10 +787,10 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                     Container(
                                       padding: const EdgeInsets.all(6),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                                        color: const Color(0xFF98259A).withValues(alpha: 0.12),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: const Icon(Icons.location_on, color: Color(0xFF7B40B5), size: 18),
+                                      child: const Icon(Icons.location_on, color: Color(0xFF98259A), size: 18),
                                     ),
                                     const SizedBox(width: 8),
                                     const Expanded(
@@ -802,7 +802,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 13,
-                                              color: Color(0xFF7B40B5),
+                                              color: Color(0xFF98259A),
                                             ),
                                           ),
                                           Text(
@@ -827,7 +827,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF7B40B5),
+                                          color: const Color(0xFF98259A),
                                           borderRadius: BorderRadius.circular(16),
                                         ),
                                         child: const Row(
@@ -851,16 +851,16 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                         decoration: BoxDecoration(
                                           color: Colors.white,
                                           borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.4)),
+                                          border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.4)),
                                         ),
                                         child: const Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.person_pin_circle_outlined, size: 13, color: Color(0xFF7B40B5)),
+                                            Icon(Icons.person_pin_circle_outlined, size: 13, color: Color(0xFF98259A)),
                                             SizedBox(width: 4),
                                             Text(
                                               'Use Profile Address',
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF98259A)),
                                             ),
                                           ],
                                         ),
@@ -881,7 +881,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                             value: loc,
                                             child: Row(
                                               children: [
-                                                const Icon(Icons.location_city, size: 14, color: Color(0xFF7B40B5)),
+                                                const Icon(Icons.location_city, size: 14, color: Color(0xFF98259A)),
                                                 const SizedBox(width: 6),
                                                 Text(loc.name ?? '${loc.latitude}, ${loc.longitude}', style: const TextStyle(fontSize: 12)),
                                               ],
@@ -918,7 +918,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                   decoration: InputDecoration(
                                     labelText: 'Street Address / Pickup Landmark',
                                     hintText: 'e.g. Unit 4B, Sunset Blvd, Brgy. Mandalagan',
-                                    prefixIcon: const Icon(Icons.home_outlined, color: Color(0xFF7B40B5), size: 18),
+                                    prefixIcon: const Icon(Icons.home_outlined, color: Color(0xFF98259A), size: 18),
                                     filled: true,
                                     fillColor: Colors.white,
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -941,7 +941,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                                   decoration: InputDecoration(
                                     labelText: 'City / Municipality / Province',
                                     hintText: 'e.g. Bacolod City, Negros Occidental',
-                                    prefixIcon: const Icon(Icons.location_city_outlined, color: Color(0xFF7B40B5), size: 18),
+                                    prefixIcon: const Icon(Icons.location_city_outlined, color: Color(0xFF98259A), size: 18),
                                     filled: true,
                                     fillColor: Colors.white,
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -1026,7 +1026,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7B40B5),
+                      backgroundColor: const Color(0xFF98259A),
                       foregroundColor: Colors.white,
                       elevation: 1,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

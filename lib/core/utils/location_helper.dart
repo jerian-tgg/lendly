@@ -414,7 +414,7 @@ class LocationHelper {
 
     try {
       final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=14');
-      final res = await http.get(url, headers: {'User-Agent': 'LendlyApp/1.0'}).timeout(const Duration(seconds: 3));
+      final res = await http.get(url, headers: {'User-Agent': 'OrchidApp/1.0'}).timeout(const Duration(seconds: 3));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final address = data['address'] as Map<String, dynamic>?;

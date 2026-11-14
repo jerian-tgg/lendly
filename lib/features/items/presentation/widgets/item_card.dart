@@ -48,7 +48,7 @@ class ItemCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.edit, color: Color(0xFF7B40B5)),
+              leading: const Icon(Icons.edit, color: Color(0xFF98259A)),
               title: const Text('Edit Item'),
               onTap: () {
                 Navigator.pop(context);
@@ -257,12 +257,12 @@ class ItemCard extends StatelessWidget {
 
                       return CircleAvatar(
                         radius: isGrid ? 13 : 16,
-                        backgroundColor: const Color(0xFFEFE8FA),
+                        backgroundColor: const Color(0xFFFBEBFB),
                         backgroundImage: isValidImageUrl(photoUrl)
                             ? NetworkImage(photoUrl!)
                             : null,
                         child: !isValidImageUrl(photoUrl)
-                            ? Icon(Icons.person, size: isGrid ? 14 : 18, color: const Color(0xFF7B40B5))
+                            ? Icon(Icons.person, size: isGrid ? 14 : 18, color: const Color(0xFF98259A))
                             : null,
                       );
                     },
@@ -287,7 +287,7 @@ class ItemCard extends StatelessWidget {
                         ),
                         Row(
                           children: [
-                            const Icon(Icons.location_on, size: 10, color: Color(0xFF7B40B5)),
+                            const Icon(Icons.location_on, size: 10, color: Color(0xFF98259A)),
                             const SizedBox(width: 2),
                             Expanded(
                               child: Text(
@@ -316,7 +316,7 @@ class ItemCard extends StatelessWidget {
                       padding: const EdgeInsets.all(4),
                       child: Icon(
                         Icons.chat_bubble_outline,
-                        color: const Color(0xFF7B40B5),
+                        color: const Color(0xFF98259A),
                         size: isGrid ? 18 : 20,
                       ),
                     ),
@@ -440,7 +440,7 @@ class ItemCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                color: const Color(0xFF98259A).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -448,7 +448,7 @@ class ItemCard extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF7B40B5),
+                                  color: Color(0xFF98259A),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -529,7 +529,7 @@ class ItemCard extends StatelessWidget {
                                     style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w800,
-                                      color: Color(0xFF7B40B5),
+                                      color: Color(0xFF98259A),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -562,7 +562,7 @@ class ItemCard extends StatelessWidget {
                                 }
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF7B40B5),
+                                backgroundColor: const Color(0xFF98259A),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,

@@ -109,10 +109,10 @@ class _QrHandoffScreenState extends State<QrHandoffScreen>
   bool _isAppraisal() => widget.action == 'appraisal_meetup';
 
   Color get _accentColor => _isHandoff()
-      ? const Color(0xFF3498DB)
+      ? const Color(0xFF98259A)
       : _isAppraisal()
-          ? const Color(0xFF7B40B5)
-          : const Color(0xFF7B40B5);
+          ? const Color(0xFF98259A)
+          : const Color(0xFF98259A);
 
   String get _title => _isHandoff()
       ? 'Item Handoff'

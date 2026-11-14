@@ -75,12 +75,12 @@ class _LoginPageState extends State<LoginPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                      color: const Color(0xFF98259A).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.lock_reset_rounded,
-                      color: Color(0xFF7B40B5),
+                      color: Color(0xFF98259A),
                       size: 22,
                     ),
                   ),
@@ -114,7 +114,7 @@ class _LoginPageState extends State<LoginPage> {
                       hintText: 'Enter your email',
                       prefixIcon: const Icon(
                         Icons.email_outlined,
-                        color: Color(0xFF7B40B5),
+                        color: Color(0xFF98259A),
                       ),
                       filled: true,
                       fillColor: const Color(0xFFF7FAFC),
@@ -133,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(
-                          color: Color(0xFF7B40B5),
+                          color: Color(0xFF98259A),
                           width: 1.5,
                         ),
                       ),
@@ -197,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                 if (!isSuccess)
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7B40B5),
+                      backgroundColor: const Color(0xFF98259A),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -356,7 +356,7 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('👑 Signed in to Admin Portal'),
-            backgroundColor: Color(0xFF007799),
+            backgroundColor: Color(0xFF98259A),
           ),
         );
         Navigator.pushReplacement(
@@ -379,7 +379,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF6F9),
+      backgroundColor: const Color(0xFFFBEBFB),
       body: Center(
         child: Container(
           padding: const EdgeInsets.all(32),
@@ -416,7 +416,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 12),
                 const Text('Welcome to', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                const Text('Lendly', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
+                const Text('Orchid', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF98259A))),
                 const SizedBox(height: 28),
 
                 TextField(
@@ -448,7 +448,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: const Text(
                       'Forgot Password?',
                       style: TextStyle(
-                        color: Color(0xFF7B40B5),
+                        color: Color(0xFF98259A),
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
@@ -507,7 +507,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: const Text(
                     'Explore as Visitor',
                     style: TextStyle(
-                      color: Color(0xFF007799),
+                      color: Color(0xFF98259A),
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -554,7 +554,7 @@ class _LoginPageState extends State<LoginPage> {
 
   ButtonStyle _buttonStyle() {
     return ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFF90E0F3),
+      backgroundColor: const Color(0xFF98259A),
       padding: const EdgeInsets.symmetric(vertical: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),

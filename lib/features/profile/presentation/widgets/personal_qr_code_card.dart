@@ -19,7 +19,7 @@ class PersonalQrCodeCard extends StatelessWidget {
 
   String get _qrPayload {
     final payload = {
-      'type': 'lendly_user_qr',
+      'type': 'orchid_user_qr',
       'userId': userId,
       'name': userName,
       'email': userEmail,
@@ -51,12 +51,12 @@ class PersonalQrCodeCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                            color: const Color(0xFF98259A).withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.qr_code_scanner_rounded,
-                            color: Color(0xFF7B40B5),
+                            color: Color(0xFF98259A),
                             size: 22,
                           ),
                         ),
@@ -73,7 +73,7 @@ class PersonalQrCodeCard extends StatelessWidget {
                               ),
                             ),
                             const Text(
-                              'Lendly Identity & Transactions',
+                              'Orchid Identity & Transactions',
                               style: TextStyle(fontSize: 11, color: Colors.grey),
                             ),
                           ],
@@ -107,7 +107,7 @@ class PersonalQrCodeCard extends StatelessWidget {
                     size: 220.0,
                     eyeStyle: const QrEyeStyle(
                       eyeShape: QrEyeShape.square,
-                      color: Color(0xFF7B40B5),
+                      color: Color(0xFF98259A),
                     ),
                     dataModuleStyle: const QrDataModuleStyle(
                       dataModuleShape: QrDataModuleShape.square,
@@ -125,7 +125,7 @@ class PersonalQrCodeCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  userName.isNotEmpty ? userName : 'Lendly User',
+                  userName.isNotEmpty ? userName : 'Orchid User',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -158,7 +158,7 @@ class PersonalQrCodeCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.copy, size: 13, color: Color(0xFF7B40B5)),
+                        const Icon(Icons.copy, size: 13, color: Color(0xFF98259A)),
                       ],
                     ),
                   ),
@@ -167,12 +167,12 @@ class PersonalQrCodeCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3E8FF),
+                    color: const Color(0xFFFBEBFB),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 18, color: Color(0xFF7B40B5)),
+                      const Icon(Icons.info_outline, size: 18, color: Color(0xFF98259A)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -181,7 +181,7 @@ class PersonalQrCodeCard extends StatelessWidget {
                               : 'Scan this code to confirm transactions and verify user details.',
                           style: const TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF5A2A94),
+                            color: Color(0xFF6B156C),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -206,10 +206,10 @@ class PersonalQrCodeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.2)),
+        border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF7B40B5).withValues(alpha: 0.05),
+            color: const Color(0xFF98259A).withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -222,7 +222,7 @@ class PersonalQrCodeCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF7B40B5).withValues(alpha: 0.06),
+              color: const Color(0xFF98259A).withValues(alpha: 0.06),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -232,7 +232,7 @@ class PersonalQrCodeCard extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.qr_code_2_rounded,
-                  color: Color(0xFF7B40B5),
+                  color: Color(0xFF98259A),
                   size: 22,
                 ),
                 const SizedBox(width: 8),
@@ -242,14 +242,14 @@ class PersonalQrCodeCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A2A94),
+                      color: Color(0xFF6B156C),
                     ),
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7B40B5),
+                    color: const Color(0xFF98259A),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
@@ -303,7 +303,7 @@ class PersonalQrCodeCard extends StatelessWidget {
                           size: 90.0,
                           eyeStyle: const QrEyeStyle(
                             eyeShape: QrEyeShape.square,
-                            color: Color(0xFF7B40B5),
+                            color: Color(0xFF98259A),
                           ),
                           dataModuleStyle: const QrDataModuleStyle(
                             dataModuleShape: QrDataModuleShape.square,
@@ -316,7 +316,7 @@ class PersonalQrCodeCard extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.all(2),
                             decoration: const BoxDecoration(
-                              color: Color(0xFF7B40B5),
+                              color: Color(0xFF98259A),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -371,7 +371,7 @@ class PersonalQrCodeCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(Icons.copy, size: 12, color: Color(0xFF7B40B5)),
+                            const Icon(Icons.copy, size: 12, color: Color(0xFF98259A)),
                           ],
                         ),
                       ),
@@ -385,8 +385,8 @@ class PersonalQrCodeCard extends StatelessWidget {
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF7B40B5),
-                          side: const BorderSide(color: Color(0xFF7B40B5)),
+                          foregroundColor: const Color(0xFF98259A),
+                          side: const BorderSide(color: Color(0xFF98259A)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),

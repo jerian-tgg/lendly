@@ -5,7 +5,7 @@
         android:name="android.hardware.camera"
         android:required="false" />
     <application
-        android:label="lendly"
+        android:label="Orchid"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
@@ -34,11 +34,14 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Deep-link callback for Didit identity verification (lendly://verify/done) -->
+            <!-- Deep-link callback for Didit identity verification -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="orchid"
+                    android:host="verify" />
                 <data
                     android:scheme="lendly"
                     android:host="verify" />

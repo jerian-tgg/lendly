@@ -95,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFE8FA),
+                      color: const Color(0xFFFBEBFB),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Image.asset(
@@ -109,19 +109,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Text(
                     'ORCHID',
                     style: TextStyle(
-                      color: Color(0xFF7B40B5),
+                      color: Color(0xFF98259A),
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.2,
                       fontSize: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Lendly',
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
                     ),
                   ),
                   if (isVisitor) ...[
@@ -132,14 +123,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                        color: const Color(0xFF98259A).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
                         'Visitor',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF7B40B5),
+                          color: Color(0xFF98259A),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -150,11 +141,11 @@ class _HomeScreenState extends State<HomeScreen> {
               actions: [
                 if (isVisitor)
                   TextButton.icon(
-                    icon: const Icon(Icons.login, color: Color(0xFF7B40B5)),
+                    icon: const Icon(Icons.login, color: Color(0xFF98259A)),
                     label: const Text(
                       'Log In',
                       style: TextStyle(
-                        color: Color(0xFF7B40B5),
+                        color: Color(0xFF98259A),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -184,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.assessment_outlined, color: Color(0xFF7B40B5)),
+                            icon: const Icon(Icons.assessment_outlined, color: Color(0xFF98259A)),
                             tooltip: 'Professional Appraisal Portal',
                             onPressed: () {
                               Navigator.push(
@@ -230,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () => _onItemTapped(4),
                           child: CircleAvatar(
                             radius: 17,
-                            backgroundColor: const Color(0xFF90E0F3),
+                            backgroundColor: const Color(0xFF98259A),
                             backgroundImage: isValidImageUrl(photoUrl)
                                 ? NetworkImage(photoUrl!)
                                 : null,
@@ -258,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _screens[_selectedIndex.clamp(0, _screens.length - 1)],
       floatingActionButton: (!isVisitor && _selectedIndex == 0)
           ? FloatingActionButton.extended(
-              backgroundColor: const Color(0xFF7B40B5),
+              backgroundColor: const Color(0xFF98259A),
               elevation: 4,
               onPressed: () => showDialog(
                 context: context,
@@ -312,7 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
         currentIndex: _selectedIndex.clamp(0, isVisitor ? 1 : 4),
-        selectedItemColor: const Color(0xFF7B40B5),
+        selectedItemColor: const Color(0xFF98259A),
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
@@ -336,7 +327,7 @@ class VisitorPromptView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF6F9),
+      backgroundColor: const Color(0xFFFBEBFB),
       body: Center(
         child: Container(
           margin: const EdgeInsets.all(24),
@@ -353,10 +344,10 @@ class VisitorPromptView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF90E0F3).withValues(alpha: 0.15),
+                  color: const Color(0xFF98259A).withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 48, color: const Color(0xFF007799)),
+                child: Icon(icon, size: 48, color: const Color(0xFF98259A)),
               ),
               const SizedBox(height: 20),
               Text(
@@ -377,7 +368,7 @@ class VisitorPromptView extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF90E0F3),
+                    backgroundColor: const Color(0xFF98259A),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -585,7 +576,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.tune, color: Color(0xFF7B40B5)),
+                          Icon(Icons.tune, color: Color(0xFF98259A)),
                           SizedBox(width: 8),
                           Text(
                             'Marketplace Filters',
@@ -617,17 +608,17 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFF9F5FE),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+                        border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                              color: const Color(0xFF98259A).withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.pin_drop, size: 20, color: Color(0xFF7B40B5)),
+                            child: const Icon(Icons.pin_drop, size: 20, color: Color(0xFF98259A)),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -641,7 +632,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                                 Text(
                                   _currentReferenceLocation.name ??
                                       '${_currentReferenceLocation.latitude.toStringAsFixed(4)}, ${_currentReferenceLocation.longitude.toStringAsFixed(4)}',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF98259A)),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -655,7 +646,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF7B40B5),
+                              color: const Color(0xFF98259A),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Row(
@@ -685,7 +676,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                           Icon(
                             Icons.location_searching,
                             size: 18,
-                            color: Color(0xFF7B40B5),
+                            color: Color(0xFF98259A),
                           ),
                           SizedBox(width: 6),
                           Text(
@@ -700,7 +691,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                             : '${_selectedRadiusKm.toInt()} km',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF7B40B5),
+                          color: Color(0xFF98259A),
                         ),
                       ),
                     ],
@@ -711,8 +702,8 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     min: 5.0,
                     max: 100.0,
                     divisions: 19,
-                    activeColor: const Color(0xFF7B40B5),
-                    inactiveColor: Colors.purple.shade50,
+                    activeColor: const Color(0xFF98259A),
+                    inactiveColor: const Color(0xFFFBEBFB),
                     label: _selectedRadiusKm >= 100.0
                         ? 'Any'
                         : '${_selectedRadiusKm.toInt()} km',
@@ -738,7 +729,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                           style: const TextStyle(fontSize: 11),
                         ),
                         selected: isSelected,
-                        selectedColor: const Color(0xFF7B40B5),
+                        selectedColor: const Color(0xFF98259A),
                         labelStyle: TextStyle(
                           color: isSelected ? Colors.white : Colors.black87,
                         ),
@@ -775,7 +766,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       return ChoiceChip(
                         label: Text(cat),
                         selected: isSelected,
-                        selectedColor: const Color(0xFF7B40B5),
+                        selectedColor: const Color(0xFF98259A),
                         labelStyle: TextStyle(
                           color: isSelected ? Colors.white : Colors.black87,
                         ),
@@ -816,7 +807,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7B40B5),
+                            backgroundColor: const Color(0xFF98259A),
                             foregroundColor: Colors.white,
                           ),
                           onPressed: () => Navigator.pop(ctx),
@@ -878,14 +869,14 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
+                          colors: [Color(0xFF98259A), Color(0xFF6B156C)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                            color: const Color(0xFF98259A).withValues(alpha: 0.3),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -989,12 +980,12 @@ class _ItemListScreenState extends State<ItemListScreen> {
                             icon: const Icon(
                               Icons.add_card,
                               size: 16,
-                              color: Color(0xFF7B40B5),
+                              color: Color(0xFF98259A),
                             ),
                             label: const Text(
                               'Cash In',
                               style: TextStyle(
-                                color: Color(0xFF7B40B5),
+                                color: Color(0xFF98259A),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
@@ -1026,14 +1017,14 @@ class _ItemListScreenState extends State<ItemListScreen> {
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF8A56AC), Color(0xFF5B32A8)],
+                    colors: [Color(0xFF98259A), Color(0xFF6B156C)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF7B40B5).withValues(alpha: 0.25),
+                      color: const Color(0xFF98259A).withValues(alpha: 0.25),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -1105,7 +1096,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                   prefixIcon: const Icon(
                     Icons.search,
-                    color: Color(0xFF7B40B5),
+                    color: Color(0xFF98259A),
                   ),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1127,7 +1118,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                       IconButton(
                         icon: Stack(
                           children: [
-                            const Icon(Icons.tune, color: Color(0xFF7B40B5)),
+                            const Icon(Icons.tune, color: Color(0xFF98259A)),
                             if (_selectedCategory != 'All' ||
                                 _selectedRadiusKm < 100.0)
                               Positioned(
@@ -1172,7 +1163,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.2)),
+                  border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.2)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.03),
@@ -1186,13 +1177,13 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                        color: const Color(0xFF98259A).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.place,
                         size: 16,
-                        color: Color(0xFF7B40B5),
+                        color: Color(0xFF98259A),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1219,7 +1210,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                  color: const Color(0xFF98259A).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -1227,7 +1218,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                                   style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF7B40B5),
+                                    color: Color(0xFF98259A),
                                   ),
                                 ),
                               ),
@@ -1247,20 +1238,20 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                        color: const Color(0xFF98259A).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.edit_location_alt, size: 14, color: Color(0xFF7B40B5)),
+                          Icon(Icons.edit_location_alt, size: 14, color: Color(0xFF98259A)),
                           SizedBox(width: 4),
                           Text(
                             'Map Pin',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF7B40B5),
+                              color: Color(0xFF98259A),
                             ),
                           ),
                         ],
@@ -1300,11 +1291,11 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   child: ChoiceChip(
                     label: Text(cat),
                     selected: isSelected,
-                    selectedColor: const Color(0xFF7B40B5),
+                    selectedColor: const Color(0xFF98259A),
                     backgroundColor: Colors.white,
                     side: BorderSide(
                       color: isSelected
-                          ? const Color(0xFF7B40B5)
+                          ? const Color(0xFF98259A)
                           : Colors.grey.shade300,
                     ),
                     labelStyle: TextStyle(
@@ -1346,7 +1337,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   ),
                   if (_selectedRadiusKm < 100.0)
                     Chip(
-                      avatar: const Icon(Icons.location_on, size: 12, color: Color(0xFF7B40B5)),
+                      avatar: const Icon(Icons.location_on, size: 12, color: Color(0xFF98259A)),
                       label: Text(
                         'Radius: ${_selectedRadiusKm.toInt()} km (${_currentReferenceLocation.name?.split(' ').first ?? 'Custom'})',
                         style: const TextStyle(fontSize: 10),
@@ -1429,7 +1420,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: _isGridView
-                                ? const Color(0xFF7B40B5)
+                                ? const Color(0xFF98259A)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -1449,7 +1440,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: !_isGridView
-                                ? const Color(0xFF7B40B5)
+                                ? const Color(0xFF98259A)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -1489,7 +1480,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(40),
-                    child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+                    child: CircularProgressIndicator(color: Color(0xFF98259A)),
                   ),
                 );
               }
@@ -1634,7 +1625,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                                 });
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF7B40B5),
+                                backgroundColor: const Color(0xFF98259A),
                                 foregroundColor: Colors.white,
                               ),
                               child: const Text('Reset All Filters'),
@@ -1754,11 +1745,11 @@ class _ItemListScreenState extends State<ItemListScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFEFE8FA) : Colors.white,
+            color: isSelected ? const Color(0xFFFBEBFB) : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFF7B40B5)
+                  ? const Color(0xFF98259A)
                   : Colors.grey.shade300,
               width: isSelected ? 1.5 : 1,
             ),
@@ -1769,7 +1760,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
               Icon(
                 icon,
                 size: 15,
-                color: isSelected ? const Color(0xFF7B40B5) : Colors.grey[700],
+                color: isSelected ? const Color(0xFF98259A) : Colors.grey[700],
               ),
               const SizedBox(width: 4),
               Text(
@@ -1778,7 +1769,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   color: isSelected
-                      ? const Color(0xFF7B40B5)
+                      ? const Color(0xFF98259A)
                       : Colors.grey[700],
                 ),
               ),

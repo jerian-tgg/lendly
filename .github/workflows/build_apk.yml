@@ -41,6 +41,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: lendly-release-apk
+          name: orchid-release-apk
           path: build/app/outputs/flutter-apk/*.apk
           retention-days: 14

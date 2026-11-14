@@ -157,7 +157,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.lock_outline, color: Color(0xFF7B40B5)),
+            Icon(Icons.lock_outline, color: Color(0xFF98259A)),
             SizedBox(width: 8),
             Text('Login Required'),
           ],
@@ -172,7 +172,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7B40B5),
+              backgroundColor: const Color(0xFF98259A),
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -207,7 +207,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF7B40B5),
+              primary: Color(0xFF98259A),
               onPrimary: Colors.white,
               surface: Colors.white,
             ),
@@ -243,7 +243,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               Text('Please select borrow dates first.'),
             ],
           ),
-          backgroundColor: const Color(0xFF7B40B5),
+          backgroundColor: const Color(0xFF98259A),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
@@ -359,15 +359,15 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFFAF5FF), Color(0xFFF3E8FF)],
+          colors: [Color(0xFFFAF5FF), Color(0xFFFBEBFB)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.35), width: 1.5),
+        border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.35), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+            color: const Color(0xFF98259A).withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -381,10 +381,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7B40B5).withValues(alpha: 0.15),
+                  color: const Color(0xFF98259A).withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.lock_person_rounded, color: Color(0xFF7B40B5), size: 20),
+                child: const Icon(Icons.lock_person_rounded, color: Color(0xFF98259A), size: 20),
               ),
               const SizedBox(width: 10),
               const Expanded(
@@ -409,7 +409,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7B40B5),
+                  color: const Color(0xFF98259A),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Row(
@@ -436,7 +436,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.2)),
+                border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -490,14 +490,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.build_circle_outlined, size: 14, color: Color(0xFF7B40B5)),
+                    Icon(Icons.build_circle_outlined, size: 14, color: Color(0xFF98259A)),
                     SizedBox(width: 4),
                     Text('Function: 1-10', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ],
                 ),
                 Text(
                   '$fnScore / 10',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF7B40B5)),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF98259A)),
                 ),
               ],
             ),
@@ -508,7 +508,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 value: fnScore / 10.0,
                 minHeight: 8,
                 backgroundColor: Colors.grey.shade200,
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF7B40B5)),
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF98259A)),
               ),
             ),
             const SizedBox(height: 2),
@@ -564,7 +564,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               ),
               child: Text(
                 'Basis for condition: Function ($fnScore/10) + Cosmetic ($cosScore/10) → Condition: ${appraiserCondition ?? 'Certified'}',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF7B40B5)),
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF98259A)),
               ),
             ),
             const SizedBox(height: 10),
@@ -818,7 +818,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF90E0F3).withValues(alpha: 0.25),
+                          color: const Color(0xFF98259A).withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -878,7 +878,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.location_on, size: 14, color: Color(0xFF7B40B5)),
+                          const Icon(Icons.location_on, size: 14, color: Color(0xFF98259A)),
                           const SizedBox(width: 2),
                           Text(
                             LocationHelper.formatLocationWithDistance(
@@ -918,7 +918,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.sell_outlined, size: 15, color: Color(0xFF7B40B5)),
+                                  const Icon(Icons.sell_outlined, size: 15, color: Color(0xFF98259A)),
                                   const SizedBox(width: 4),
                                   Flexible(
                                     child: Text(
@@ -940,7 +940,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                       style: const TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.w800,
-                                        color: Color(0xFF7B40B5),
+                                        color: Color(0xFF98259A),
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1139,7 +1139,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           const Divider(height: 20),
                           Row(
                             children: [
-                              const Icon(Icons.business, size: 14, color: Color(0xFF7B40B5)),
+                              const Icon(Icons.business, size: 14, color: Color(0xFF98259A)),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
@@ -1211,16 +1211,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                      color: const Color(0xFF98259A).withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+                                      border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.3)),
                                     ),
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.handshake, size: 12, color: Color(0xFF7B40B5)),
+                                        Icon(Icons.handshake, size: 12, color: Color(0xFF98259A)),
                                         SizedBox(width: 4),
-                                        Text('In-Person Meetup Verified', style: TextStyle(fontSize: 10, color: Color(0xFF7B40B5), fontWeight: FontWeight.bold)),
+                                        Text('In-Person Meetup Verified', style: TextStyle(fontSize: 10, color: Color(0xFF98259A), fontWeight: FontWeight.bold)),
                                       ],
                                     ),
                                   ),
@@ -1396,10 +1396,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName),
-                              icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF7B40B5)),
-                              label: const Text('Appraisal Chat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
+                              icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF98259A)),
+                              label: const Text('Appraisal Chat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF98259A))),
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFF7B40B5)),
+                                side: const BorderSide(color: Color(0xFF98259A)),
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
@@ -1415,7 +1415,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
                               ),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF7B40B5),
+                                backgroundColor: const Color(0xFF98259A),
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
@@ -1498,7 +1498,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           ),
                           const Divider(height: 20),
                           Text(
-                            'An accredited Lendly appraiser is currently inspecting this item to verify its specifications and rate its physical condition.',
+                            'An accredited Orchid appraiser is currently inspecting this item to verify its specifications and rate its physical condition.',
                             style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.3),
                           ),
                           const SizedBox(height: 10),
@@ -1558,17 +1558,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                                color: const Color(0xFF98259A).withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.check_circle_outline, size: 16, color: Color(0xFF7B40B5)),
+                                  Icon(Icons.check_circle_outline, size: 16, color: Color(0xFF98259A)),
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'Your appraisal request is queued. An appraiser will rate your item shortly.',
-                                      style: TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF98259A), fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ],
@@ -1587,7 +1587,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF7B40B5),
+                                  backgroundColor: const Color(0xFF98259A),
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
@@ -1603,16 +1603,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFE8FA),
+                        color: const Color(0xFFFBEBFB),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+                        border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.3)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.stars_rounded, color: Color(0xFF7B40B5), size: 24),
+                              const Icon(Icons.stars_rounded, color: Color(0xFF98259A), size: 24),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -1630,7 +1630,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF7B40B5),
+                                            color: const Color(0xFF98259A),
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
@@ -1675,7 +1675,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text('Appraisal requested! Professional appraisers will review your item.'),
-                                        backgroundColor: Color(0xFF7B40B5),
+                                        backgroundColor: Color(0xFF98259A),
                                       ),
                                     );
                                     setState(() {
@@ -1690,8 +1690,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF7B40B5),
-                                  side: const BorderSide(color: Color(0xFF7B40B5)),
+                                  foregroundColor: const Color(0xFF98259A),
+                                  side: const BorderSide(color: Color(0xFF98259A)),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                               ),
@@ -1709,7 +1709,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF7B40B5),
+                                  backgroundColor: const Color(0xFF98259A),
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
@@ -1726,7 +1726,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   // DESCRIPTION SECTION
                   const Row(
                     children: [
-                      Icon(Icons.notes_rounded, color: Color(0xFF7B40B5), size: 20),
+                      Icon(Icons.notes_rounded, color: Color(0xFF98259A), size: 20),
                       SizedBox(width: 6),
                       Text(
                         'Description',
@@ -1785,12 +1785,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 22,
-                                backgroundColor: const Color(0xFFEFE8FA),
+                                backgroundColor: const Color(0xFFFBEBFB),
                                 backgroundImage: isValidImageUrl(photoUrl)
                                     ? NetworkImage(photoUrl!)
                                     : null,
                                 child: !isValidImageUrl(photoUrl)
-                                    ? const Icon(Icons.person, color: Color(0xFF7B40B5))
+                                    ? const Icon(Icons.person, color: Color(0xFF98259A))
                                     : null,
                               ),
                               const SizedBox(width: 12),
@@ -1864,13 +1864,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 _endDate = null;
                               });
                             },
-                            icon: const Icon(Icons.close, size: 16, color: Color(0xFF7B40B5)),
+                            icon: const Icon(Icons.close, size: 16, color: Color(0xFF98259A)),
                             label: const Text(
                               'Clear Date',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF7B40B5),
+                                color: Color(0xFF98259A),
                               ),
                             ),
                             style: TextButton.styleFrom(
@@ -1892,14 +1892,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: (_startDate != null && _endDate != null)
-                                ? const Color(0xFF7B40B5)
+                                ? const Color(0xFF98259A)
                                 : Colors.grey.shade300,
                             width: (_startDate != null && _endDate != null) ? 1.5 : 1,
                           ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.calendar_month, color: Color(0xFF7B40B5)),
+                            const Icon(Icons.calendar_month, color: Color(0xFF98259A)),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -1920,7 +1920,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                       '$totalDays day(s) × $priceStr = ₱${totalPrice.toStringAsFixed(0)} total',
                                       style: const TextStyle(
                                         fontSize: 12,
-                                        color: Color(0xFF7B40B5),
+                                        color: Color(0xFF98259A),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1967,7 +1967,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7B40B5),
+                          backgroundColor: const Color(0xFF98259A),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 2,
@@ -2002,7 +2002,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                color: const Color(0xFF98259A).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -2010,7 +2010,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF7B40B5),
+                                  color: Color(0xFF98259A),
                                 ),
                               ),
                             ),
@@ -2023,7 +2023,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           icon: const Icon(Icons.rate_review_outlined, size: 16),
                           label: const Text('Write Review', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7B40B5),
+                            backgroundColor: const Color(0xFF98259A),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -2121,7 +2121,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         return const Center(
                           child: Padding(
                             padding: EdgeInsets.all(16),
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7B40B5)),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF98259A)),
                           ),
                         );
                       }
@@ -2196,14 +2196,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   children: [
                                     CircleAvatar(
                                       radius: 18,
-                                      backgroundColor: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                      backgroundColor: const Color(0xFF98259A).withValues(alpha: 0.1),
                                       backgroundImage: (reviewerPhoto != null && reviewerPhoto.isNotEmpty)
                                           ? NetworkImage(reviewerPhoto)
                                           : null,
                                       child: (reviewerPhoto == null || reviewerPhoto.isEmpty)
                                           ? Text(
                                               reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : '?',
-                                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF98259A)),
                                             )
                                           : null,
                                     ),
@@ -2314,7 +2314,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         return const Center(
                           child: Padding(
                             padding: EdgeInsets.all(20),
-                            child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+                            child: CircularProgressIndicator(color: Color(0xFF98259A)),
                           ),
                         );
                       }
@@ -2388,7 +2388,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 itemPrice,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF7B40B5),
+                                  color: Color(0xFF98259A),
                                   fontSize: 13,
                                 ),
                               ),
@@ -2482,11 +2482,11 @@ class _BorrowRequestSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                  color: const Color(0xFF98259A).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.handshake_outlined,
-                    color: Color(0xFF7B40B5), size: 24),
+                    color: Color(0xFF98259A), size: 24),
               ),
               const SizedBox(width: 14),
               Column(
@@ -2565,7 +2565,7 @@ class _BorrowRequestSheet extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF7B40B5),
+                        color: Color(0xFF98259A),
                       ),
                     ),
                   ],
@@ -2630,7 +2630,7 @@ class _BorrowRequestSheet extends StatelessWidget {
                         fontSize: 15),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7B40B5),
+                    backgroundColor: const Color(0xFF98259A),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -2668,7 +2668,7 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color(0xFF7B40B5)),
+        Icon(icon, size: 16, color: const Color(0xFF98259A)),
         const SizedBox(width: 10),
         Text('$label  ',
             style:

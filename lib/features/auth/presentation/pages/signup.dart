@@ -292,7 +292,7 @@ class _SignUpPageState extends State<SignUpPage> {
             const Text('Create Account', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
-        backgroundColor: const Color(0xFF7B40B5),
+        backgroundColor: const Color(0xFF98259A),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -331,12 +331,12 @@ class _SignUpPageState extends State<SignUpPage> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: i < _currentStep
-                          ? const Color(0xFF7B40B5)
+                          ? const Color(0xFF98259A)
                           : i == _currentStep
-                              ? const Color(0xFF90E0F3)
+                              ? const Color(0xFF98259A)
                               : Colors.grey[200],
                       border: i == _currentStep
-                          ? Border.all(color: const Color(0xFF7B40B5), width: 2)
+                          ? Border.all(color: const Color(0xFF98259A), width: 2)
                           : null,
                     ),
                     child: Center(
@@ -348,7 +348,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: i == _currentStep
-                                    ? const Color(0xFF7B40B5)
+                                    ? const Color(0xFF98259A)
                                     : Colors.grey,
                               ),
                             ),
@@ -363,7 +363,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: i == _currentStep ? FontWeight.bold : FontWeight.normal,
-                        color: i == _currentStep ? const Color(0xFF7B40B5) : Colors.grey,
+                        color: i == _currentStep ? const Color(0xFF98259A) : Colors.grey,
                       ),
                     ),
                   ),
@@ -376,7 +376,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 child: Container(
                   height: 2,
                   margin: const EdgeInsets.only(bottom: 20),
-                  color: i < _currentStep ? const Color(0xFF7B40B5) : Colors.grey[300],
+                  color: i < _currentStep ? const Color(0xFF98259A) : Colors.grey[300],
                 ),
               ),
           ],
@@ -558,7 +558,7 @@ class _SignUpPageState extends State<SignUpPage> {
               color: const Color(0xFFF9F5FE),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: const Color(0xFF7B40B5).withValues(alpha: 0.35),
+                color: const Color(0xFF98259A).withValues(alpha: 0.35),
               ),
             ),
             child: Column(
@@ -569,12 +569,12 @@ class _SignUpPageState extends State<SignUpPage> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                        color: const Color(0xFF98259A).withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.pin_drop_rounded,
-                        color: Color(0xFF7B40B5),
+                        color: Color(0xFF98259A),
                         size: 20,
                       ),
                     ),
@@ -622,14 +622,14 @@ class _SignUpPageState extends State<SignUpPage> {
                                 height: 14,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Color(0xFF7B40B5),
+                                  color: Color(0xFF98259A),
                                 ),
                               )
                             : const Icon(Icons.my_location, size: 16),
                         label: const Text('Use GPS', style: TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF7B40B5),
-                          side: const BorderSide(color: Color(0xFF7B40B5)),
+                          foregroundColor: const Color(0xFF98259A),
+                          side: const BorderSide(color: Color(0xFF98259A)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -644,7 +644,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         icon: const Icon(Icons.map_outlined, size: 16),
                         label: const Text('Pin on Map', style: TextStyle(fontSize: 12)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7B40B5),
+                          backgroundColor: const Color(0xFF98259A),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -747,13 +747,13 @@ class _SignUpPageState extends State<SignUpPage> {
               children: [
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  activeThumbColor: const Color(0xFF7B40B5),
+                  activeThumbColor: const Color(0xFF98259A),
                   title: const Text(
                     'Register as a Certified Appraiser',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF7B40B5),
+                      color: Color(0xFF98259A),
                     ),
                   ),
                   subtitle: const Text(
@@ -767,18 +767,18 @@ class _SignUpPageState extends State<SignUpPage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                      color: const Color(0xFF98259A).withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline, size: 18, color: Color(0xFF7B40B5)),
+                        Icon(Icons.info_outline, size: 18, color: Color(0xFF98259A)),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Manual Verification: You will submit photos of your BIR permits or business registration papers from your profile for admin verification before appraiser status is activated.',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF5A2A94), height: 1.3),
+                            style: TextStyle(fontSize: 11, color: Color(0xFF6B156C), height: 1.3),
                           ),
                         ),
                       ],
@@ -844,10 +844,10 @@ class _SignUpPageState extends State<SignUpPage> {
                 onPressed: _cancel,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: const BorderSide(color: Color(0xFF7B40B5)),
+                  side: const BorderSide(color: Color(0xFF98259A)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('Back', style: TextStyle(color: Color(0xFF7B40B5))),
+                child: const Text('Back', style: TextStyle(color: Color(0xFF98259A))),
               ),
             ),
             const SizedBox(width: 12),
@@ -857,7 +857,7 @@ class _SignUpPageState extends State<SignUpPage> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : _continue,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7B40B5),
+                backgroundColor: const Color(0xFF98259A),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
@@ -910,7 +910,7 @@ class _SignUpPageState extends State<SignUpPage> {
       validator: validator,
       onTap: onTap,
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: const Color(0xFF7B40B5)),
+        prefixIcon: Icon(icon, color: const Color(0xFF98259A)),
         hintText: hint,
         filled: true,
         fillColor: Colors.grey[100],
@@ -920,7 +920,7 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF7B40B5), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFF98259A), width: 1.5),
         ),
         suffixIcon: suffixIcon,
       ),
@@ -937,7 +937,7 @@ class _SignUpPageState extends State<SignUpPage> {
     return DropdownButtonFormField<String>(
       initialValue: value,
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: const Color(0xFF7B40B5)),
+        prefixIcon: Icon(icon, color: const Color(0xFF98259A)),
         labelText: label,
         filled: true,
         fillColor: Colors.grey[100],
@@ -947,7 +947,7 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF7B40B5), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFF98259A), width: 1.5),
         ),
       ),
       items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),

@@ -113,7 +113,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Login'),
-        backgroundColor: const Color(0xFF007799),
+        backgroundColor: const Color(0xFF98259A),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -138,13 +138,13 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.admin_panel_settings,
-                    size: 56, color: Color(0xFF007799)),
+                    size: 56, color: Color(0xFF98259A)),
                 const SizedBox(height: 16),
                 const Text('Admin Portal',
                     style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF007799))),
+                        color: Color(0xFF98259A))),
                 const SizedBox(height: 24),
                 TextField(
                   controller: _usernameController,
@@ -152,7 +152,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                     prefixIcon: Icon(Icons.person),
                     hintText: 'Username',
                     filled: true,
-                    fillColor: Color(0xFFEFF6F9),
+                    fillColor: Color(0xFFFBEBFB),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(10)),
                       borderSide: BorderSide.none,
@@ -167,7 +167,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                     prefixIcon: const Icon(Icons.lock),
                     hintText: 'Password',
                     filled: true,
-                    fillColor: const Color(0xFFEFF6F9),
+                    fillColor: const Color(0xFFFBEBFB),
                     border: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(10)),
                       borderSide: BorderSide.none,
@@ -185,7 +185,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                   child: ElevatedButton(
                     onPressed: _loading ? null : _login,
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF007799),
+                        backgroundColor: const Color(0xFF98259A),
                         padding: const EdgeInsets.symmetric(vertical: 16)),
                     child: _loading
                         ? const CircularProgressIndicator(color: Colors.white)
@@ -196,11 +196,11 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                 const SizedBox(height: 16),
                 TextButton.icon(
                   onPressed: _loading ? null : _navigateToRegularLogin,
-                  icon: const Icon(Icons.arrow_back, size: 16, color: Color(0xFF007799)),
+                  icon: const Icon(Icons.arrow_back, size: 16, color: Color(0xFF98259A)),
                   label: const Text(
                     'Back to User Login',
                     style: TextStyle(
-                      color: Color(0xFF007799),
+                      color: Color(0xFF98259A),
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),

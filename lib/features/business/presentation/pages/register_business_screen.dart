@@ -245,7 +245,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Row(
             children: [
-              Icon(Icons.check_circle, color: Color(0xFF7B40B5), size: 28),
+              Icon(Icons.check_circle, color: Color(0xFF98259A), size: 28),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -267,17 +267,17 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFE8FA),
+                  color: const Color(0xFFFBEBFB),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.shield_outlined, color: Color(0xFF7B40B5), size: 20),
+                    Icon(Icons.shield_outlined, color: Color(0xFF98259A), size: 20),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Our administrators will manually verify your BIR permits. You can monitor the review status on your profile.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF5A2A94)),
+                        style: TextStyle(fontSize: 12, color: Color(0xFF6B156C)),
                       ),
                     ),
                   ],
@@ -292,7 +292,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                 Navigator.pop(context, true);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7B40B5),
+                backgroundColor: const Color(0xFF98259A),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
@@ -341,14 +341,14 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF5A2A94), Color(0xFF7B40B5)],
+                        colors: [Color(0xFF6B156C), Color(0xFF98259A)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF7B40B5).withValues(alpha: 0.25),
+                          color: const Color(0xFF98259A).withValues(alpha: 0.25),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -402,7 +402,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                         decoration: InputDecoration(
                           labelText: 'Business / Agency Name *',
                           hintText: 'e.g. Apex Valuations & Lending Services',
-                          prefixIcon: const Icon(Icons.business, color: Color(0xFF7B40B5)),
+                          prefixIcon: const Icon(Icons.business, color: Color(0xFF98259A)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         validator: (val) =>
@@ -414,7 +414,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                         decoration: InputDecoration(
                           labelText: 'BIR TIN / Business Registration No. *',
                           hintText: 'e.g. TIN: 009-876-543-000 or APP-2026-XXXX',
-                          prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF7B40B5)),
+                          prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF98259A)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         validator: (val) =>
@@ -425,7 +425,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                         initialValue: _selectedSpecialization,
                         decoration: InputDecoration(
                           labelText: 'Primary Specialization *',
-                          prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF7B40B5)),
+                          prefixIcon: const Icon(Icons.category_outlined, color: Color(0xFF98259A)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         items: _specializations
@@ -442,7 +442,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                         decoration: InputDecoration(
                           labelText: 'Business Phone / Mobile *',
                           hintText: 'e.g. +63 917 123 4567',
-                          prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF7B40B5)),
+                          prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF98259A)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         validator: (val) =>
@@ -454,7 +454,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                         decoration: InputDecoration(
                           labelText: 'Business Address / City *',
                           hintText: 'e.g. 45 Rizal Avenue, Cebu City',
-                          prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFF7B40B5)),
+                          prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFF98259A)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         validator: (val) =>
@@ -480,7 +480,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                         isExpanded: true,
                         decoration: InputDecoration(
                           labelText: 'Document Type',
-                          prefixIcon: const Icon(Icons.description_outlined, color: Color(0xFF7B40B5)),
+                          prefixIcon: const Icon(Icons.description_outlined, color: Color(0xFF98259A)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         items: _permitTypes
@@ -496,14 +496,14 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3E8FF),
+                          color: const Color(0xFFFBEBFB),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+                          border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.3)),
                         ),
                         child: const Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.camera_alt_outlined, color: Color(0xFF7B40B5), size: 20),
+                            Icon(Icons.camera_alt_outlined, color: Color(0xFF98259A), size: 20),
                             SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -523,10 +523,10 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: _pickFromCamera,
-                              icon: const Icon(Icons.photo_camera, color: Color(0xFF7B40B5)),
-                              label: const Text('Take Photo', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
+                              icon: const Icon(Icons.photo_camera, color: Color(0xFF98259A)),
+                              label: const Text('Take Photo', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF98259A))),
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFF7B40B5), width: 1.5),
+                                side: const BorderSide(color: Color(0xFF98259A), width: 1.5),
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
@@ -539,7 +539,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                               icon: const Icon(Icons.photo_library, color: Colors.white),
                               label: const Text('From Gallery', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF7B40B5),
+                                backgroundColor: const Color(0xFF98259A),
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
@@ -643,7 +643,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7B40B5),
+                        backgroundColor: const Color(0xFF98259A),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 3,
                       ),
@@ -669,7 +669,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const CircularProgressIndicator(color: Color(0xFF7B40B5)),
+                      const CircularProgressIndicator(color: Color(0xFF98259A)),
                       const SizedBox(height: 18),
                       Text(
                         _loadingMessage,
@@ -710,7 +710,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: const Color(0xFF7B40B5), size: 20),
+              Icon(icon, color: const Color(0xFF98259A), size: 20),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -749,7 +749,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
             height: 100,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF7B40B5), width: 1.5),
+              border: Border.all(color: const Color(0xFF98259A), width: 1.5),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(11),
@@ -800,7 +800,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
           height: 100,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.purple.shade300, width: 1.5),
+            border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.5), width: 1.5),
             color: Colors.grey[200],
           ),
           child: FutureBuilder<Widget>(

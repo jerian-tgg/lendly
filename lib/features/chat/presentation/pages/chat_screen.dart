@@ -456,7 +456,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Help us keep Lendly safe and trusted. What would you like to report?',
+                'Help us keep Orchid safe and trusted. What would you like to report?',
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               const SizedBox(height: 16),
@@ -605,7 +605,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Help the Lendly community by sharing a review and rating for "$itemName".',
+                'Help the Orchid community by sharing a review and rating for "$itemName".',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Colors.grey[600]),
               ),
@@ -625,7 +625,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   icon: const Icon(Icons.star, color: Colors.white, size: 18),
                   label: const Text('Review This Item', style: TextStyle(fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7B40B5),
+                    backgroundColor: const Color(0xFF98259A),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -700,10 +700,10 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
           backgroundColor: action == 'handoff'
-              ? const Color(0xFF3498DB)
+              ? const Color(0xFF98259A)
               : action == 'appraisal_meetup'
                   ? const Color(0xFF059669)
-                  : const Color(0xFF7B40B5),
+                  : const Color(0xFF98259A),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           duration: const Duration(seconds: 3),
@@ -884,7 +884,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               Text(
-                                effectiveItemId.isNotEmpty ? itemName : 'Lendly Chat',
+                                effectiveItemId.isNotEmpty ? itemName : 'Orchid Chat',
                                 style: const TextStyle(
                                     color: Colors.black45, fontSize: 11),
                                 maxLines: 1,
@@ -958,7 +958,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           value: 'review_item',
                           child: Row(
                             children: [
-                              Icon(Icons.rate_review_outlined, color: Color(0xFF7B40B5), size: 18),
+                              Icon(Icons.rate_review_outlined, color: Color(0xFF98259A), size: 18),
                               SizedBox(width: 8),
                               Text('Rate & Review Item'),
                             ],
@@ -969,7 +969,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           value: 'view_item',
                           child: Row(
                             children: [
-                              Icon(Icons.inventory_2_outlined, color: Color(0xFF7B40B5), size: 18),
+                              Icon(Icons.inventory_2_outlined, color: Color(0xFF98259A), size: 18),
                               SizedBox(width: 8),
                               Text('View Item Details'),
                             ],
@@ -1000,7 +1000,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
               body: !convoSnap.hasData
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF7B40B5)))
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF98259A)))
                   : Column(
                       children: [
                         // Pinned header card (Appraisal vs Borrow Request)
@@ -1060,7 +1060,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               if (!msgSnap.hasData) {
                                 return const Center(
                                     child: CircularProgressIndicator(
-                                        color: Color(0xFF7B40B5)));
+                                        color: Color(0xFF98259A)));
                               }
 
                               final messages = msgSnap.data!.docs;
@@ -1360,10 +1360,10 @@ class _BorrowRequestCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                    color: const Color(0xFF98259A).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.inventory_2_outlined, size: 22, color: Color(0xFF7B40B5)),
+                  child: const Icon(Icons.inventory_2_outlined, size: 22, color: Color(0xFF98259A)),
                 ),
               const SizedBox(width: 10),
               Expanded(
@@ -1398,7 +1398,7 @@ class _BorrowRequestCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF7B40B5),
+                              color: Color(0xFF98259A),
                             ),
                           ),
                       ],
@@ -1530,14 +1530,14 @@ class _BorrowRequestCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF7B40B5)),
+                        Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF98259A)),
                         SizedBox(width: 4),
                         Text(
                           'View Listing',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF7B40B5),
+                            color: Color(0xFF98259A),
                           ),
                         ),
                       ],
@@ -1638,11 +1638,11 @@ class _BorrowRequestMessage extends StatelessWidget {
             const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
           color: isMe
-              ? const Color(0xFF7B40B5).withValues(alpha: 0.08)
+              ? const Color(0xFF98259A).withValues(alpha: 0.08)
               : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-              color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+              color: const Color(0xFF98259A).withValues(alpha: 0.3)),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -1657,13 +1657,13 @@ class _BorrowRequestMessage extends StatelessWidget {
             const Row(
               children: [
                 Icon(Icons.handshake_outlined,
-                    size: 16, color: Color(0xFF7B40B5)),
+                    size: 16, color: Color(0xFF98259A)),
                 SizedBox(width: 6),
                 Text('Borrow Request',
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF7B40B5))),
+                        color: Color(0xFF98259A))),
               ],
             ),
             const SizedBox(height: 10),
@@ -1689,7 +1689,7 @@ class _BorrowRequestMessage extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF7B40B5))),
+                        color: Color(0xFF98259A))),
               ],
             ),
             if (onViewItem != null || onReviewItem != null) ...[
@@ -1703,7 +1703,7 @@ class _BorrowRequestMessage extends StatelessWidget {
                       icon: const Icon(Icons.open_in_new, size: 13),
                       label: const Text('View Listing', style: TextStyle(fontSize: 11)),
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF7B40B5),
+                        foregroundColor: const Color(0xFF98259A),
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       ),
@@ -1715,7 +1715,7 @@ class _BorrowRequestMessage extends StatelessWidget {
                       icon: const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
                       label: const Text('Review', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF7B40B5),
+                        foregroundColor: const Color(0xFF98259A),
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       ),
@@ -1821,7 +1821,7 @@ class _ChatBubble extends StatelessWidget {
                   vertical: 3, horizontal: 6),
               decoration: BoxDecoration(
                 color: isMe
-                    ? const Color(0xFF7B40B5)
+                    ? const Color(0xFF98259A)
                     : Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
@@ -1922,7 +1922,7 @@ class _StatusBar extends StatelessWidget {
         : isFullyDone
             ? const Color(0xFF2ECC71)
             : isApproved
-                ? (contractSigned ? const Color(0xFF2E7D32) : const Color(0xFF7B40B5))
+                ? (contractSigned ? const Color(0xFF2E7D32) : const Color(0xFF98259A))
                 : const Color(0xFFE67E22);
 
     return Container(
@@ -2063,7 +2063,7 @@ class _QrActionPanel extends StatelessWidget {
                       : 'Confirm Handoff',
                   sublabel: 'Item exchange',
                   done: handoffDone,
-                  color: const Color(0xFF3498DB),
+                  color: const Color(0xFF98259A),
                   onTap:
                       handoffDone ? null : onConfirmHandoff,
                 ),
@@ -2077,7 +2077,7 @@ class _QrActionPanel extends StatelessWidget {
                       : 'Confirm Return',
                   sublabel: 'Item returned',
                   done: returnDone,
-                  color: const Color(0xFF7B40B5),
+                  color: const Color(0xFF98259A),
                   onTap: (!handoffDone || returnDone)
                       ? null
                       : onConfirmReturn,
@@ -2230,7 +2230,7 @@ class _CompletedReviewPanel extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: hasReviewed
-                    ? [const Color(0xFFF3E8FF), const Color(0xFFEDE9FE)]
+                    ? [const Color(0xFFFBEBFB), const Color(0xFFEDE9FE)]
                     : [const Color(0xFFFFFBEB), const Color(0xFFFEF3C7)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -2238,7 +2238,7 @@ class _CompletedReviewPanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: hasReviewed
-                    ? const Color(0xFF7B40B5).withValues(alpha: 0.3)
+                    ? const Color(0xFF98259A).withValues(alpha: 0.3)
                     : Colors.amber.shade300,
               ),
               boxShadow: [
@@ -2259,7 +2259,7 @@ class _CompletedReviewPanel extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: hasReviewed ? const Color(0xFF7B40B5) : Colors.amber.shade700,
+                        color: hasReviewed ? const Color(0xFF98259A) : Colors.amber.shade700,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -2288,7 +2288,7 @@ class _CompletedReviewPanel extends StatelessWidget {
                                 : 'Rate "$itemName" to help the community.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: hasReviewed ? Colors.purple.shade900 : Colors.brown.shade800,
+                              color: hasReviewed ? const Color(0xFF6B156C) : Colors.brown.shade800,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -2302,7 +2302,7 @@ class _CompletedReviewPanel extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.4)),
+                          border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.4)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -2314,7 +2314,7 @@ class _CompletedReviewPanel extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF7B40B5),
+                                color: Color(0xFF98259A),
                               ),
                             ),
                           ],
@@ -2355,7 +2355,7 @@ class _CompletedReviewPanel extends StatelessWidget {
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: hasReviewed ? const Color(0xFF7B40B5) : Colors.amber.shade800,
+                          backgroundColor: hasReviewed ? const Color(0xFF98259A) : Colors.amber.shade800,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           elevation: 0,
@@ -2395,7 +2395,7 @@ class _CompletedReviewPanel extends StatelessWidget {
               border: Border.all(
                 color: hasReviewed
                     ? const Color(0xFF2ECC71).withValues(alpha: 0.4)
-                    : const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                    : const Color(0xFF98259A).withValues(alpha: 0.3),
               ),
               boxShadow: [
                 BoxShadow(
@@ -2416,12 +2416,12 @@ class _CompletedReviewPanel extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: hasReviewed
                             ? const Color(0xFF2ECC71).withValues(alpha: 0.15)
-                            : const Color(0xFF7B40B5).withValues(alpha: 0.15),
+                            : const Color(0xFF98259A).withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         hasReviewed ? Icons.verified_user : Icons.person_pin_rounded,
-                        color: hasReviewed ? const Color(0xFF2ECC71) : const Color(0xFF7B40B5),
+                        color: hasReviewed ? const Color(0xFF2ECC71) : const Color(0xFF98259A),
                         size: 20,
                       ),
                     ),
@@ -2450,7 +2450,7 @@ class _CompletedReviewPanel extends StatelessWidget {
                       icon: Icon(hasReviewed ? Icons.edit_outlined : Icons.star_rate_rounded, size: 16),
                       label: Text(hasReviewed ? 'Edit' : 'Rate'),
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF7B40B5),
+                        foregroundColor: const Color(0xFF98259A),
                         textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                     ),
@@ -2511,7 +2511,7 @@ class _MessageInput extends StatelessWidget {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: Color(0xFF7B40B5), width: 1.5),
+                  borderSide: const BorderSide(color: Color(0xFF98259A), width: 1.5),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 10),
@@ -2526,7 +2526,7 @@ class _MessageInput extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: const BoxDecoration(
-                color: Color(0xFF7B40B5),
+                color: Color(0xFF98259A),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.send_rounded,
@@ -2603,11 +2603,11 @@ class _ContractSigningPanel extends StatelessWidget {
         border: Border.all(
           color: iHaveSigned
               ? Colors.orange.withValues(alpha: 0.5)
-              : const Color(0xFF7B40B5).withValues(alpha: 0.4),
+              : const Color(0xFF98259A).withValues(alpha: 0.4),
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+            color: const Color(0xFF98259A).withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -2621,12 +2621,12 @@ class _ContractSigningPanel extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                  color: const Color(0xFF98259A).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
                   Icons.description_outlined,
-                  color: Color(0xFF7B40B5),
+                  color: Color(0xFF98259A),
                   size: 16,
                 ),
               ),
@@ -2653,7 +2653,7 @@ class _ContractSigningPanel extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEDE7F6),
+                  color: const Color(0xFFFBEBFB),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
@@ -2661,7 +2661,7 @@ class _ContractSigningPanel extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 8,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF7B40B5),
+                    color: Color(0xFF98259A),
                   ),
                 ),
               ),
@@ -2697,7 +2697,7 @@ class _ContractSigningPanel extends StatelessWidget {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: iHaveSigned ? Colors.orange : const Color(0xFF7B40B5),
+                backgroundColor: iHaveSigned ? Colors.orange : const Color(0xFF98259A),
                 padding: const EdgeInsets.symmetric(vertical: 11),
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -2791,7 +2791,7 @@ class _AppraisalHeaderCard extends StatelessWidget {
         ? const Color(0xFF059669)
         : isMeetupConfirmed
             ? const Color(0xFF0284C7)
-            : const Color(0xFF7B40B5);
+            : const Color(0xFF98259A);
 
     final statusLabel = isAppraisalCompleted
         ? '✓ Certified'
@@ -2841,10 +2841,10 @@ class _AppraisalHeaderCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                    color: const Color(0xFF98259A).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.verified_outlined, size: 22, color: Color(0xFF7B40B5)),
+                  child: const Icon(Icons.verified_outlined, size: 22, color: Color(0xFF98259A)),
                 ),
               const SizedBox(width: 10),
               Expanded(
@@ -2969,11 +2969,11 @@ class _AppraisalHeaderCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF7B40B5)),
+                        Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF98259A)),
                         SizedBox(width: 4),
                         Text(
                           'View Item Listing',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5)),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF98259A)),
                         ),
                       ],
                     ),
@@ -3022,7 +3022,7 @@ class _AppraisalStepIndicator extends StatelessWidget {
     final color = done
         ? const Color(0xFF059669)
         : active
-            ? const Color(0xFF7B40B5)
+            ? const Color(0xFF98259A)
             : Colors.grey;
 
     return Row(
@@ -3089,9 +3089,9 @@ class _AppraisalStatusBar extends StatelessWidget {
           ? 'Physical meetup verified! Inspect the item and complete the rating below.'
           : 'Physical meetup verified! The appraiser is now inspecting your item.';
     } else {
-      bg = const Color(0xFFF3E8FF);
+      bg = const Color(0xFFFBEBFB);
       icon = Icons.qr_code_scanner_rounded;
-      fg = const Color(0xFF7B40B5);
+      fg = const Color(0xFF98259A);
       label = 'Agree where to meet in person, then scan QR code together to confirm meetup.';
     }
 
@@ -3228,9 +3228,9 @@ class _AppraisalRequestMessage extends StatelessWidget {
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF7B40B5).withValues(alpha: 0.08) : Colors.white,
+          color: isMe ? const Color(0xFF98259A).withValues(alpha: 0.08) : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+          border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.3)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -3245,14 +3245,14 @@ class _AppraisalRequestMessage extends StatelessWidget {
           children: [
             const Row(
               children: [
-                Icon(Icons.verified_outlined, size: 16, color: Color(0xFF7B40B5)),
+                Icon(Icons.verified_outlined, size: 16, color: Color(0xFF98259A)),
                 SizedBox(width: 6),
                 Text(
                   'Official Appraisal Request',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF7B40B5),
+                    color: Color(0xFF98259A),
                   ),
                 ),
               ],
@@ -3274,7 +3274,7 @@ class _AppraisalRequestMessage extends StatelessWidget {
                   icon: const Icon(Icons.open_in_new, size: 13),
                   label: const Text('View Listing', style: TextStyle(fontSize: 11)),
                   style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF7B40B5),
+                    foregroundColor: const Color(0xFF98259A),
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   ),

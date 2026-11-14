@@ -154,7 +154,7 @@ class _DocumentViewerDialogState extends State<DocumentViewerDialog> {
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
                       return const Center(
-                        child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+                        child: CircularProgressIndicator(color: Color(0xFF98259A)),
                       );
                     },
                     errorBuilder: (context, error, stackTrace) {

@@ -32,7 +32,7 @@ class _AdminReportsPageState extends State<AdminReportsPage>
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF007799),
+        backgroundColor: const Color(0xFF98259A),
         title: const Text('Reports',
             style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -74,7 +74,7 @@ class _ReportList extends StatelessWidget {
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF007799)));
+              child: CircularProgressIndicator(color: Color(0xFF98259A)));
         }
         if (!snap.hasData || snap.data!.docs.isEmpty) {
           return Center(
@@ -297,7 +297,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
     final data = widget.data;
     final mediaUrls = List<String>.from(data['mediaUrls'] ?? []);
     final isPending = data['status'] == 'pending';
-    final accent = const Color(0xFF007799);
+    final accent = const Color(0xFF98259A);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.9,

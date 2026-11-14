@@ -50,7 +50,7 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
           'Admin Wallet & Transaction Ledger',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17),
         ),
-        backgroundColor: const Color(0xFF007799),
+        backgroundColor: const Color(0xFF98259A),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -147,7 +147,7 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
                                 title: '10% Commissions',
                                 value: _formatCurrency(totalCommission),
                                 icon: Icons.pie_chart_rounded,
-                                color: const Color(0xFF007799),
+                                color: const Color(0xFF98259A),
                                 subtitle: 'Collected platform fees',
                               ),
                             ),
@@ -164,7 +164,7 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
                                 title: 'Active Escrow',
                                 value: _formatCurrency(activeEscrowVolume),
                                 icon: Icons.lock_clock_rounded,
-                                color: const Color(0xFF7B40B5),
+                                color: const Color(0xFF98259A),
                                 subtitle: '$activeEscrowCount active hold(s)',
                               ),
                             ),
@@ -190,7 +190,7 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: const Color(0xFF007799).withValues(alpha: 0.2),
+                              color: const Color(0xFF98259A).withValues(alpha: 0.2),
                             ),
                             boxShadow: const [
                               BoxShadow(
@@ -203,7 +203,7 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
                           child: const Row(
                             children: [
                               Icon(Icons.verified_user_outlined,
-                                  color: Color(0xFF007799), size: 22),
+                                  color: Color(0xFF98259A), size: 22),
                               SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -257,7 +257,7 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
                                     child: Padding(
                                       padding: EdgeInsets.all(40),
                                       child: CircularProgressIndicator(
-                                          color: Color(0xFF007799)),
+                                          color: Color(0xFF98259A)),
                                     ),
                                   );
                                 }
@@ -323,7 +323,7 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
                   setState(() => _selectedFilter = f['key']!);
                 }
               },
-              selectedColor: const Color(0xFF007799),
+              selectedColor: const Color(0xFF98259A),
               backgroundColor: Colors.white,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : Colors.black87,
@@ -334,7 +334,7 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
                 borderRadius: BorderRadius.circular(10),
                 side: BorderSide(
                   color: isSelected
-                      ? const Color(0xFF007799)
+                      ? const Color(0xFF98259A)
                       : Colors.grey.shade300,
                 ),
               ),
@@ -495,14 +495,14 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
     switch (type) {
       case 'escrow_hold':
         icon = Icons.lock_clock_outlined;
-        accentColor = const Color(0xFF7B40B5);
+        accentColor = const Color(0xFF98259A);
         title = 'Escrow Hold ($itemName)';
         badgeText = status == 'SETTLED' ? 'HOLD SETTLED' : 'ESCROW HOLD';
         amountPrefix = '';
         break;
       case 'lender_payout':
         icon = Icons.payments_outlined;
-        accentColor = const Color(0xFF007799);
+        accentColor = const Color(0xFF98259A);
         title = 'User Payout ($itemName)';
         badgeText = '90% PAYOUT';
         amountPrefix = '';

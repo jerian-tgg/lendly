@@ -31,9 +31,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Lendly',
+      title: 'Orchid',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF98259A),
+          primary: const Color(0xFF98259A),
+        ),
+        primaryColor: const Color(0xFF98259A),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF98259A),
+          foregroundColor: Colors.white,
+        ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const AuthWrapper(),

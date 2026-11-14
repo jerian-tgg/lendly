@@ -23,7 +23,8 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Borrowed Items (Records)"),
-        backgroundColor: const Color(0xFF90E0F3),
+        backgroundColor: const Color(0xFF98259A),
+        foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -168,7 +169,7 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
       icon = Icons.payment_outlined;
     } else if (!isReceived) {
       label = 'Payment Secured • Awaiting Handover';
-      color = const Color(0xFF3498DB);
+      color = const Color(0xFF98259A);
       icon = Icons.handshake_outlined;
     } else if (!isReturned) {
       label = 'Rental Active • Item in Custody';
@@ -176,7 +177,7 @@ class _BorrowedItemsScreenState extends State<BorrowedItemsScreen> {
       icon = Icons.timelapse;
     } else {
       label = 'Returned • Pending Return Confirmation';
-      color = const Color(0xFF7B40B5);
+      color = const Color(0xFF98259A);
       icon = Icons.published_with_changes;
     }
 

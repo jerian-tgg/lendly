@@ -111,7 +111,7 @@ class _TrustScoreCardState extends State<TrustScoreCard> {
                                     height: 16,
                                     child: CircularProgressIndicator(strokeWidth: 2),
                                   )
-                                : const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF7B40B5)),
+                                : const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF98259A)),
                             tooltip: 'Recalculate Score',
                             onPressed: _isRecalculating ? null : _handleRecalculate,
                           ),
@@ -233,7 +233,7 @@ class _TrustScoreCardState extends State<TrustScoreCard> {
                       Icon(
                         _isExpanded ? Icons.tune_rounded : Icons.analytics_outlined,
                         size: 16,
-                        color: const Color(0xFF7B40B5),
+                        color: const Color(0xFF98259A),
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -241,14 +241,14 @@ class _TrustScoreCardState extends State<TrustScoreCard> {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF7B40B5),
+                          color: Color(0xFF98259A),
                         ),
                       ),
                     ],
                   ),
                   Icon(
                     _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                    color: const Color(0xFF7B40B5),
+                    color: const Color(0xFF98259A),
                   ),
                 ],
               ),
@@ -444,7 +444,7 @@ class _TrustScoreCardState extends State<TrustScoreCard> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Icons.shield_outlined, color: Color(0xFF7B40B5)),
+            Icon(Icons.shield_outlined, color: Color(0xFF98259A)),
             SizedBox(width: 8),
             Text('About Trust Score', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
@@ -484,7 +484,7 @@ class _TrustScoreCardState extends State<TrustScoreCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Got it', style: TextStyle(color: Color(0xFF7B40B5), fontWeight: FontWeight.bold)),
+            child: const Text('Got it', style: TextStyle(color: Color(0xFF98259A), fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -503,7 +503,7 @@ class _TrustScoreCardState extends State<TrustScoreCard> {
                   ? 'Trust Score updated: ${res['trustScore']}/100'
                   : 'Trust score refreshed.',
             ),
-            backgroundColor: const Color(0xFF7B40B5),
+            backgroundColor: const Color(0xFF98259A),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -536,7 +536,7 @@ class _TrustScoreCardState extends State<TrustScoreCard> {
       return _TrustScoreTier(
         label: 'Very Good Standing',
         description: 'Trusted peer with solid transaction history and reliable communication.',
-        color: const Color(0xFF7B40B5),
+        color: const Color(0xFF98259A),
         icon: Icons.verified_rounded,
       );
     } else if (score >= 60) {
@@ -591,7 +591,7 @@ class _ExplainerBullet extends StatelessWidget {
       children: [
         const Padding(
           padding: EdgeInsets.only(top: 4),
-          child: Icon(Icons.circle, size: 6, color: Color(0xFF7B40B5)),
+          child: Icon(Icons.circle, size: 6, color: Color(0xFF98259A)),
         ),
         const SizedBox(width: 8),
         Expanded(

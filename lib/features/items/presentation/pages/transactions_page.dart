@@ -73,9 +73,9 @@ class _TransactionsPageState extends State<TransactionsPage>
         ),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: const Color(0xFF7B40B5),
+          labelColor: const Color(0xFF98259A),
           unselectedLabelColor: Colors.grey,
-          indicatorColor: const Color(0xFF7B40B5),
+          indicatorColor: const Color(0xFF98259A),
           indicatorWeight: 3,
           tabs: const [
             Tab(text: 'Borrow'),
@@ -93,7 +93,7 @@ class _TransactionsPageState extends State<TransactionsPage>
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+              child: CircularProgressIndicator(color: Color(0xFF98259A)),
             );
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -176,13 +176,13 @@ class _TransactionsPageState extends State<TransactionsPage>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+              color: const Color(0xFF98259A).withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.receipt_long_outlined,
               size: 56,
-              color: Color(0xFF7B40B5),
+              color: Color(0xFF98259A),
             ),
           ),
           const SizedBox(height: 16),
@@ -726,8 +726,8 @@ class _TransactionCard extends StatelessWidget {
           icon: const Icon(Icons.chat_bubble_outline, size: 13),
           label: const Text('Chat', style: TextStyle(fontSize: 11)),
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF7B40B5),
-            side: const BorderSide(color: Color(0xFF7B40B5)),
+            foregroundColor: const Color(0xFF98259A),
+            side: const BorderSide(color: Color(0xFF98259A)),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             minimumSize: Size.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -749,7 +749,7 @@ class _TransactionCard extends StatelessWidget {
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+        child: CircularProgressIndicator(color: Color(0xFF98259A)),
       ),
     );
 
@@ -820,7 +820,7 @@ class _TransactionCard extends StatelessWidget {
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+        child: CircularProgressIndicator(color: Color(0xFF98259A)),
       ),
     );
 
@@ -915,7 +915,7 @@ class _TransactionCard extends StatelessWidget {
   Widget _placeholder() => Container(
         width: 56,
         height: 56,
-        color: const Color(0xFFEFF6F9),
+        color: const Color(0xFFFBEBFB),
         child: const Icon(Icons.image_not_supported_outlined,
             color: Colors.black26, size: 28),
       );
@@ -974,7 +974,7 @@ class _RoleChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color =
-        isLender ? const Color(0xFF7B40B5) : const Color(0xFF3498DB);
+        isLender ? const Color(0xFF98259A) : const Color(0xFF98259A);
     final label = isLender ? 'You: Lender' : 'You: Borrower';
     final icon =
         isLender ? Icons.handshake_outlined : Icons.shopping_bag_outlined;
@@ -1014,9 +1014,9 @@ class _ProgressStepper extends StatelessWidget {
   static const _labels = ['Paid', 'Received', 'Returned', 'Confirmed'];
   static const _colors = [
     Color(0xFF2ECC71),
-    Color(0xFF3498DB),
+    Color(0xFF98259A),
     Color(0xFFE67E22),
-    Color(0xFF7B40B5),
+    Color(0xFF98259A),
   ];
 
   @override
@@ -1230,8 +1230,8 @@ class _StatusBadge extends StatelessWidget {
         : step == 0
             ? Colors.orange
             : step == 1
-                ? const Color(0xFF3498DB)
-                : const Color(0xFF7B40B5);
+                ? const Color(0xFF98259A)
+                : const Color(0xFF98259A);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

@@ -51,12 +51,12 @@ class ConversationScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                color: const Color(0xFF98259A).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.chat_bubble_outline_rounded,
-                color: Color(0xFF7B40B5),
+                color: Color(0xFF98259A),
                 size: 20,
               ),
             ),
@@ -77,7 +77,7 @@ class ConversationScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+              child: CircularProgressIndicator(color: Color(0xFF98259A)),
             );
           }
 
@@ -116,13 +116,13 @@ class ConversationScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                        color: const Color(0xFF98259A).withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.forum_outlined,
                         size: 52,
-                        color: Color(0xFF7B40B5),
+                        color: Color(0xFF98259A),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -207,7 +207,7 @@ class ConversationScreen extends StatelessWidget {
                                 // Avatar
                                 CircleAvatar(
                                   radius: 25,
-                                  backgroundColor: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                  backgroundColor: const Color(0xFF98259A).withValues(alpha: 0.1),
                                   backgroundImage: isValidImageUrl(profilePicUrl)
                                       ? NetworkImage(profilePicUrl!)
                                       : null,
@@ -215,7 +215,7 @@ class ConversationScreen extends StatelessWidget {
                                       ? Text(
                                           username.isNotEmpty ? username[0].toUpperCase() : '?',
                                           style: const TextStyle(
-                                            color: Color(0xFF7B40B5),
+                                            color: Color(0xFF98259A),
                                             fontWeight: FontWeight.bold,
                                             fontSize: 18,
                                           ),
@@ -264,7 +264,7 @@ class ConversationScreen extends StatelessWidget {
                                               decoration: BoxDecoration(
                                                 color: convo.conversationType == 'appraisal'
                                                     ? const Color(0xFF059669).withValues(alpha: 0.12)
-                                                    : const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                                    : const Color(0xFF98259A).withValues(alpha: 0.1),
                                                 borderRadius: BorderRadius.circular(4),
                                               ),
                                               child: Row(
@@ -277,7 +277,7 @@ class ConversationScreen extends StatelessWidget {
                                                     size: 10,
                                                     color: convo.conversationType == 'appraisal'
                                                         ? const Color(0xFF059669)
-                                                        : const Color(0xFF7B40B5),
+                                                        : const Color(0xFF98259A),
                                                   ),
                                                   const SizedBox(width: 3),
                                                   Text(
@@ -289,7 +289,7 @@ class ConversationScreen extends StatelessWidget {
                                                       fontWeight: FontWeight.bold,
                                                       color: convo.conversationType == 'appraisal'
                                                           ? const Color(0xFF059669)
-                                                          : const Color(0xFF7B40B5),
+                                                          : const Color(0xFF98259A),
                                                     ),
                                                   ),
                                                 ],

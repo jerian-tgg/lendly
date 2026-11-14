@@ -19,7 +19,7 @@ class AdminDashboardPage extends StatelessWidget {
           'Admin Dashboard',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF007799),
+        backgroundColor: const Color(0xFF98259A),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -47,7 +47,7 @@ class AdminDashboardPage extends StatelessWidget {
               style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF007799)),
+                  color: Color(0xFF98259A)),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -62,7 +62,7 @@ class AdminDashboardPage extends StatelessWidget {
               icon: Icons.people_alt_rounded,
               title: 'User Management',
               subtitle: 'View, block, or unblock users',
-              color: const Color(0xFF007799),
+              color: const Color(0xFF98259A),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -86,7 +86,7 @@ class AdminDashboardPage extends StatelessWidget {
               icon: Icons.assignment_turned_in_rounded,
               title: 'Appraiser Applications',
               subtitle: 'Review submitted documents, accept or reject appraisers',
-              color: const Color(0xFF7B40B5),
+              color: const Color(0xFF98259A),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(

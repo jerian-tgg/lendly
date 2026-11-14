@@ -40,6 +40,8 @@ class ContractData {
 }
 
 class ContractService {
+  static const _orchidPurple = PdfColor.fromInt(0xFF98259A);
+  static const _orchidLight  = PdfColor.fromInt(0xFFFBEBFB);
   static final _db = FirebaseFirestore.instance;
   static final _storage = FirebaseStorage.instance;
 
@@ -88,7 +90,7 @@ class ContractService {
           final pdfBytes = await _buildPdf(data);
           final storageRef = _storage
               .ref()
-              .child('contracts/${data.convoId}/lendly_contract.pdf');
+              .child('contracts/${data.convoId}/orchid_contract.pdf');
           final uploadTask = storageRef.putData(
             pdfBytes,
             SettableMetadata(contentType: 'application/pdf'),
@@ -125,7 +127,7 @@ class ContractService {
           _body(
             'This Electronic Lending Agreement ("Agreement") is entered into as of '
             '${dateFmt.format(now)}, by and between the parties identified below, '
-            'facilitated through the Lendly platform. This Agreement is executed '
+            'facilitated through the Orchid platform. This Agreement is executed '
             'electronically in accordance with the Philippine Electronic Commerce Act '
             '(Republic Act No. 8792) and its Implementing Rules and Regulations, '
             'and shall have the same legal effect as a manually signed written contract.',
@@ -159,7 +161,7 @@ class ContractService {
             'DAMAGE & LOSS. The Borrower shall be liable for any damage, loss, or destruction of the item during the rental period. Liability shall extend to the fair market value of the item at the time of damage or loss.',
             'PAYMENT. The Borrower agrees to pay the total rental amount of ₱${d.totalPrice.toStringAsFixed(2)} in full. This amount is non-refundable except as otherwise agreed by both parties.',
             'LENDER WARRANTIES. The Lender warrants that the item is in good working condition and that the Lender is the lawful owner or has authority to lend the item.',
-            'LIABILITY LIMITATION. The Lendly platform acts solely as a facilitator and is not a party to this Agreement. Neither Lendly nor its affiliates shall be liable for any loss, damage, or injury arising from this lending arrangement.',
+            'LIABILITY LIMITATION. The Orchid platform acts solely as a facilitator and is not a party to this Agreement. Neither Orchid nor its affiliates shall be liable for any loss, damage, or injury arising from this lending arrangement.',
             'DISPUTE RESOLUTION. Any dispute arising out of this Agreement shall first be resolved through good-faith negotiation. If unresolved within thirty (30) days, the parties agree to submit the dispute to the appropriate courts or mediation bodies with jurisdiction in the Philippines.',
             'GOVERNING LAW. This Agreement shall be governed by the laws of the Republic of the Philippines, including Republic Act No. 8792 (Electronic Commerce Act) and the Civil Code of the Philippines.',
             'ENTIRE AGREEMENT. This Agreement constitutes the entire agreement between the parties with respect to the subject matter hereof and supersedes all prior negotiations, representations, or agreements, whether oral or written.',
@@ -168,7 +170,7 @@ class ContractService {
 
           _section('ARTICLE IV — ELECTRONIC SIGNATURES'),
           _body(
-            'By electronically agreeing to this contract within the Lendly application, '
+            'By electronically agreeing to this contract within the Orchid application, '
             'each party acknowledges that they have read, understood, and agreed to all '
             'terms and conditions set forth herein. This electronic agreement constitutes '
             'a valid, binding, and enforceable contract under RA 8792.',
@@ -190,7 +192,7 @@ class ContractService {
               '(Philippine Electronic Commerce Act). It has the same legal force and effect as a '
               'handwritten contract. Falsification, tampering, or unauthorized alteration of this '
               'document may constitute a criminal offense under Philippine law. This contract is '
-              'stored securely on Lendly servers and may be used as evidence in legal proceedings.',
+              'stored securely on Orchid servers and may be used as evidence in legal proceedings.',
             ),
           ),
         ],
@@ -216,9 +218,9 @@ class ContractService {
           children: [
             pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
               pw.Text(
-                'LENDLY',
+                'ORCHID',
                 style: pw.TextStyle(
-                  color: PdfColors.deepPurple,
+                  color: _orchidPurple,
                   fontSize: 22,
                   fontWeight: pw.FontWeight.bold,
                   letterSpacing: 2,
@@ -258,7 +260,7 @@ class ContractService {
             ]),
           ],
         ),
-        pw.Divider(color: PdfColors.deepPurple, thickness: 1.5),
+        pw.Divider(color: _orchidPurple, thickness: 1.5),
         pw.SizedBox(height: 4),
       ],
     );
@@ -271,7 +273,7 @@ class ContractService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            'Lendly Platform — Electronic Contract | RA 8792 Compliant',
+            'Orchid Platform — Electronic Contract | RA 8792 Compliant',
             style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey500),
           ),
           pw.Text(
@@ -287,14 +289,14 @@ class ContractService {
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 8),
       padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: pw.BoxDecoration(
-        color: PdfColor.fromInt(0xFFEDE7F6),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+      decoration: const pw.BoxDecoration(
+        color: _orchidLight,
+        borderRadius: pw.BorderRadius.all(pw.Radius.circular(4)),
       ),
       child: pw.Text(
         title,
         style: pw.TextStyle(
-          color: PdfColors.deepPurple,
+          color: _orchidPurple,
           fontSize: 10,
           fontWeight: pw.FontWeight.bold,
           letterSpacing: 0.8,
@@ -353,7 +355,7 @@ class ContractService {
           pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: pw.BoxDecoration(
-              color: PdfColors.deepPurple,
+              color: _orchidPurple,
               borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
             ),
             child: pw.Text(
@@ -392,7 +394,7 @@ class ContractService {
                 height: 18,
                 margin: const pw.EdgeInsets.only(right: 8, top: 1),
                 decoration: const pw.BoxDecoration(
-                  color: PdfColors.deepPurple,
+                  color: _orchidPurple,
                   shape: pw.BoxShape.circle,
                 ),
                 child: pw.Center(
@@ -448,15 +450,15 @@ class ContractService {
         children: [
           pw.Text(
             role,
-            style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.deepPurple),
+            style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: _orchidPurple),
           ),
           pw.SizedBox(height: 6),
           pw.Container(
             width: double.infinity,
             height: 28,
-            decoration: pw.BoxDecoration(
-              color: PdfColor.fromInt(0xFFEDE7F6),
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            decoration: const pw.BoxDecoration(
+              color: _orchidLight,
+              borderRadius: pw.BorderRadius.all(pw.Radius.circular(4)),
             ),
             child: pw.Center(
               child: pw.Text(
@@ -464,7 +466,7 @@ class ContractService {
                 style: pw.TextStyle(
                   fontSize: 12,
                   fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.deepPurple,
+                  color: _orchidPurple,
                   fontStyle: pw.FontStyle.italic,
                 ),
               ),
@@ -479,7 +481,7 @@ class ContractService {
           ),
           pw.SizedBox(height: 4),
           pw.Text(
-            '✔ Electronically signed via Lendly (RA 8792)',
+            '✔ Electronically signed via Orchid (RA 8792)',
             style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700),
           ),
         ],

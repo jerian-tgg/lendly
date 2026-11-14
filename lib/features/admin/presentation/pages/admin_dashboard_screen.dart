@@ -79,7 +79,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'This user will receive full verified appraiser & business badges across Lendly.',
+                      'This user will receive full verified appraiser & business badges across Orchid.',
                       style: TextStyle(fontSize: 11, color: Colors.green),
                     ),
                   ),
@@ -296,7 +296,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           'Appraiser Applications',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF007799),
+        backgroundColor: const Color(0xFF98259A),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -304,7 +304,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         stream: _repository.streamAllApplications(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF7B40B5)));
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF98259A)));
           }
 
           final allApplications = snapshot.data ?? [];
@@ -347,7 +347,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         _buildStatBox(
                           title: 'Total',
                           count: allApplications.length,
-                          color: const Color(0xFF7B40B5),
+                          color: const Color(0xFF98259A),
                           icon: Icons.receipt_long,
                         ),
                       ],
@@ -389,9 +389,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 color: Colors.white,
                 child: TabBar(
                   controller: _tabController,
-                  labelColor: const Color(0xFF7B40B5),
+                  labelColor: const Color(0xFF98259A),
                   unselectedLabelColor: Colors.grey,
-                  indicatorColor: const Color(0xFF7B40B5),
+                  indicatorColor: const Color(0xFF98259A),
                   indicatorWeight: 3,
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   tabs: [
@@ -561,9 +561,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
-                  backgroundColor: const Color(0xFFEFE8FA),
+                  backgroundColor: const Color(0xFFFBEBFB),
                   radius: 24,
-                  child: const Icon(Icons.business, color: Color(0xFF7B40B5), size: 26),
+                  child: const Icon(Icons.business, color: Color(0xFF98259A), size: 26),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -645,7 +645,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             // Attached Documents / BIR Permits Section
             Row(
               children: [
-                const Icon(Icons.photo_library_outlined, color: Color(0xFF7B40B5), size: 18),
+                const Icon(Icons.photo_library_outlined, color: Color(0xFF98259A), size: 18),
                 const SizedBox(width: 6),
                 Text(
                   'Attached BIR & Registration Papers (${app.documentUrls.length}):',
@@ -699,7 +699,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             height: 110,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF7B40B5), width: 1.5),
+                              border: Border.all(color: const Color(0xFF98259A), width: 1.5),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.05),
@@ -839,8 +839,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   icon: const Icon(Icons.person_outline, size: 16),
                   label: const Text('View Profile', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF7B40B5),
-                    side: const BorderSide(color: Color(0xFF7B40B5)),
+                    foregroundColor: const Color(0xFF98259A),
+                    side: const BorderSide(color: Color(0xFF98259A)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),

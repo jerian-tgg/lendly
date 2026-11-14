@@ -298,8 +298,8 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                       icon: const Icon(Icons.camera_alt_outlined, size: 16),
                       label: const Text('Capture Defect Photo', style: TextStyle(fontSize: 12)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF7B40B5),
-                        side: const BorderSide(color: Color(0xFF7B40B5)),
+                        foregroundColor: const Color(0xFF98259A),
+                        side: const BorderSide(color: Color(0xFF98259A)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
@@ -313,7 +313,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7B40B5),
+                  backgroundColor: const Color(0xFF98259A),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () async {
@@ -466,7 +466,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                 ),
               ],
             ),
-            backgroundColor: const Color(0xFF7B40B5),
+            backgroundColor: const Color(0xFF98259A),
             duration: const Duration(seconds: 4),
           ),
         );
@@ -491,7 +491,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.handshake_outlined, color: Color(0xFF7B40B5), size: 24),
+            Icon(Icons.handshake_outlined, color: Color(0xFF98259A), size: 24),
             SizedBox(width: 8),
             Text('Meetup Required', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ],
@@ -500,7 +500,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7B40B5),
+              backgroundColor: const Color(0xFF98259A),
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(ctx),
@@ -540,10 +540,10 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                        color: const Color(0xFF98259A).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.verified_outlined, color: Color(0xFF7B40B5), size: 28),
+                      child: const Icon(Icons.verified_outlined, color: Color(0xFF98259A), size: 28),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -583,10 +583,10 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                          color: const Color(0xFF98259A).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.inventory_2_outlined, color: Color(0xFF7B40B5), size: 20),
+                        child: const Icon(Icons.inventory_2_outlined, color: Color(0xFF98259A), size: 20),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -613,7 +613,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                         children: [
                           Text(
                             '₱${currentPrice.toStringAsFixed(0)}/day',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7B40B5), fontSize: 14),
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF98259A), fontSize: 14),
                           ),
                           const Text('Owner Rate (Locked)', style: TextStyle(fontSize: 10, color: Colors.grey)),
                         ],
@@ -634,7 +634,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                     color: _isOwnerMeetupVerified ? const Color(0xFFF0FDF4) : const Color(0xFFFAF5FF),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: _isOwnerMeetupVerified ? const Color(0xFF86EFAC) : const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                      color: _isOwnerMeetupVerified ? const Color(0xFF86EFAC) : const Color(0xFF98259A).withValues(alpha: 0.3),
                       width: 1.5,
                     ),
                   ),
@@ -645,7 +645,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                         children: [
                           Icon(
                             _isOwnerMeetupVerified ? Icons.check_circle_rounded : Icons.handshake_outlined,
-                            color: _isOwnerMeetupVerified ? const Color(0xFF16A34A) : const Color(0xFF7B40B5),
+                            color: _isOwnerMeetupVerified ? const Color(0xFF16A34A) : const Color(0xFF98259A),
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -695,7 +695,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                             icon: const Icon(Icons.qr_code_scanner, size: 16),
                             label: const Text('Scan Owner QR to Verify Meetup', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7B40B5),
+                              backgroundColor: const Color(0xFF98259A),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -728,7 +728,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.25)),
+                    border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.25)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.03),
@@ -745,7 +745,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.build_circle_outlined, color: Color(0xFF7B40B5), size: 18),
+                              Icon(Icons.build_circle_outlined, color: Color(0xFF98259A), size: 18),
                               SizedBox(width: 6),
                               Text(
                                 'Function: 1-10',
@@ -756,7 +756,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF7B40B5),
+                              color: const Color(0xFF98259A),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -787,10 +787,10 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                       // Slider
                       SliderTheme(
                         data: SliderTheme.of(context).copyWith(
-                          activeTrackColor: const Color(0xFF7B40B5),
+                          activeTrackColor: const Color(0xFF98259A),
                           inactiveTrackColor: Colors.grey.shade200,
-                          thumbColor: const Color(0xFF7B40B5),
-                          overlayColor: const Color(0xFF7B40B5).withValues(alpha: 0.2),
+                          thumbColor: const Color(0xFF98259A),
+                          overlayColor: const Color(0xFF98259A).withValues(alpha: 0.2),
                           trackHeight: 6,
                           thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
                         ),
@@ -830,10 +830,10 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                                   height: 32,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: isSelected ? const Color(0xFF7B40B5) : Colors.grey.shade100,
+                                    color: isSelected ? const Color(0xFF98259A) : Colors.grey.shade100,
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: isSelected ? const Color(0xFF7B40B5) : Colors.grey.shade300,
+                                      color: isSelected ? const Color(0xFF98259A) : Colors.grey.shade300,
                                     ),
                                   ),
                                   child: Text(
@@ -1122,8 +1122,8 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                           ),
                           TextButton.icon(
                             onPressed: _showAddDefectDialog,
-                            icon: const Icon(Icons.add_circle_outline, size: 15, color: Color(0xFF7B40B5)),
-                            label: const Text('Add Defect', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7B40B5))),
+                            icon: const Icon(Icons.add_circle_outline, size: 15, color: Color(0xFF98259A)),
+                            label: const Text('Add Defect', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF98259A))),
                           ),
                         ],
                       ),
@@ -1136,9 +1136,9 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                         const SizedBox(height: 8),
                         const Row(
                           children: [
-                            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7B40B5))),
+                            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF98259A))),
                             SizedBox(width: 8),
-                            Text('Uploading defect photo...', style: TextStyle(fontSize: 11, color: Color(0xFF7B40B5))),
+                            Text('Uploading defect photo...', style: TextStyle(fontSize: 11, color: Color(0xFF98259A))),
                           ],
                         ),
                       ],
@@ -1329,7 +1329,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                 CheckboxListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  activeColor: const Color(0xFF7B40B5),
+                  activeColor: const Color(0xFF98259A),
                   title: const Text('Serial Number & Hardware Authenticity Verified', style: TextStyle(fontSize: 12)),
                   value: _isSerialVerified,
                   onChanged: (val) => setState(() => _isSerialVerified = val ?? true),
@@ -1337,7 +1337,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                 CheckboxListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  activeColor: const Color(0xFF7B40B5),
+                  activeColor: const Color(0xFF98259A),
                   title: const Text('Clean Functional Testing (No Hidden Defect)', style: TextStyle(fontSize: 12)),
                   value: _isCleanWorking,
                   onChanged: (val) => setState(() => _isCleanWorking = val ?? true),
@@ -1345,7 +1345,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                 CheckboxListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  activeColor: const Color(0xFF7B40B5),
+                  activeColor: const Color(0xFF98259A),
                   title: const Text('Recommend Security Deposit Protection for Owner', style: TextStyle(fontSize: 12)),
                   value: _isDepositRecommended,
                   onChanged: (val) => setState(() => _isDepositRecommended = val ?? true),
@@ -1398,7 +1398,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7B40B5),
+                      backgroundColor: const Color(0xFF98259A),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),

@@ -44,7 +44,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: isBlocked
-                  ? const Color(0xFF007799)
+                  ? const Color(0xFF98259A)
                   : const Color(0xFFB00020),
             ),
             onPressed: () => Navigator.pop(ctx, true),
@@ -61,7 +61,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
           SnackBar(
             content: Text('"$name" has been ${isBlocked ? 'unblocked' : 'blocked'}.'),
             backgroundColor:
-                isBlocked ? const Color(0xFF007799) : const Color(0xFFB00020),
+                isBlocked ? const Color(0xFF98259A) : const Color(0xFFB00020),
           ),
         );
       }
@@ -77,7 +77,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
           'User Management',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF007799),
+        backgroundColor: const Color(0xFF98259A),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
@@ -85,7 +85,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
         children: [
           // ── Search bar ────────────────────────────────────────────
           Container(
-            color: const Color(0xFF007799),
+            color: const Color(0xFF98259A),
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: TextField(
               onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
@@ -123,7 +123,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _Stat(label: 'Total Users', value: total.toString(),
-                        color: const Color(0xFF007799)),
+                        color: const Color(0xFF98259A)),
                     _Stat(label: 'Active', value: (total - blocked).toString(),
                         color: Colors.green),
                     _Stat(label: 'Blocked', value: blocked.toString(),
@@ -233,7 +233,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
                                       style: const TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
-                                          color: Color(0xFF007799)),
+                                          color: Color(0xFF98259A)),
                                     )
                                   : null,
                             ),
@@ -267,7 +267,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
                             if (isVerified) ...[
                               const SizedBox(width: 6),
                               const Icon(Icons.verified,
-                                  color: Color(0xFF007799), size: 16),
+                                  color: Color(0xFF98259A), size: 16),
                             ],
                           ],
                         ),
@@ -299,7 +299,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
                                   fontWeight: FontWeight.bold,
                                   color: isBlocked
                                       ? const Color(0xFFB00020)
-                                      : const Color(0xFF007799),
+                                      : const Color(0xFF98259A),
                                 ),
                               ),
                             ),

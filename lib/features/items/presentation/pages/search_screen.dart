@@ -63,7 +63,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.tune, color: Color(0xFF7B40B5)),
+                          Icon(Icons.tune, color: Color(0xFF98259A)),
                           SizedBox(width: 8),
                           Text(
                             'Search & Filter',
@@ -97,11 +97,11 @@ class _SearchScreenState extends State<SearchScreen> {
                       return ChoiceChip(
                         label: Text(mode),
                         selected: isSelected,
-                        selectedColor: const Color(0xFF7B40B5),
+                        selectedColor: const Color(0xFF98259A),
                         backgroundColor: Colors.white,
                         side: BorderSide(
                           color: isSelected
-                              ? const Color(0xFF7B40B5)
+                              ? const Color(0xFF98259A)
                               : Colors.grey.shade300,
                         ),
                         labelStyle: TextStyle(
@@ -135,11 +135,11 @@ class _SearchScreenState extends State<SearchScreen> {
                       return ChoiceChip(
                         label: Text(cat),
                         selected: isSelected,
-                        selectedColor: const Color(0xFF7B40B5),
+                        selectedColor: const Color(0xFF98259A),
                         backgroundColor: Colors.white,
                         side: BorderSide(
                           color: isSelected
-                              ? const Color(0xFF7B40B5)
+                              ? const Color(0xFF98259A)
                               : Colors.grey.shade300,
                         ),
                         labelStyle: TextStyle(
@@ -191,7 +191,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: ElevatedButton(
                           onPressed: () => Navigator.pop(ctx),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7B40B5),
+                            backgroundColor: const Color(0xFF98259A),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
@@ -227,12 +227,12 @@ class _SearchScreenState extends State<SearchScreen> {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                color: const Color(0xFF98259A).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.search_rounded,
-                color: Color(0xFF7B40B5),
+                color: Color(0xFF98259A),
                 size: 20,
               ),
             ),
@@ -250,14 +250,14 @@ class _SearchScreenState extends State<SearchScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                  color: const Color(0xFF98259A).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
                   'Visitor',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF7B40B5),
+                    color: Color(0xFF98259A),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -268,11 +268,11 @@ class _SearchScreenState extends State<SearchScreen> {
         actions: [
           if (isVisitor)
             TextButton.icon(
-              icon: const Icon(Icons.login, color: Color(0xFF7B40B5), size: 18),
+              icon: const Icon(Icons.login, color: Color(0xFF98259A), size: 18),
               label: const Text(
                 'Log In',
                 style: TextStyle(
-                  color: Color(0xFF7B40B5),
+                  color: Color(0xFF98259A),
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -316,7 +316,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                   prefixIcon: const Icon(
                     Icons.search,
-                    color: Color(0xFF7B40B5),
+                    color: Color(0xFF98259A),
                   ),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -338,7 +338,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       IconButton(
                         icon: Stack(
                           children: [
-                            const Icon(Icons.tune, color: Color(0xFF7B40B5)),
+                            const Icon(Icons.tune, color: Color(0xFF98259A)),
                             if (_selectedCategory != 'All' || _selectedMode != 'All')
                               Positioned(
                                 right: 0,
@@ -371,7 +371,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
 
-          // Horizontal Category Filter Pills (Global Lendly Chip Styling)
+          // Horizontal Category Filter Pills (Global Orchid Chip Styling)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -383,11 +383,11 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: ChoiceChip(
                     label: Text(cat),
                     selected: isSelected,
-                    selectedColor: const Color(0xFF7B40B5),
+                    selectedColor: const Color(0xFF98259A),
                     backgroundColor: Colors.white,
                     side: BorderSide(
                       color: isSelected
-                          ? const Color(0xFF7B40B5)
+                          ? const Color(0xFF98259A)
                           : Colors.grey.shade300,
                     ),
                     labelStyle: TextStyle(
@@ -429,7 +429,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                          color: const Color(0xFF98259A).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -437,7 +437,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF7B40B5),
+                            color: Color(0xFF98259A),
                           ),
                         ),
                       ),
@@ -460,7 +460,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: _isGridView
-                                ? const Color(0xFF7B40B5)
+                                ? const Color(0xFF98259A)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -478,7 +478,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: !_isGridView
-                                ? const Color(0xFF7B40B5)
+                                ? const Color(0xFF98259A)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -528,7 +528,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+                    child: CircularProgressIndicator(color: Color(0xFF98259A)),
                   );
                 }
 
@@ -583,13 +583,13 @@ class _SearchScreenState extends State<SearchScreen> {
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                              color: const Color(0xFF98259A).withValues(alpha: 0.08),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.search_off_rounded,
                               size: 52,
-                              color: Color(0xFF7B40B5),
+                              color: Color(0xFF98259A),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -615,7 +615,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             icon: const Icon(Icons.refresh, size: 16),
                             label: const Text('Reset All Filters'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7B40B5),
+                              backgroundColor: const Color(0xFF98259A),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 18,

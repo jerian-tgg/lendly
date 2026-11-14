@@ -16,7 +16,7 @@ class AuthWrapper extends StatelessWidget {
           final user = snapshot.data;
 
           if (user != null) {
-            final isAdmin = user.email?.toLowerCase() == FirebaseAuthService.defaultAdminEmail;
+            final isAdmin = FirebaseAuthService.isSystemAdminEmail(user.email);
             if (!user.emailVerified && !isAdmin) {
               return LoginPage(
                 initialEmail: user.email,

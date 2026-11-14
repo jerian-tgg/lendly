@@ -79,7 +79,7 @@ class _OwnerMeetupScannerDialogState extends State<OwnerMeetupScannerDialog> {
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              color: const Color(0xFF7B40B5),
+              color: const Color(0xFF98259A),
               child: Row(
                 children: [
                   const Icon(Icons.qr_code_scanner, color: Colors.white, size: 22),
@@ -116,7 +116,7 @@ class _OwnerMeetupScannerDialogState extends State<OwnerMeetupScannerDialog> {
                       width: 220,
                       height: 220,
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFF7B40B5), width: 3),
+                        border: Border.all(color: const Color(0xFF98259A), width: 3),
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),

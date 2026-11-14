@@ -181,7 +181,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.lock_reset, color: Color(0xFF7B40B5)),
+            Icon(Icons.lock_reset, color: Color(0xFF98259A)),
             SizedBox(width: 8),
             Text('Reset Password'),
           ],
@@ -197,7 +197,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7B40B5),
+              backgroundColor: const Color(0xFF98259A),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -348,7 +348,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7B40B5),
+                          backgroundColor: const Color(0xFF98259A),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
@@ -374,8 +374,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF7B40B5),
-                          side: const BorderSide(color: Color(0xFF7B40B5), width: 1.5),
+                          foregroundColor: const Color(0xFF98259A),
+                          side: const BorderSide(color: Color(0xFF98259A), width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
@@ -388,7 +388,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Color(0xFF7B40B5),
+                                  color: Color(0xFF98259A),
                                 ),
                               )
                             : const Icon(Icons.lock_reset, size: 20),
@@ -443,14 +443,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                  color: const Color(0xFF98259A).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${_selectedGeoLocation!.latitude.toStringAsFixed(3)}, ${_selectedGeoLocation!.longitude.toStringAsFixed(3)}',
                   style: const TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF7B40B5),
+                    color: Color(0xFF98259A),
                     fontWeight: FontWeight.bold,
                     fontFamily: 'monospace',
                   ),
@@ -469,9 +469,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
           },
           decoration: InputDecoration(
             hintText: 'e.g. Bacolod City or 10.67, 122.95',
-            prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFF7B40B5)),
+            prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFF98259A)),
             suffixIcon: PopupMenuButton<GeoLocation>(
-              icon: const Icon(Icons.arrow_drop_down_circle_outlined, color: Color(0xFF7B40B5)),
+              icon: const Icon(Icons.arrow_drop_down_circle_outlined, color: Color(0xFF98259A)),
               tooltip: 'Choose Preset City',
               onSelected: (loc) {
                 setState(() {
@@ -508,14 +508,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Color(0xFF7B40B5),
+                          color: Color(0xFF98259A),
                         ),
                       )
                     : const Icon(Icons.my_location, size: 16),
                 label: const Text('Use Current GPS', style: TextStyle(fontSize: 12)),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF7B40B5),
-                  side: const BorderSide(color: Color(0xFF7B40B5)),
+                  foregroundColor: const Color(0xFF98259A),
+                  side: const BorderSide(color: Color(0xFF98259A)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
@@ -528,7 +528,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 icon: const Icon(Icons.map_outlined, size: 16),
                 label: const Text('Pin on Map', style: TextStyle(fontSize: 12)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7B40B5),
+                  backgroundColor: const Color(0xFF98259A),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 10),

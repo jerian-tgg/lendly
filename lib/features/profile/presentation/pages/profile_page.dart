@@ -434,7 +434,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                     padding: EdgeInsets.all(40),
                     child: Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF7B40B5),
+                        color: Color(0xFF98259A),
                       ),
                     ),
                   );
@@ -447,7 +447,7 @@ class _UserProfilePageState extends State<UserProfilePage>
 
                 final displayName = userData['username'] ??
                     '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
-                final nameStr = displayName.isNotEmpty ? displayName : 'Lendly User';
+                final nameStr = displayName.isNotEmpty ? displayName : 'Orchid User';
                 // Prioritize saved default location (from map/GPS/settings), falling back to signup address city
                 final location = () {
                   final locDisplay = LocationHelper.formatLocationDisplay(
@@ -485,7 +485,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                       children: [
                         CircleAvatar(
                           radius: 52,
-                          backgroundColor: const Color(0xFFEFE8FA),
+                          backgroundColor: const Color(0xFFFBEBFB),
                           backgroundImage: isValidImageUrl(imageUrl)
                               ? NetworkImage(imageUrl)
                               : null,
@@ -493,7 +493,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                               ? const Icon(
                                   Icons.person,
                                   size: 55,
-                                  color: Color(0xFF7B40B5),
+                                  color: Color(0xFF98259A),
                                 )
                               : null,
                         ),
@@ -556,7 +556,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                             const Icon(
                               Icons.location_on,
                               size: 14,
-                              color: Color(0xFF7B40B5),
+                              color: Color(0xFF98259A),
                             ),
                             const SizedBox(width: 4),
                             Flexible(
@@ -577,7 +577,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                  color: const Color(0xFF98259A).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Row(
@@ -586,7 +586,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                     Icon(
                                       Icons.edit_location_alt_outlined,
                                       size: 11,
-                                      color: Color(0xFF7B40B5),
+                                      color: Color(0xFF98259A),
                                     ),
                                     SizedBox(width: 2),
                                     Text(
@@ -594,7 +594,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF7B40B5),
+                                        color: Color(0xFF98259A),
                                       ),
                                     ),
                                   ],
@@ -668,21 +668,21 @@ class _UserProfilePageState extends State<UserProfilePage>
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF7B40B5).withValues(alpha: 0.15),
-                              border: Border.all(color: const Color(0xFF7B40B5)),
+                              color: const Color(0xFF98259A).withValues(alpha: 0.15),
+                              border: Border.all(color: const Color(0xFF98259A)),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.verified, size: 13, color: Color(0xFF7B40B5)),
+                                Icon(Icons.verified, size: 13, color: Color(0xFF98259A)),
                                 SizedBox(width: 4),
                                 Text(
                                   'Certified Appraiser',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF7B40B5),
+                                    color: Color(0xFF98259A),
                                   ),
                                 ),
                               ],
@@ -697,7 +697,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                             return Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                                color: const Color(0xFF98259A).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -706,7 +706,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   Icon(
                                     hasReviews ? Icons.star_rounded : Icons.verified_user_outlined,
                                     size: 14,
-                                    color: hasReviews ? Colors.amber[700] : const Color(0xFF7B40B5),
+                                    color: hasReviews ? Colors.amber[700] : const Color(0xFF98259A),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -716,7 +716,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                     style: const TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF7B40B5),
+                                      color: Color(0xFF98259A),
                                     ),
                                   ),
                                 ],
@@ -768,10 +768,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0077B6).withValues(alpha: 0.08),
+                            color: const Color(0xFF98259A).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: const Color(0xFF0077B6).withValues(alpha: 0.3),
+                              color: const Color(0xFF98259A).withValues(alpha: 0.3),
                             ),
                           ),
                           child: Row(
@@ -779,12 +779,12 @@ class _UserProfilePageState extends State<UserProfilePage>
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF0077B6).withValues(alpha: 0.15),
+                                  color: const Color(0xFF98259A).withValues(alpha: 0.15),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
                                   Icons.verified_user_outlined,
-                                  color: Color(0xFF0077B6),
+                                  color: Color(0xFF98259A),
                                   size: 26,
                                 ),
                               ),
@@ -798,7 +798,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
-                                        color: Color(0xFF0077B6),
+                                        color: Color(0xFF98259A),
                                       ),
                                     ),
                                     const SizedBox(height: 2),
@@ -816,7 +816,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                               ElevatedButton(
                                 onPressed: _isVerifying ? null : _handleStartVerification,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0077B6),
+                                  backgroundColor: const Color(0xFF98259A),
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -859,7 +859,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                             ),
                             label: const Text('Send Message'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7B40B5),
+                              backgroundColor: const Color(0xFF98259A),
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
@@ -882,9 +882,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                               icon: const Icon(Icons.phone, size: 18),
                               label: const Text('Call'),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF7B40B5),
+                                foregroundColor: const Color(0xFF98259A),
                                 side: const BorderSide(
-                                  color: Color(0xFF7B40B5),
+                                  color: Color(0xFF98259A),
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -930,7 +930,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF5A2A94), Color(0xFF7B40B5)],
+                              colors: [Color(0xFF6B156C), Color(0xFF98259A)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -938,7 +938,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(
-                                  0xFF7B40B5,
+                                  0xFF98259A,
                                 ).withValues(alpha: 0.3),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
@@ -998,13 +998,13 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   },
                                   icon: const Icon(
                                     Icons.assessment_rounded,
-                                    color: Color(0xFF7B40B5),
+                                    color: Color(0xFF98259A),
                                   ),
                                   label: const Text(
                                     'Open Professional Appraisal Portal',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF7B40B5),
+                                      color: Color(0xFF98259A),
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
@@ -1164,12 +1164,12 @@ class _UserProfilePageState extends State<UserProfilePage>
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: const Color(
-                              0xFF7B40B5,
+                              0xFF98259A,
                             ).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: const Color(
-                                0xFF7B40B5,
+                                0xFF98259A,
                               ).withValues(alpha: 0.3),
                             ),
                           ),
@@ -1178,10 +1178,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF7B40B5).withValues(alpha: 0.12),
+                                  color: const Color(0xFF98259A).withValues(alpha: 0.12),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.business_center, color: Color(0xFF7B40B5), size: 26),
+                                child: const Icon(Icons.business_center, color: Color(0xFF98259A), size: 26),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -1190,7 +1190,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   children: [
                                     const Text(
                                       'Apply as an Appraiser',
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF7B40B5)),
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF98259A)),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
@@ -1204,7 +1204,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                               ElevatedButton(
                                 onPressed: () => _openBusinessRegistration(context),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF7B40B5),
+                                  backgroundColor: const Color(0xFF98259A),
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -1250,7 +1250,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                             icon: const Icon(Icons.star_rounded, size: 16),
                             label: const Text('Leave Review', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7B40B5),
+                              backgroundColor: const Color(0xFF98259A),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1287,7 +1287,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7B40B5),
+                            backgroundColor: const Color(0xFF98259A),
                             foregroundColor: Colors.white,
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1312,7 +1312,7 @@ class _UserProfilePageState extends State<UserProfilePage>
   Widget _buildSectionHeader(String title, IconData icon) {
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF7B40B5), size: 20),
+        Icon(icon, color: const Color(0xFF98259A), size: 20),
         const SizedBox(width: 6),
         Text(
           title,
@@ -1337,7 +1337,7 @@ class _UserProfilePageState extends State<UserProfilePage>
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+              child: CircularProgressIndicator(color: Color(0xFF98259A)),
             ),
           );
         }
@@ -1430,7 +1430,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                   itemPrice,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF7B40B5),
+                    color: Color(0xFF98259A),
                   ),
                 ),
                 onTap: () {
@@ -1459,7 +1459,7 @@ class _UserProfilePageState extends State<UserProfilePage>
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF7B40B5)),
+            child: CircularProgressIndicator(color: Color(0xFF98259A)),
           );
         }
 
@@ -1504,14 +1504,14 @@ class _UserProfilePageState extends State<UserProfilePage>
               ),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: const Color(0xFFEFE8FA),
+                  backgroundColor: const Color(0xFFFBEBFB),
                   backgroundImage: isValidImageUrl(reviewerPhoto)
                       ? NetworkImage(reviewerPhoto!)
                       : null,
                   child: !isValidImageUrl(reviewerPhoto)
                       ? Text(
                           reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'U',
-                          style: const TextStyle(color: Color(0xFF7B40B5), fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Color(0xFF98259A), fontWeight: FontWeight.bold),
                         )
                       : null,
                 ),
@@ -1542,7 +1542,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                       const SizedBox(height: 2),
                       Text(
                         'Item: "$itemTitle"',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF7B40B5), fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF98259A), fontWeight: FontWeight.w600),
                       ),
                     ],
                     const SizedBox(height: 2),

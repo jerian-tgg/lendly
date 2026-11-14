@@ -7,7 +7,7 @@ import 'package:printing/printing.dart';
 
 import 'contract_service.dart';
 
-/// Full-screen page for reviewing and e-signing the Lendly lending agreement.
+/// Full-screen page for reviewing and e-signing the Orchid lending agreement.
 /// Shown once after the lender accepts the borrow request in chat.
 class ElectronicContractPage extends StatefulWidget {
   final String convoId;
@@ -38,7 +38,7 @@ class ElectronicContractPage extends StatefulWidget {
 }
 
 class _ElectronicContractPageState extends State<ElectronicContractPage> {
-  static const _purple = Color(0xFF7B40B5);
+  static const _purple = Color(0xFF98259A);
 
   bool _agreed        = false;
   bool _signing       = false;
@@ -322,11 +322,11 @@ class _LegalBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF7B40B5), Color(0xFF5B2D8E)],
+          colors: [Color(0xFF98259A), Color(0xFF6B156C)],
         ),
         borderRadius: BorderRadius.circular(10),
         boxShadow: const [
-          BoxShadow(color: Color(0x337B40B5), blurRadius: 8, offset: Offset(0, 3)),
+          BoxShadow(color: Color(0x3398259A), blurRadius: 8, offset: Offset(0, 3)),
         ],
       ),
       child: Row(
@@ -412,7 +412,7 @@ class _ContractHeaderCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.description_outlined, color: Color(0xFF7B40B5), size: 18),
+              const Icon(Icons.description_outlined, color: Color(0xFF98259A), size: 18),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
@@ -423,12 +423,12 @@ class _ContractHeaderCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEDE7F6),
+                  color: const Color(0xFFFBEBFB),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   'ID: ${convoId.substring(0, convoId.length.clamp(0, 8)).toUpperCase()}',
-                  style: const TextStyle(fontSize: 9, color: Color(0xFF7B40B5), fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 9, color: Color(0xFF98259A), fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -504,7 +504,7 @@ class _SectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Icon(icon, color: const Color(0xFF7B40B5), size: 16),
+            Icon(icon, color: const Color(0xFF98259A), size: 16),
             const SizedBox(width: 8),
             Text(
               title,
@@ -533,7 +533,7 @@ class _PartyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLender = role == 'Lender';
-    final color = isLender ? const Color(0xFF7B40B5) : const Color(0xFF3498DB);
+    final color = isLender ? const Color(0xFF98259A) : const Color(0xFF98259A);
 
     return Row(
       children: [
@@ -623,10 +623,10 @@ class _TermsSummary extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7B40B5).withValues(alpha: 0.08),
+                  color: const Color(0xFF98259A).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Icon(t.$1, size: 13, color: const Color(0xFF7B40B5)),
+                child: Icon(t.$1, size: 13, color: const Color(0xFF98259A)),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -704,16 +704,16 @@ class _SignatureSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3)),
+        border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.3)),
         boxShadow: const [
-          BoxShadow(color: Color(0x147B40B5), blurRadius: 10, offset: Offset(0, 3)),
+          BoxShadow(color: Color(0x1498259A), blurRadius: 10, offset: Offset(0, 3)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Icon(Icons.draw_outlined, color: Color(0xFF7B40B5), size: 18),
+            const Icon(Icons.draw_outlined, color: Color(0xFF98259A), size: 18),
             const SizedBox(width: 8),
             Text(
               'Your Signature — ${isLender ? "Lender" : "Borrower"}',
@@ -727,16 +727,16 @@ class _SignatureSection extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFFEDE7F6),
+              color: const Color(0xFFFBEBFB),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF7B40B5).withValues(alpha: 0.3), style: BorderStyle.solid),
+              border: Border.all(color: const Color(0xFF98259A).withValues(alpha: 0.3), style: BorderStyle.solid),
             ),
             child: Center(
               child: Text(
                 userName,
                 style: const TextStyle(
                   fontSize: 22,
-                  color: Color(0xFF7B40B5),
+                  color: Color(0xFF98259A),
                   fontWeight: FontWeight.bold,
                   fontStyle: FontStyle.italic,
                   fontFamily: 'Roboto',
@@ -758,11 +758,11 @@ class _SignatureSection extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: agreed ? const Color(0xFFEDE7F6) : const Color(0xFFF7FAFC),
+                color: agreed ? const Color(0xFFFBEBFB) : const Color(0xFFF7FAFC),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: agreed
-                      ? const Color(0xFF7B40B5).withValues(alpha: 0.5)
+                      ? const Color(0xFF98259A).withValues(alpha: 0.5)
                       : Colors.grey.withValues(alpha: 0.3),
                 ),
               ),
@@ -771,7 +771,7 @@ class _SignatureSection extends StatelessWidget {
                   Checkbox(
                     value: agreed,
                     onChanged: onAgreedChanged,
-                    activeColor: const Color(0xFF7B40B5),
+                    activeColor: const Color(0xFF98259A),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   const SizedBox(width: 4),
@@ -808,7 +808,7 @@ class _SignatureSection extends StatelessWidget {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7B40B5),
+                backgroundColor: const Color(0xFF98259A),
                 disabledBackgroundColor: Colors.grey.shade300,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 elevation: 0,
@@ -947,8 +947,8 @@ class PdfPreviewPage extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: Color(0xFF7B40B5)),
-            onPressed: () => Printing.sharePdf(bytes: pdfBytes, filename: 'lendly_contract.pdf'),
+            icon: const Icon(Icons.share_outlined, color: Color(0xFF98259A)),
+            onPressed: () => Printing.sharePdf(bytes: pdfBytes, filename: 'orchid_contract.pdf'),
           ),
         ],
       ),

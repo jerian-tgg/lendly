@@ -71,7 +71,7 @@ class _CashInDialogState extends State<CashInDialog> {
           await Stripe.instance.initPaymentSheet(
             paymentSheetParameters: SetupPaymentSheetParameters(
               paymentIntentClientSecret: clientSecret,
-              merchantDisplayName: 'Lendly ORC Wallet',
+              merchantDisplayName: 'Orchid ORC Wallet',
               style: ThemeMode.light,
             ),
           );
@@ -172,12 +172,12 @@ class _CashInDialogState extends State<CashInDialog> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7B40B5).withValues(alpha: 0.1),
+                    color: const Color(0xFF98259A).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.account_balance_wallet,
-                    color: Color(0xFF7B40B5),
+                    color: Color(0xFF98259A),
                     size: 24,
                   ),
                 ),
@@ -210,22 +210,22 @@ class _CashInDialogState extends State<CashInDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFEFE8FA),
+                color: const Color(0xFFFBEBFB),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFF7B40B5).withValues(alpha: 0.3),
+                  color: const Color(0xFF98259A).withValues(alpha: 0.3),
                 ),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.currency_exchange, color: Color(0xFF7B40B5), size: 20),
+                  Icon(Icons.currency_exchange, color: Color(0xFF98259A), size: 20),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Conversion Rate: ₱1 PHP = 1 ORC Credit\nNo hidden charges. Instant wallet credit.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF5B32A8),
+                        color: Color(0xFF6B156C),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -254,7 +254,7 @@ class _CashInDialogState extends State<CashInDialog> {
                   onSelected: (selected) {
                     if (selected) _onPresetSelected(amt);
                   },
-                  selectedColor: const Color(0xFF7B40B5),
+                  selectedColor: const Color(0xFF98259A),
                   backgroundColor: const Color(0xFFF0F4F8),
                   labelStyle: TextStyle(
                     color: isSelected ? Colors.white : Colors.black87,
@@ -287,7 +287,7 @@ class _CashInDialogState extends State<CashInDialog> {
                 prefixStyle: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: Color(0xFF7B40B5),
+                  color: Color(0xFF98259A),
                 ),
                 labelText: 'Custom Amount (Min. ₱20)',
                 hintText: 'Enter amount in PHP',
@@ -296,7 +296,7 @@ class _CashInDialogState extends State<CashInDialog> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF7B40B5), width: 2),
+                  borderSide: const BorderSide(color: Color(0xFF98259A), width: 2),
                 ),
               ),
             ),
@@ -318,7 +318,7 @@ class _CashInDialogState extends State<CashInDialog> {
               child: ElevatedButton(
                 onPressed: _loading ? null : _processCashIn,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7B40B5),
+                  backgroundColor: const Color(0xFF98259A),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
