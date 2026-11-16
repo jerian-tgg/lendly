@@ -10,6 +10,17 @@ class BusinessApplicationRepository {
   CollectionReference get _usersCollection =>
       _firestore.collection('users');
 
+  /// Returns true only if the user is a verified user (or admin) and eligible
+  /// to apply to become an appraiser.
+  static bool canUserApplyAsAppraiser(
+    Map<String, dynamic>? userData, {
+    bool? localIsVerified,
+  }) {
+    if (localIsVerified == true) return true;
+    if (userData == null) return false;
+    return userData['isVerified'] == true || userData['isAdmin'] == true;
+  }
+
   /// Submit a new business / appraiser verification application
   Future<String> submitApplication({
     required String userId,
@@ -24,6 +35,14 @@ class BusinessApplicationRepository {
     required List<String> documentUrls,
     String notes = '',
   }) async {
+    final userSnap = await _usersCollection.doc(userId).get();
+    final userData = userSnap.data() as Map<String, dynamic>?;
+    if (!canUserApplyAsAppraiser(userData)) {
+      throw Exception(
+        'You must become a verified user first before applying to become an appraiser.',
+      );
+    }
+
     final applicationData = {
       'userId': userId,
       'userEmail': userEmail,

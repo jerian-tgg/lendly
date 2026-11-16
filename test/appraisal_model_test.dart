@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lendly/core/constants/item_categories.dart';
 import 'package:lendly/features/appraisal/domain/models/appraisal_model.dart';
+import 'package:lendly/features/business/data/repositories/business_application_repository.dart';
 
 void main() {
   group('AppraisalModel Tests', () {
@@ -122,6 +124,183 @@ void main() {
       expect(defectsList.length, 1);
       expect(defectsList[0]['description'], 'Micro scratches on casing');
       expect(defectsList[0]['severity'], 'Minor');
+    });
+
+    test('Expanded everyday categories and appraiser specialties match 1-to-1 and exclude high-value/titled assets', () {
+      expect(ItemCategories.listingCategories, equals(ItemCategories.appraiserSpecialties));
+      expect(
+        ItemCategories.listingCategories,
+        containsAll(<String>[
+          'Electronics',
+          'Books',
+          'Tools',
+          'Musical Instruments',
+          'Camping Gear',
+          'Kitchen Appliances',
+        ]),
+      );
+
+      for (final category in ItemCategories.categories) {
+        expect(ItemCategories.isExcludedCategory(category), isFalse);
+      }
+
+      // High-value / titled / regulated items must be excluded
+      expect(ItemCategories.isExcludedCategory('Real Estate'), isTrue);
+      expect(ItemCategories.isExcludedCategory('Vehicles'), isTrue);
+      expect(ItemCategories.isExcludedCategory('Vehicles & Transport'), isTrue);
+      expect(ItemCategories.isExcludedCategory('Firearms'), isTrue);
+      expect(ItemCategories.isExcludedCategory('Jewelry & Luxury Goods'), isTrue);
+      expect(ItemCategories.listingCategories.contains('Vehicles'), isFalse);
+      expect(ItemCategories.listingCategories.contains('Real Estate'), isFalse);
+      expect(ItemCategories.listingCategories.contains('Firearms'), isFalse);
+    });
+
+    test('Enforces strict specialty-matching logic for appraisals', () {
+      // Exact specialty match allowed
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'Electronics',
+          itemCategory: 'Electronics',
+        ),
+        isTrue,
+      );
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'Books',
+          itemCategory: 'Books',
+        ),
+        isTrue,
+      );
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'Camping Gear',
+          itemCategory: 'Camping Gear',
+        ),
+        isTrue,
+      );
+
+      // Cross-category appraisal strictly rejected
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'Electronics',
+          itemCategory: 'Books',
+        ),
+        isFalse,
+      );
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'Books',
+          itemCategory: 'Electronics',
+        ),
+        isFalse,
+      );
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'Tools',
+          itemCategory: 'Musical Instruments',
+        ),
+        isFalse,
+      );
+
+      // Excluded categories and generic catch-alls strictly rejected
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'Vehicles',
+          itemCategory: 'Vehicles',
+        ),
+        isFalse,
+      );
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'Real Estate',
+          itemCategory: 'Real Estate',
+        ),
+        isFalse,
+      );
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'Firearms',
+          itemCategory: 'Firearms',
+        ),
+        isFalse,
+      );
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'General Merchandise',
+          itemCategory: 'Electronics',
+        ),
+        isFalse,
+      );
+      expect(
+        AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: 'All',
+          itemCategory: 'Books',
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('Appraiser Application Verification Prerequisite', () {
+    test('Returns false when userData is null or user is not verified', () {
+      expect(
+        BusinessApplicationRepository.canUserApplyAsAppraiser(null),
+        isFalse,
+      );
+      expect(
+        BusinessApplicationRepository.canUserApplyAsAppraiser({}),
+        isFalse,
+      );
+      expect(
+        BusinessApplicationRepository.canUserApplyAsAppraiser({
+          'isVerified': false,
+          'isAdmin': false,
+        }),
+        isFalse,
+      );
+      expect(
+        BusinessApplicationRepository.canUserApplyAsAppraiser(
+          {'isVerified': false},
+          localIsVerified: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('Returns true when user is verified via Firestore userData', () {
+      expect(
+        BusinessApplicationRepository.canUserApplyAsAppraiser({
+          'isVerified': true,
+        }),
+        isTrue,
+      );
+    });
+
+    test('Returns true when localIsVerified is true', () {
+      expect(
+        BusinessApplicationRepository.canUserApplyAsAppraiser(
+          {'isVerified': false},
+          localIsVerified: true,
+        ),
+        isTrue,
+      );
+      expect(
+        BusinessApplicationRepository.canUserApplyAsAppraiser(
+          null,
+          localIsVerified: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('Returns true when user is an admin', () {
+      expect(
+        BusinessApplicationRepository.canUserApplyAsAppraiser({
+          'isVerified': false,
+          'isAdmin': true,
+        }),
+        isTrue,
+      );
     });
   });
 }

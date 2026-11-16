@@ -50,8 +50,35 @@ class DocumentUploadService {
   }
 
   /// Upload an XFile (works cross-platform on web, mobile, desktop) to Cloudinary
-  static Future<String> uploadXFile(XFile file) async {
-    final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+  static Future<String> uploadXFile(XFile file) {
+    return _uploadToCloudinary(
+      file,
+      resourceType: 'image',
+      defaultFilename: 'bir_permit_${DateTime.now().millisecondsSinceEpoch}.jpg',
+    );
+  }
+
+  /// Upload an image or video XFile to Cloudinary using the `auto` resource endpoint.
+  static Future<String> uploadMediaXFile(XFile file) {
+    final lowerName = file.name.toLowerCase();
+    final isVideo = lowerName.endsWith('.mp4') ||
+        lowerName.endsWith('.mov') ||
+        lowerName.endsWith('.avi') ||
+        lowerName.endsWith('.webm');
+    final ext = isVideo ? 'mp4' : 'jpg';
+    return _uploadToCloudinary(
+      file,
+      resourceType: 'auto',
+      defaultFilename: 'report_evidence_${DateTime.now().millisecondsSinceEpoch}.$ext',
+    );
+  }
+
+  static Future<String> _uploadToCloudinary(
+    XFile file, {
+    required String resourceType,
+    required String defaultFilename,
+  }) async {
+    final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/$resourceType/upload');
     final bytes = await file.readAsBytes();
 
     final request = http.MultipartRequest('POST', uri)
@@ -60,7 +87,7 @@ class DocumentUploadService {
         http.MultipartFile.fromBytes(
           'file',
           bytes,
-          filename: file.name.isNotEmpty ? file.name : 'bir_permit_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          filename: file.name.isNotEmpty ? file.name : defaultFilename,
         ),
       );
 

@@ -1,10 +1,8 @@
-import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lendly/core/services/report_service.dart';
 
 // ──────────────────────────────────────────────────────────────────
 // ReportScreen
@@ -51,43 +49,43 @@ class _ReportScreenState extends State<ReportScreen> {
   ];
 
   final ImagePicker _picker = ImagePicker();
+  final ReportService _reportService = ReportService();
 
   // ── Media Picking ──────────────────────────────────────────────
 
   Future<void> _pickImage() async {
-    final file = await _picker.pickImage(
-        source: ImageSource.gallery, imageQuality: 80);
-    if (file != null) setState(() => _mediaFiles.add(file));
+    try {
+      final file = await _picker.pickImage(
+          source: ImageSource.gallery, imageQuality: 80);
+      if (file != null && mounted) setState(() => _mediaFiles.add(file));
+    } catch (e) {
+      if (mounted) _snack('Could not pick image: $e');
+    }
   }
 
   Future<void> _pickVideo() async {
-    final file = await _picker.pickVideo(source: ImageSource.gallery);
-    if (file != null) setState(() => _mediaFiles.add(file));
+    try {
+      final file = await _picker.pickVideo(source: ImageSource.gallery);
+      if (file != null && mounted) setState(() => _mediaFiles.add(file));
+    } catch (e) {
+      if (mounted) _snack('Could not pick video: $e');
+    }
   }
 
   Future<void> _takePhoto() async {
-    final file = await _picker.pickImage(
-        source: ImageSource.camera, imageQuality: 80);
-    if (file != null) setState(() => _mediaFiles.add(file));
+    try {
+      final file = await _picker.pickImage(
+          source: ImageSource.camera, imageQuality: 80);
+      if (file != null && mounted) setState(() => _mediaFiles.add(file));
+    } catch (e) {
+      if (mounted) _snack('Could not capture photo: $e');
+    }
   }
 
   void _removeMedia(int index) =>
       setState(() => _mediaFiles.removeAt(index));
 
   // ── Upload & Submit ────────────────────────────────────────────
-
-  Future<List<String>> _uploadMedia() async {
-    final urls = <String>[];
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
-    for (final f in _mediaFiles) {
-      final ext = f.path.split('.').last;
-      final ref = FirebaseStorage.instance
-          .ref('reports/${DateTime.now().millisecondsSinceEpoch}_$uid.$ext');
-      await ref.putFile(File(f.path));
-      urls.add(await ref.getDownloadURL());
-    }
-    return urls;
-  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -98,33 +96,25 @@ class _ReportScreenState extends State<ReportScreen> {
 
     setState(() => _submitting = true);
     try {
-      final mediaUrls = await _uploadMedia();
-      final reporter = FirebaseAuth.instance.currentUser;
-
-      await FirebaseFirestore.instance.collection('reports').add({
-        'targetId': widget.targetId,
-        'targetType': widget.targetType,
-        'targetName': widget.targetName,
-        'reporterId': reporter?.uid ?? '',
-        'reporterName': reporter?.displayName ?? 'Anonymous',
-        'reporterEmail': reporter?.email ?? '',
-        'reason': _selectedReason,
-        'explanation': _explanationController.text.trim(),
-        'mediaUrls': mediaUrls,
-        'status': 'pending', // pending | reviewed | dismissed
-        'createdAt': FieldValue.serverTimestamp(),
-        'reviewedAt': null,
-        'adminNote': null,
-      });
+      await _reportService.submitReport(
+        targetId: widget.targetId,
+        targetType: widget.targetType,
+        targetName: widget.targetName,
+        reason: _selectedReason!,
+        explanation: _explanationController.text.trim(),
+        mediaFiles: List<XFile>.from(_mediaFiles),
+      );
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Row(children: [
               Icon(Icons.check_circle, color: Colors.white, size: 16),
               SizedBox(width: 8),
-              Text('Report submitted. Our team will review it shortly.'),
+              Expanded(
+                child: Text('Report submitted. Sent to admin dashboard for review.'),
+              ),
             ]),
             backgroundColor: const Color(0xFF2ECC71),
             behavior: SnackBarBehavior.floating,
@@ -134,8 +124,12 @@ class _ReportScreenState extends State<ReportScreen> {
         );
       }
     } catch (e) {
-      setState(() => _submitting = false);
-      _snack('Failed to submit report. Please try again.');
+      debugPrint('Report submission error: $e');
+      if (mounted) {
+        setState(() => _submitting = false);
+        final msg = e.toString().replaceFirst('Exception: ', '');
+        _snack('Failed to submit report: $msg');
+      }
     }
   }
 
@@ -406,10 +400,13 @@ class _MediaThumb extends StatelessWidget {
   final VoidCallback onRemove;
   const _MediaThumb({required this.file, required this.onRemove});
 
-  bool get _isVideo =>
-      file.path.toLowerCase().endsWith('.mp4') ||
-      file.path.toLowerCase().endsWith('.mov') ||
-      file.path.toLowerCase().endsWith('.avi');
+  bool get _isVideo {
+    final target = '${file.name} ${file.path}'.toLowerCase();
+    return target.contains('.mp4') ||
+        target.contains('.mov') ||
+        target.contains('.avi') ||
+        target.contains('.webm');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -425,8 +422,31 @@ class _MediaThumb extends StatelessWidget {
                   child: const Center(
                       child: Icon(Icons.videocam, size: 32, color: Colors.grey)),
                 )
-              : Image.file(File(file.path),
-                  width: 80, height: 80, fit: BoxFit.cover),
+              : FutureBuilder<Uint8List>(
+                  future: file.readAsBytes(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return Image.memory(
+                        snapshot.data!,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                      );
+                    }
+                    return Container(
+                      width: 80,
+                      height: 80,
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ),
         Positioned(
           top: 2,

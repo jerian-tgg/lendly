@@ -33,8 +33,8 @@ class GeoLocation {
 }
 
 class LocationHelper {
-  // Default discovery radius (50 km around the user's saved location)
-  static const double defaultDiscoveryRadiusKm = 50.0;
+  // Default discovery radius (10 km around the user's saved location)
+  static const double defaultDiscoveryRadiusKm = 10.0;
 
   // Geographical bounds for the Philippines (Batanes to Tawi-Tawi / Palawan to Eastern Mindanao)
   static const double phMinLat = 4.2;

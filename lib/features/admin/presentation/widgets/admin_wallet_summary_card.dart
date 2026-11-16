@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_wallet_page.dart';
+import 'package:lendly/features/admin/presentation/widgets/admin_ledger_transaction_card.dart';
 import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart';
 
 /// Admin Wallet Summary Card displayed on the Admin Dashboard.
@@ -283,7 +283,7 @@ class _AdminWalletSummaryCardState extends State<AdminWalletSummaryCard> {
   }
 }
 
-class _AdminFeeDetailsSheet extends StatelessWidget {
+class _AdminFeeDetailsSheet extends StatefulWidget {
   final double balance;
   final double totalFees;
   final double activeEscrow;
@@ -293,6 +293,34 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
     required this.totalFees,
     required this.activeEscrow,
   });
+
+  @override
+  State<_AdminFeeDetailsSheet> createState() => _AdminFeeDetailsSheetState();
+}
+
+class _AdminFeeDetailsSheetState extends State<_AdminFeeDetailsSheet> {
+  final AdminLedgerDetailsLoader _detailsLoader = AdminLedgerDetailsLoader();
+  final Set<String> _expandedIds = {};
+
+  double get balance => widget.balance;
+  double get totalFees => widget.totalFees;
+  double get activeEscrow => widget.activeEscrow;
+
+  void _toggleExpanded(String entryId, Map<String, dynamic> data) {
+    final willExpand = !_expandedIds.contains(entryId);
+    setState(() {
+      if (willExpand) {
+        _expandedIds.add(entryId);
+      } else {
+        _expandedIds.remove(entryId);
+      }
+    });
+    if (willExpand) {
+      _detailsLoader.ensureLoaded(data, () {
+        if (mounted) setState(() {});
+      });
+    }
+  }
 
   String _formatAmount(num amount) {
     return '₱${amount.toStringAsFixed(2).replaceAllMapped(
@@ -469,16 +497,31 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
                               }
                               return Column(
                                 children: commDocs.map((d) {
-                                  final data = d.data() as Map<String, dynamic>;
-                                  return _buildCommissionItem(
-                                    txId: d.id,
-                                    type: 'service_fee',
-                                    feeAmount: (data['amount'] as num?)?.toDouble() ?? 0.0,
-                                    grossAmount: (data['grossAmount'] as num?)?.toDouble() ?? 0.0,
-                                    lenderId: data['lenderId'] as String?,
-                                    borrowerId: data['borrowerId'] as String?,
-                                    timestamp: data['timestamp'] as Timestamp?,
-                                  );
+                                  final raw = d.data() as Map<String, dynamic>;
+                                  final rentalId =
+                                      (raw['rentalId'] as String?) ?? d.id;
+                                  final feeAmt =
+                                      (raw['amount'] as num?)?.toDouble() ?? 0.0;
+                                  final grossAmt =
+                                      (raw['grossAmount'] as num?)?.toDouble() ??
+                                          (feeAmt * 10);
+                                  final entryId = 'fee_$rentalId';
+                                  final data = <String, dynamic>{
+                                    ...raw,
+                                    'id': entryId,
+                                    'type': 'service_fee',
+                                    'amount': feeAmt,
+                                    'grossAmount': grossAmt,
+                                    'payoutAmount':
+                                        (raw['payoutAmount'] as num?)?.toDouble() ??
+                                            (grossAmt - feeAmt),
+                                    'referenceId': rentalId,
+                                    'rentalId': rentalId,
+                                    'itemName': raw['itemName'] ?? 'Rental Item',
+                                    'status': raw['status'] ?? 'completed',
+                                    'createdAt': raw['timestamp'],
+                                  };
+                                  return _buildLedgerItem(entryId, data);
                                 }).toList(),
                               );
                             },
@@ -487,25 +530,10 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
 
                         return Column(
                           children: docs.map((d) {
-                            final data = d.data() as Map<String, dynamic>;
-                            final type = (data['type'] as String?) ?? 'service_fee';
-                            final feeAmount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-                            final grossAmount = (data['grossAmount'] as num?)?.toDouble() ??
-                                (type == 'service_fee' && feeAmount > 0 ? feeAmount / 0.10 : feeAmount);
-                            final referenceId = data['referenceId'] as String? ?? d.id;
-                            final borrowerId = data['borrowerId'] as String?;
-                            final lenderId = data['lenderId'] as String?;
-                            final timestamp = (data['createdAt'] ?? data['timestamp']) as Timestamp?;
-
-                            return _buildCommissionItem(
-                              txId: referenceId,
-                              type: type,
-                              feeAmount: feeAmount,
-                              grossAmount: grossAmount,
-                              lenderId: lenderId,
-                              borrowerId: borrowerId,
-                              timestamp: timestamp,
-                            );
+                            final data = Map<String, dynamic>.from(
+                                d.data() as Map<String, dynamic>);
+                            data['id'] = d.id;
+                            return _buildLedgerItem(d.id, data);
                           }).toList(),
                         );
                       },
@@ -562,158 +590,23 @@ class _AdminFeeDetailsSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildCommissionItem({
-    required String txId,
-    required String type,
-    required double feeAmount,
-    required double grossAmount,
-    required String? lenderId,
-    required String? borrowerId,
-    required Timestamp? timestamp,
-  }) {
-    final dateStr = timestamp != null
-        ? DateFormat('MMM d, yyyy • h:mm a').format(timestamp.toDate())
-        : 'Just now';
+  Widget _buildLedgerItem(String entryId, Map<String, dynamic> data) {
+    final lenderId = (data['lenderId'] as String?) ?? '';
+    final borrowerId = (data['borrowerId'] as String?) ?? '';
+    final rentalId =
+        (data['referenceId'] as String?) ?? (data['rentalId'] as String?) ?? '';
 
-    String badgeLabel;
-    Color badgeColor;
-    String amountPrefix;
-
-    switch (type) {
-      case 'escrow_hold':
-        badgeLabel = 'Escrow Hold';
-        badgeColor = const Color(0xFF98259A);
-        amountPrefix = '';
-        break;
-      case 'lender_payout':
-        badgeLabel = '90% User Payout';
-        badgeColor = const Color(0xFF98259A);
-        amountPrefix = '';
-        break;
-      case 'escrow_refund':
-        badgeLabel = 'Escrow Refund';
-        badgeColor = const Color(0xFFE67E22);
-        amountPrefix = '';
-        break;
-      case 'service_fee':
-      default:
-        badgeLabel = '10% Platform Fee';
-        badgeColor = const Color(0xFF27AE60);
-        amountPrefix = '+';
-        break;
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 3, offset: Offset(0, 1)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top row: Rental ID & Type Pill
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF98259A).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'TX: ${txId.length > 12 ? txId.substring(0, 12) : txId}',
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF98259A),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: badgeColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      badgeLabel,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: badgeColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                '$amountPrefix₱${feeAmount.toStringAsFixed(2)} ORC',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: badgeColor,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // Middle row: Gross transaction amount & timestamp
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Gross Amount: ₱${grossAmount.toStringAsFixed(2)} ORC',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                dateStr,
-                style: const TextStyle(fontSize: 11, color: Colors.black45),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 6),
-
-          // Source user IDs row
-          Row(
-            children: [
-              if (borrowerId != null && borrowerId.isNotEmpty)
-                Expanded(
-                  child: Text(
-                    'Borrower: ${borrowerId.length > 8 ? borrowerId.substring(0, 8) : borrowerId}...',
-                    style: const TextStyle(fontSize: 11, color: Colors.black54),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              if (lenderId != null && lenderId.isNotEmpty)
-                Expanded(
-                  child: Text(
-                    'Lender: ${lenderId.length > 8 ? lenderId.substring(0, 8) : lenderId}...',
-                    style: const TextStyle(fontSize: 11, color: Colors.black54),
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.end,
-                  ),
-                ),
-            ],
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AdminLedgerTransactionCard(
+        key: ValueKey(entryId),
+        data: data,
+        isExpanded: _expandedIds.contains(entryId),
+        onTap: () => _toggleExpanded(entryId, data),
+        lenderInfo: _detailsLoader.getUser(lenderId),
+        borrowerInfo: _detailsLoader.getUser(borrowerId),
+        rentalInfo: _detailsLoader.getRental(rentalId),
+        isLoadingDetails: _detailsLoader.isLoadingFor(data),
       ),
     );
   }

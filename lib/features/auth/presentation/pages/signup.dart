@@ -59,26 +59,12 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _obscurePassword        = true;
   bool _obscureConfirmPassword = true;
 
-  // ── Appraiser ──
-  bool   _isAppraiser    = false;
-  String _specialization = 'Electronics & Technology';
-  final _businessNameController  = TextEditingController();
-  final _licenseNumberController = TextEditingController();
-
   bool _isLoading = false;
 
   final _emailRegex = RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$');
 
   final List<String> _sexOptions         = ['Male', 'Female', 'Prefer not to say'];
   final List<String> _civilStatusOptions = ['Single', 'Married', 'Widowed', 'Separated'];
-  final List<String> _specializations    = [
-    'Electronics & Technology',
-    'Industrial Tools & Equipment',
-    'Jewelry & Luxury Goods',
-    'Vehicles & Transport',
-    'Musical Instruments',
-    'General Merchandise',
-  ];
 
   @override
   void dispose() {
@@ -102,8 +88,6 @@ class _SignUpPageState extends State<SignUpPage> {
     _emergencyRelationController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _businessNameController.dispose();
-    _licenseNumberController.dispose();
     super.dispose();
   }
 
@@ -233,10 +217,7 @@ class _SignUpPageState extends State<SignUpPage> {
         emergencyName: _emergencyNameController.text.trim(),
         emergencyPhone: _emergencyPhoneController.text.trim(),
         emergencyRelation: _emergencyRelationController.text.trim(),
-        isAppraiser: _isAppraiser,
-        businessName: _isAppraiser ? _businessNameController.text.trim() : null,
-        licenseNumber: _isAppraiser ? _licenseNumberController.text.trim() : null,
-        specialization: _isAppraiser ? _specialization : null,
+        isAppraiser: false,
         latitude: effectiveLoc.latitude,
         longitude: effectiveLoc.longitude,
         locationName: effectiveLoc.name ?? (cityStr.isNotEmpty ? '$cityStr, $provStr' : null),
@@ -588,7 +569,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                 ? (_pinnedLocation!.name ?? 'Location Pinned')
                                 : (_isDetectingLocation
                                     ? 'Detecting your GPS location...'
-                                    : 'Set your coordinates for nearby items (50km feed)'),
+                                    : 'Set your coordinates for nearby items (10km feed)'),
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -599,7 +580,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           Text(
                             _pinnedLocation != null
                                 ? 'Coordinates: ${_pinnedLocation!.latitude.toStringAsFixed(4)}, ${_pinnedLocation!.longitude.toStringAsFixed(4)}'
-                                : 'Pin your location on the map or use GPS so we can show rentals within 50km of you.',
+                                : 'Pin your location on the map or use GPS so we can show rentals within 10km of you.',
                             style: const TextStyle(
                               fontSize: 11,
                               color: Colors.black54,
@@ -733,94 +714,28 @@ class _SignUpPageState extends State<SignUpPage> {
             },
           ),
           const SizedBox(height: 24),
-          _sectionTitle('Special Roles (Optional)'),
+          _sectionTitle('Appraiser Eligibility'),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: const Color(0xFF98259A).withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
+              border: Border.all(
+                color: const Color(0xFF98259A).withValues(alpha: 0.3),
+              ),
             ),
-            child: Column(
+            child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  activeThumbColor: const Color(0xFF98259A),
-                  title: const Text(
-                    'Register as a Certified Appraiser',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF98259A),
-                    ),
+                Icon(Icons.verified_user_outlined, size: 22, color: Color(0xFF98259A)),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Want to apply as a Certified Appraiser? Create your account and complete Identity Verification on your Profile first to unlock the Appraiser Application.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF6B156C), height: 1.4),
                   ),
-                  subtitle: const Text(
-                    'Offer certified item valuations & official appraisals',
-                    style: TextStyle(fontSize: 11, color: Colors.black54),
-                  ),
-                  value: _isAppraiser,
-                  onChanged: (val) => setState(() => _isAppraiser = val),
                 ),
-                if (_isAppraiser) ...[
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF98259A).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline, size: 18, color: Color(0xFF98259A)),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Manual Verification: You will submit photos of your BIR permits or business registration papers from your profile for admin verification before appraiser status is activated.',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF6B156C), height: 1.3),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildField(
-                    controller: _businessNameController,
-                    hint: 'Business / Agency Name *',
-                    icon: Icons.business,
-                    validator: (v) => _isAppraiser && (v == null || v.isEmpty) ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildField(
-                    controller: _licenseNumberController,
-                    hint: 'License / Accreditation No. (e.g. APP-2026-XXXX)',
-                    icon: Icons.verified_user,
-                    validator: (v) => _isAppraiser && (v == null || v.isEmpty) ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Specialization Category',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    initialValue: _specialization,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.category),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    items: _specializations.map((cat) {
-                      return DropdownMenuItem(value: cat, child: Text(cat, style: const TextStyle(fontSize: 13)));
-                    }).toList(),
-                    onChanged: (val) { if (val != null) setState(() => _specialization = val); },
-                  ),
-                ],
               ],
             ),
           ),

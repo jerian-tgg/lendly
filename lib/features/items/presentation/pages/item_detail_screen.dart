@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:lendly/core/constants/item_categories.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/core/utils/location_helper.dart';
@@ -53,6 +54,26 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   void _openAppraisalDialog(BuildContext context, Map<String, dynamic> itemData) async {
+    final appraiserSpecialty = _currentUserProfile?['specialization']?.toString();
+    final itemCategory = (itemData['category'] ?? '').toString();
+    if (!AppraisalModel.canAppraiseItem(
+      appraiserSpecialty: appraiserSpecialty,
+      itemCategory: itemCategory,
+    )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppraisalModel.getSpecialtyMismatchMessage(
+              appraiserSpecialty: appraiserSpecialty,
+              itemCategory: itemCategory,
+            ),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AppraisalFormDialog(
@@ -88,7 +109,29 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
       final userData = userDoc.data() ?? {};
       final businessName = (userData['businessName'] as String?) ?? 'Licensed Appraiser';
+      final appraiserSpecialty = userData['specialization']?.toString();
+      final itemCategory = (itemData['category'] ?? '').toString();
       final itemName = (itemData['name'] ?? itemData['title'] ?? 'Item').toString();
+
+      if (!AppraisalModel.canAppraiseItem(
+        appraiserSpecialty: appraiserSpecialty,
+        itemCategory: itemCategory,
+      )) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppraisalModel.getSpecialtyMismatchMessage(
+                  appraiserSpecialty: appraiserSpecialty,
+                  itemCategory: itemCategory,
+                ),
+              ),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
 
       final convoId = await createOrGetAppraisalConversation(
         appraiserId: currentUserId,
@@ -639,6 +682,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         final isViewerAppraiser = _currentUserProfile?['isAppraiser'] == true ||
             _currentUserProfile?['businessVerificationStatus'] == 'approved' ||
             isViewerAdmin;
+        final viewerSpecialty = _currentUserProfile?['specialization']?.toString();
+        final viewerCanonicalSpecialty =
+            ItemCategories.normalizeCategory(viewerSpecialty) ??
+                (viewerSpecialty != null && viewerSpecialty.isNotEmpty
+                    ? viewerSpecialty
+                    : 'Unspecified');
+        final canViewerAppraiseThisItem = isViewerAppraiser &&
+            AppraisalModel.canAppraiseItem(
+              appraiserSpecialty: viewerSpecialty,
+              itemCategory: category.toString(),
+            );
 
         final appraisalVal = (itemData['appraisalValue'] as num?)?.toDouble() ??
             (itemData['appraisal'] as num?)?.toDouble();
@@ -1391,38 +1445,57 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     // Appraiser action button for certified item
                     if (!isOwner && (isViewerAppraiser || isViewerAdmin)) ...[
                       const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName),
-                              icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF98259A)),
-                              label: const Text('Appraisal Chat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF98259A))),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFF98259A)),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      if (canViewerAppraiseThisItem)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName),
+                                icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF98259A)),
+                                label: const Text('Appraisal Chat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF98259A))),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Color(0xFF98259A)),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _openAppraisalDialog(context, itemData),
-                              icon: const Icon(Icons.edit_note, color: Colors.white, size: 16),
-                              label: const Text(
-                                'Re-Appraise',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF98259A),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _openAppraisalDialog(context, itemData),
+                                icon: const Icon(Icons.edit_note, color: Colors.white, size: 16),
+                                label: const Text(
+                                  'Re-Appraise',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF98259A),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
                               ),
                             ),
+                          ],
+                        )
+                      else
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: null,
+                            icon: const Icon(Icons.lock_outline, size: 16),
+                            label: Text(
+                              'Specialty Restricted ($viewerCanonicalSpecialty Only)',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              disabledBackgroundColor: Colors.grey.shade200,
+                              disabledForegroundColor: Colors.grey.shade700,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
                           ),
-                        ],
-                      ),
+                        ),
                     ],
                   ] else if (isUnderReview) ...[
                     // State 2: Currently Being Checked by Appraiser
@@ -1580,14 +1653,28 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName),
-                                icon: const Icon(Icons.handshake_outlined, color: Colors.white, size: 18),
-                                label: const Text(
-                                  'Coordinate Meetup & Appraise',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                                onPressed: canViewerAppraiseThisItem
+                                    ? () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName)
+                                    : null,
+                                icon: Icon(
+                                  canViewerAppraiseThisItem ? Icons.handshake_outlined : Icons.lock_outline,
+                                  color: canViewerAppraiseThisItem ? Colors.white : Colors.grey.shade700,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  canViewerAppraiseThisItem
+                                      ? 'Coordinate Meetup & Appraise'
+                                      : 'Specialty Restricted ($viewerCanonicalSpecialty Only)',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: canViewerAppraiseThisItem ? Colors.white : Colors.grey.shade700,
+                                  ),
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF98259A),
+                                  disabledBackgroundColor: Colors.grey.shade200,
+                                  disabledForegroundColor: Colors.grey.shade700,
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
@@ -1702,14 +1789,28 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName),
-                                icon: const Icon(Icons.handshake_outlined, color: Colors.white, size: 18),
-                                label: const Text(
-                                  'Coordinate Meetup & Appraise',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                                onPressed: canViewerAppraiseThisItem
+                                    ? () => _messageOwnerToAppraise(context, itemData, ownerId, ownerName)
+                                    : null,
+                                icon: Icon(
+                                  canViewerAppraiseThisItem ? Icons.handshake_outlined : Icons.lock_outline,
+                                  color: canViewerAppraiseThisItem ? Colors.white : Colors.grey.shade700,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  canViewerAppraiseThisItem
+                                      ? 'Coordinate Meetup & Appraise'
+                                      : 'Specialty Restricted ($viewerCanonicalSpecialty Only)',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: canViewerAppraiseThisItem ? Colors.white : Colors.grey.shade700,
+                                  ),
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF98259A),
+                                  disabledBackgroundColor: Colors.grey.shade200,
+                                  disabledForegroundColor: Colors.grey.shade700,
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lendly/core/constants/item_categories.dart';
 import 'package:lendly/core/services/document_upload_service.dart';
 import 'package:lendly/features/business/data/repositories/business_application_repository.dart';
 import 'package:lendly/features/admin/presentation/widgets/document_viewer_dialog.dart';
@@ -26,7 +27,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
   late TextEditingController _notesController;
 
   String _selectedPermitType = 'BIR Certificate of Registration (Form 2303)';
-  String _selectedSpecialization = 'Electronics & Technology';
+  String _selectedSpecialization = ItemCategories.defaultCategory;
 
   final List<String> _permitTypes = [
     'BIR Certificate of Registration (Form 2303)',
@@ -37,15 +38,7 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
     'Other Business Registration Papers',
   ];
 
-  final List<String> _specializations = [
-    'Electronics & Technology',
-    'Industrial Tools & Equipment',
-    'Jewelry & Luxury Goods',
-    'Vehicles & Transport',
-    'Musical Instruments',
-    'Home & Office Appliances',
-    'General Merchandise',
-  ];
+  final List<String> _specializations = ItemCategories.appraiserSpecialties;
 
   // Local pending photos picked via camera/gallery
   final List<XFile> _pickedFiles = [];
@@ -55,11 +48,14 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
   bool _isLoading = false;
   String _loadingMessage = '';
   String? _photoError;
+  bool _isUserVerified = false;
+  bool _isCheckingVerification = true;
 
   @override
   void initState() {
     super.initState();
     final init = widget.existingData;
+    _isUserVerified = BusinessApplicationRepository.canUserApplyAsAppraiser(init);
 
     _businessNameController = TextEditingController(text: init?['businessName'] ?? '');
     _licenseController = TextEditingController(text: init?['licenseNumber'] ?? '');
@@ -70,8 +66,9 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
     if (init?['permitType'] != null && _permitTypes.contains(init!['permitType'])) {
       _selectedPermitType = init['permitType'];
     }
-    if (init?['specialization'] != null && _specializations.contains(init!['specialization'])) {
-      _selectedSpecialization = init['specialization'];
+    final normalizedSpec = ItemCategories.normalizeCategory(init?['specialization']?.toString());
+    if (normalizedSpec != null && _specializations.contains(normalizedSpec)) {
+      _selectedSpecialization = normalizedSpec;
     }
 
     if (init?['documentUrls'] is List) {
@@ -85,27 +82,43 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
 
   Future<void> _loadUserDefaultData() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _isUserVerified = false;
+          _isCheckingVerification = false;
+        });
+      }
+      return;
+    }
 
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       if (doc.exists && mounted) {
         final data = doc.data() ?? {};
-        if (_phoneController.text.isEmpty && data['phone'] != null) {
-          setState(() {
+        setState(() {
+          _isUserVerified = BusinessApplicationRepository.canUserApplyAsAppraiser(data);
+          _isCheckingVerification = false;
+          if (_phoneController.text.isEmpty && data['phone'] != null) {
             _phoneController.text = data['phone'];
-          });
-        }
-        if (_addressController.text.isEmpty && data['location'] != null) {
-          final loc = data['location'];
-          if (loc is String) {
-            setState(() => _addressController.text = loc);
-          } else if (loc is Map && loc['name'] != null) {
-            setState(() => _addressController.text = loc['name'].toString());
           }
-        }
+          if (_addressController.text.isEmpty && data['location'] != null) {
+            final loc = data['location'];
+            if (loc is String) {
+              _addressController.text = loc;
+            } else if (loc is Map && loc['name'] != null) {
+              _addressController.text = loc['name'].toString();
+            }
+          }
+        });
+      } else if (mounted) {
+        setState(() => _isCheckingVerification = false);
       }
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isCheckingVerification = false);
+      }
+    }
   }
 
   @override
@@ -209,9 +222,23 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
         });
       }
 
-      // Fetch user profile for full name
+      // Fetch user profile for full name and verification status
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final userData = userDoc.data() ?? {};
+      if (!BusinessApplicationRepository.canUserApplyAsAppraiser(userData)) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'You must become a verified user first before applying to become an appraiser.',
+              ),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
       final firstName = userData['firstName'] ?? '';
       final lastName = userData['lastName'] ?? '';
       final applicantName = ('$firstName $lastName').trim().isNotEmpty
@@ -391,6 +418,37 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                   ),
 
                   const SizedBox(height: 20),
+
+                  if (!_isCheckingVerification && !_isUserVerified) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.shade300),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.lock_outline, color: Colors.redAccent, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Identity Verification Required: You must become a verified user on your Profile page before you can submit an appraiser application.',
+                              style: TextStyle(
+                                color: Colors.red.shade900,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Section 1: Business Details
                   _buildSectionCard(
@@ -636,7 +694,9 @@ class _RegisterBusinessScreenState extends State<RegisterBusinessScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton.icon(
-                      onPressed: _isLoading ? null : _submitApplication,
+                      onPressed: (_isLoading || (!_isCheckingVerification && !_isUserVerified))
+                          ? null
+                          : _submitApplication,
                       icon: const Icon(Icons.send_rounded, color: Colors.white),
                       label: const Text(
                         'Submit for Admin Verification',

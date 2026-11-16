@@ -119,8 +119,8 @@ void main() {
       expect(matchesRadius, isTrue);
     });
 
-    test('Default discovery radius is 50km', () {
-      expect(LocationHelper.defaultDiscoveryRadiusKm, 50.0);
+    test('Default discovery radius is 10km', () {
+      expect(LocationHelper.defaultDiscoveryRadiusKm, 10.0);
     });
 
     test('Validates and sanitizes coordinates to Philippines bounds', () {

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lendly/core/constants/item_categories.dart';
 import 'package:lendly/features/appraisal/presentation/widgets/appraisal_form_dialog.dart';
 import 'package:lendly/features/appraisal/domain/models/appraisal_model.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
+import 'package:lendly/features/business/data/repositories/business_application_repository.dart';
 import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
 import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
@@ -20,19 +22,9 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedCategory = 'All';
-  String _filterType = 'all'; // 'all', 'needs_appraisal', 'requested', 'certified'
+  String _filterType = 'all'; // 'all', 'my_specialty', 'needs_appraisal', 'requested', 'certified'
 
-  final List<String> _categories = [
-    'All',
-    'Electronics',
-    'Cameras',
-    'Tools',
-    'Outdoor',
-    'Musical Instruments',
-    'Vehicles',
-    'Sports',
-    'Home',
-  ];
+  final List<String> _categories = ItemCategories.filterCategories;
 
   @override
   void initState() {
@@ -47,7 +39,31 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
     super.dispose();
   }
 
-  void _openAppraisalModal(BuildContext context, Map<String, dynamic> itemData, String itemId) async {
+  void _openAppraisalModal(
+    BuildContext context,
+    Map<String, dynamic> itemData,
+    String itemId, {
+    String? appraiserSpecialty,
+  }) async {
+    final itemCategory = (itemData['category'] ?? '').toString();
+    if (!AppraisalModel.canAppraiseItem(
+      appraiserSpecialty: appraiserSpecialty,
+      itemCategory: itemCategory,
+    )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppraisalModel.getSpecialtyMismatchMessage(
+              appraiserSpecialty: appraiserSpecialty,
+              itemCategory: itemCategory,
+            ),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AppraisalFormDialog(
@@ -61,11 +77,17 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
     }
   }
 
-  Future<void> _startAppraisalFlow(BuildContext context, Map<String, dynamic> itemData, String itemId) async {
+  Future<void> _startAppraisalFlow(
+    BuildContext context,
+    Map<String, dynamic> itemData,
+    String itemId, {
+    String? appraiserSpecialty,
+  }) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final ownerId = (itemData['ownerId'] ?? '').toString();
     final ownerName = (itemData['ownerName'] ?? 'Owner').toString();
     final itemName = (itemData['name'] ?? itemData['title'] ?? 'Item').toString();
+    final itemCategory = (itemData['category'] ?? '').toString();
 
     if (currentUserId.isEmpty || ownerId.isEmpty) return;
     if (currentUserId == ownerId) {
@@ -76,10 +98,31 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
     }
 
     try {
-      // Fetch appraiser's verified business name
+      // Fetch appraiser's verified business name & specialty
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
       final userData = userDoc.data() ?? {};
       final businessName = (userData['businessName'] as String?) ?? 'Licensed Appraiser';
+      final effectiveSpecialty = appraiserSpecialty ?? (userData['specialization'] as String?);
+
+      if (!AppraisalModel.canAppraiseItem(
+        appraiserSpecialty: effectiveSpecialty,
+        itemCategory: itemCategory,
+      )) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppraisalModel.getSpecialtyMismatchMessage(
+                  appraiserSpecialty: effectiveSpecialty,
+                  itemCategory: itemCategory,
+                ),
+              ),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
 
       final convoId = await createOrGetAppraisalConversation(
         appraiserId: currentUserId,
@@ -143,6 +186,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
               userData['businessVerificationStatus'] == 'approved';
 
           if (!isVerifiedAppraiser) {
+            final isVerifiedUser = BusinessApplicationRepository.canUserApplyAsAppraiser(userData);
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
@@ -171,28 +215,40 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'The Appraiser Dashboard is only visible to users who applied and are verified as an appraiser by the administrator.',
+                    Text(
+                      isVerifiedUser
+                          ? 'The Appraiser Dashboard is only visible to users who applied and are verified as an appraiser by the administrator.'
+                          : 'You must become a verified user first before applying to become an appraiser.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+                      style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => RegisterBusinessScreen(existingData: userData),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.assignment_turned_in, color: Colors.white, size: 18),
-                      label: const Text(
-                        'Apply as an Appraiser',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      onPressed: isVerifiedUser
+                          ? () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RegisterBusinessScreen(existingData: userData),
+                                ),
+                              );
+                            }
+                          : null,
+                      icon: Icon(
+                        isVerifiedUser ? Icons.assignment_turned_in : Icons.verified_user_outlined,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      label: Text(
+                        isVerifiedUser
+                            ? 'Apply as an Appraiser'
+                            : 'Verify Identity on Profile First',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF98259A),
+                        disabledBackgroundColor: Colors.grey[400],
+                        disabledForegroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -209,7 +265,9 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
           final licenseNo = userData['licenseNumber'] is String && (userData['licenseNumber'] as String).isNotEmpty
               ? userData['licenseNumber']
               : 'APP-2026-VERIFIED';
-          final specialization = userData['specialization'] ?? 'General Marketplace';
+          final rawSpec = userData['specialization']?.toString();
+          final specialization = ItemCategories.normalizeCategory(rawSpec) ??
+              (rawSpec != null && rawSpec.isNotEmpty ? rawSpec : ItemCategories.defaultCategory);
 
           return Column(
             children: [
@@ -319,12 +377,14 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                     ),
                     const SizedBox(height: 10),
 
-                    // Filter Status Chips (All, Needs Appraisal, Requested, Certified)
+                    // Filter Status Chips (All, My Specialty, Needs Appraisal, Requested, Certified)
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
                           _buildFilterChip('All Marketplace Items', 'all'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('My Specialty ($specialization)', 'my_specialty'),
                           const SizedBox(width: 8),
                           _buildFilterChip('Needs Appraisal', 'needs_appraisal'),
                           const SizedBox(width: 8),
@@ -382,7 +442,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildBrowseAndRateTab(uid),
+                    _buildBrowseAndRateTab(uid, specialization),
                     _buildCertifiedHistoryTab(uid),
                   ],
                 ),
@@ -431,7 +491,7 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
     );
   }
 
-  Widget _buildBrowseAndRateTab(String uid) {
+  Widget _buildBrowseAndRateTab(String uid, String specialization) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('items').snapshots(),
       builder: (context, snapshot) {
@@ -452,8 +512,16 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
           final title = (data['name'] ?? data['title'] ?? '').toString().toLowerCase();
           final owner = (data['ownerName'] ?? '').toString().toLowerCase();
 
+          // Exclude prohibited high-value / titled categories
+          if (ItemCategories.isExcludedCategory(category)) {
+            return false;
+          }
+
           // Category filter
-          if (_selectedCategory != 'All' && !category.toLowerCase().contains(_selectedCategory.toLowerCase())) {
+          if (!ItemCategories.matchesCategoryFilter(
+            itemCategory: category,
+            selectedFilter: _selectedCategory,
+          )) {
             return false;
           }
 
@@ -463,6 +531,13 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
           }
 
           // Status filter
+          if (_filterType == 'my_specialty' &&
+              !AppraisalModel.canAppraiseItem(
+                appraiserSpecialty: specialization,
+                itemCategory: category,
+              )) {
+            return false;
+          }
           if (_filterType == 'needs_appraisal' && isCertified) return false;
           if (_filterType == 'requested' && !isRequested) return false;
           if (_filterType == 'certified' && !isCertified) return false;
@@ -503,6 +578,10 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
             final category = itemData['category'] ?? 'General';
             final isCertified = itemData['appraisalStatus'] == 'certified';
             final isRequested = itemData['appraisalRequested'] == true;
+            final canAppraiseSpecialty = AppraisalModel.canAppraiseItem(
+              appraiserSpecialty: specialization,
+              itemCategory: category.toString(),
+            );
 
             final fnScore = itemData['functionScore'];
             final cosScore = itemData['cosmeticScore'];
@@ -688,18 +767,31 @@ class _AppraisalDashboardState extends State<AppraisalDashboard> with SingleTick
                         Expanded(
                           flex: 2,
                           child: ElevatedButton.icon(
-                            onPressed: () => _startAppraisalFlow(context, itemData, doc.id),
+                            onPressed: canAppraiseSpecialty
+                                ? () => _startAppraisalFlow(
+                                      context,
+                                      itemData,
+                                      doc.id,
+                                      appraiserSpecialty: specialization,
+                                    )
+                                : null,
                             icon: Icon(
-                              isCertified ? Icons.edit_note_rounded : Icons.handshake_outlined,
+                              !canAppraiseSpecialty
+                                  ? Icons.lock_outline_rounded
+                                  : (isCertified ? Icons.edit_note_rounded : Icons.handshake_outlined),
                               size: 15,
                             ),
                             label: Text(
-                              isCertified ? 'Re-Appraise (Chat)' : 'Message & Appraise',
+                              !canAppraiseSpecialty
+                                  ? 'Locked ($specialization Only)'
+                                  : (isCertified ? 'Re-Appraise (Chat)' : 'Message & Appraise'),
                               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF98259A),
                               foregroundColor: Colors.white,
+                              disabledBackgroundColor: Colors.grey.shade200,
+                              disabledForegroundColor: Colors.grey.shade600,
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),

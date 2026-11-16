@@ -103,7 +103,7 @@ class BusinessApplication {
       businessName: data['businessName'] ?? '',
       licenseNumber: data['licenseNumber'] ?? '',
       permitType: data['permitType'] ?? 'BIR Permit / Registration Document',
-      specialization: data['specialization'] ?? 'General Merchandise',
+      specialization: data['specialization'] ?? 'Electronics',
       phone: data['phone'] ?? '',
       address: data['address'] ?? '',
       documentUrls: docList,

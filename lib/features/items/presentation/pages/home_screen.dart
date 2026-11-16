@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lendly/core/constants/item_categories.dart';
 import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/features/chat/presentation/pages/conversation_screen.dart';
@@ -410,23 +411,14 @@ class _ItemListScreenState extends State<ItemListScreen> {
   String _selectedCategory = 'All';
   String _selectedMode = 'All'; // All, Lend, Borrow, Nearby
   double _selectedRadiusKm =
-      LocationHelper.defaultDiscoveryRadiusKm; // Default 50km radius around user's saved location
+      LocationHelper.defaultDiscoveryRadiusKm; // Default 10km radius around user's saved location
   bool _isGridView = true; // Two-column marketplace layout toggle
 
   GeoLocation _currentReferenceLocation = LocationHelper.defaultLocation;
   final Map<String, GeoLocation> _ownerLocationsCache = {};
   StreamSubscription<DocumentSnapshot>? _userLocationSub;
 
-  final List<String> _categories = [
-    'All',
-    'Electronics',
-    'Appliances',
-    'Tools',
-    'Books',
-    'Furniture',
-    'Clothing',
-    'Other',
-  ];
+  final List<String> _categories = ItemCategories.filterCategories;
 
   final List<double> _radiusOptions = [5.0, 10.0, 25.0, 50.0, 100.0];
 
@@ -439,7 +431,7 @@ class _ItemListScreenState extends State<ItemListScreen> {
   Future<void> _loadUserReferenceLocation() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // 1. Primary: Listen to user's saved location in Firestore so the 50km feed
+      // 1. Primary: Listen to user's saved location in Firestore so the 10km feed
       // centers on their saved coordinates and updates immediately if changed in Account Settings.
       _userLocationSub?.cancel();
       _userLocationSub = FirebaseFirestore.instance
@@ -1515,10 +1507,16 @@ class _ItemListScreenState extends State<ItemListScreen> {
                     ownerName.contains(_searchQuery) ||
                     condition.contains(_searchQuery);
 
+                // Exclude prohibited high-value / titled categories
+                if (ItemCategories.isExcludedCategory(data['category']?.toString())) {
+                  return false;
+                }
+
                 // Category Matching
-                final matchesCategory =
-                    _selectedCategory == 'All' ||
-                    category == _selectedCategory.toLowerCase();
+                final matchesCategory = ItemCategories.matchesCategoryFilter(
+                  itemCategory: data['category']?.toString(),
+                  selectedFilter: _selectedCategory,
+                );
 
                 // Calculate Functional Geographical Distance (Haversine formula!)
                 GeoLocation? itemCoords = LocationHelper.extractItemCoordinates(data);

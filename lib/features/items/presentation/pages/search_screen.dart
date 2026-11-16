@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lendly/core/constants/item_categories.dart';
 import 'package:lendly/features/auth/presentation/pages/login.dart';
 import 'package:lendly/features/items/presentation/widgets/item_card.dart';
 
@@ -20,16 +21,7 @@ class _SearchScreenState extends State<SearchScreen> {
   String _selectedMode = 'All'; // All, Lend, Borrow
   bool _isGridView = true;
 
-  final List<String> _categories = [
-    'All',
-    'Electronics',
-    'Appliances',
-    'Tools',
-    'Books',
-    'Furniture',
-    'Clothing',
-    'Other',
-  ];
+  final List<String> _categories = ItemCategories.filterCategories;
 
   @override
   void dispose() {
@@ -561,9 +553,16 @@ class _SearchScreenState extends State<SearchScreen> {
                       ownerName.contains(_searchQuery) ||
                       condition.contains(_searchQuery);
 
+                  // Exclude prohibited high-value / titled categories
+                  if (ItemCategories.isExcludedCategory(data['category']?.toString())) {
+                    return false;
+                  }
+
                   // Category matching
-                  final matchesCategory = _selectedCategory == 'All' ||
-                      category == _selectedCategory.toLowerCase();
+                  final matchesCategory = ItemCategories.matchesCategoryFilter(
+                    itemCategory: data['category']?.toString(),
+                    selectedFilter: _selectedCategory,
+                  );
 
                   // Mode matching
                   final matchesMode = _selectedMode == 'All' ||

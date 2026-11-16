@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:lendly/core/services/report_service.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_dashboard_screen.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_reports_page.dart';
 import 'package:lendly/features/admin/presentation/pages/admin_user_management_page.dart';
@@ -70,16 +71,23 @@ class AdminDashboardPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _DashboardCard(
-              icon: Icons.flag_rounded,
-              title: 'Reports',
-              subtitle: 'Review user & item violation reports',
-              color: const Color(0xFFE74C3C),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const AdminReportsPage()),
-              ),
+            StreamBuilder<int>(
+              stream: ReportService().streamPendingReportCount(),
+              builder: (context, snapshot) {
+                final pendingCount = snapshot.data ?? 0;
+                return _DashboardCard(
+                  icon: Icons.flag_rounded,
+                  title: 'Reports',
+                  subtitle: 'Review user & item violation reports',
+                  color: const Color(0xFFE74C3C),
+                  badgeCount: pendingCount,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminReportsPage()),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 12),
             _DashboardCard(
@@ -118,6 +126,7 @@ class _DashboardCard extends StatelessWidget {
   final String subtitle;
   final Color color;
   final VoidCallback onTap;
+  final int badgeCount;
 
   const _DashboardCard({
     required this.icon,
@@ -125,6 +134,7 @@ class _DashboardCard extends StatelessWidget {
     required this.subtitle,
     required this.color,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   @override
@@ -155,11 +165,36 @@ class _DashboardCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: color)),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(title,
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: color)),
+                      ),
+                      if (badgeCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$badgeCount pending',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 4),
                   Text(subtitle,
                       style: const TextStyle(

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:lendly/core/services/report_service.dart';
 
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({super.key});
@@ -65,18 +66,35 @@ class _ReportList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('reports')
-          .where('status', isEqualTo: status)
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
+    return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+      stream: ReportService().streamReportsByStatus(status),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(
               child: CircularProgressIndicator(color: Color(0xFF98259A)));
         }
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
+        if (snap.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline,
+                      size: 48, color: Colors.redAccent),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Unable to load $status reports:\n${snap.error}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        final docs = snap.data ?? [];
+        if (docs.isEmpty) {
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -95,11 +113,11 @@ class _ReportList extends StatelessWidget {
 
         return ListView.separated(
           padding: const EdgeInsets.all(16),
-          itemCount: snap.data!.docs.length,
+          itemCount: docs.length,
           separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (context, i) {
-            final doc = snap.data!.docs[i];
-            final data = doc.data() as Map<String, dynamic>;
+            final doc = docs[i];
+            final data = doc.data();
             return _ReportCard(
               docId: doc.id,
               data: data,
@@ -281,15 +299,34 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
 
   Future<void> _updateStatus(String status) async {
     setState(() => _saving = true);
-    await FirebaseFirestore.instance
-        .collection('reports')
-        .doc(widget.docId)
-        .update({
-      'status': status,
-      'adminNote': _noteController.text.trim(),
-      'reviewedAt': FieldValue.serverTimestamp(),
-    });
-    if (mounted) Navigator.pop(context);
+    try {
+      await ReportService().updateReportStatus(
+        docId: widget.docId,
+        status: status,
+        adminNote: _noteController.text.trim(),
+      );
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Report marked as ${status.toUpperCase()}.'),
+            backgroundColor: status == 'reviewed'
+                ? const Color(0xFF2ECC71)
+                : Colors.blueGrey,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update report: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -342,6 +379,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
             // Target info
             _DetailRow(label: 'Type', value: data['targetType'] ?? '—'),
             _DetailRow(label: 'Target', value: data['targetName'] ?? '—'),
+            _DetailRow(label: 'Target ID', value: data['targetId'] ?? '—'),
             _DetailRow(label: 'Reported By', value: data['reporterName'] ?? '—'),
             _DetailRow(label: 'Reporter Email', value: data['reporterEmail'] ?? '—'),
             _DetailRow(label: 'Reason', value: data['reason'] ?? '—'),
@@ -405,10 +443,19 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                                     child: Icon(Icons.play_circle_outline,
                                         size: 40, color: Colors.grey)),
                               )
-                            : Image.network(url,
+                            : Image.network(
+                                url,
                                 width: 110,
                                 height: 110,
-                                fit: BoxFit.cover),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => Container(
+                                  width: 110,
+                                  height: 110,
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.broken_image,
+                                      color: Colors.grey),
+                                ),
+                              ),
                       ),
                     );
                   },

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lendly/core/constants/item_categories.dart';
 import 'package:lendly/features/appraisal/domain/models/appraisal_model.dart';
 import 'package:lendly/features/appraisal/presentation/widgets/owner_meetup_scanner_dialog.dart';
 import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
@@ -369,10 +370,37 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
   Future<void> _submitAppraisal() async {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     final ownerId = (widget.itemData['ownerId'] ?? '').toString();
+    final itemCategory = (widget.itemData['category'] ?? '').toString();
 
     // Prevent fraudulent self-appraisal
     if (uid.isNotEmpty && uid == ownerId) {
-      _showAppraisalError('Self-Appraisal Prohibited: You cannot certify or appraise your own item listing.');
+      _showAppraisalError(
+        'Self-Appraisal Prohibited: You cannot certify or appraise your own item listing.',
+        title: 'Self-Appraisal Prohibited',
+      );
+      return;
+    }
+
+    // Ensure appraiser profile is loaded to validate specialty
+    if (_appraiserProfile == null && uid.isNotEmpty) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists) {
+        _appraiserProfile = doc.data();
+      }
+    }
+
+    final appraiserSpecialty = _appraiserProfile?['specialization']?.toString();
+    if (!AppraisalModel.canAppraiseItem(
+      appraiserSpecialty: appraiserSpecialty,
+      itemCategory: itemCategory,
+    )) {
+      _showAppraisalError(
+        AppraisalModel.getSpecialtyMismatchMessage(
+          appraiserSpecialty: appraiserSpecialty,
+          itemCategory: itemCategory,
+        ),
+        title: 'Specialty Mismatch',
+      );
       return;
     }
 
@@ -389,6 +417,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
     try {
       final businessName = _appraiserProfile?['businessName'] as String? ?? 'Licensed Professional Appraiser';
       final licenseNo = _appraiserProfile?['licenseNumber'] as String? ?? 'APP-2026-VERIFIED';
+      final canonicalSpecialty = ItemCategories.normalizeCategory(appraiserSpecialty);
 
       final estimatedVal = double.tryParse(_estimatedValController.text.replaceAll(',', '').trim()) ?? 5000.0;
       final overallScore = AppraisalModel.calculateOverallScore(_functionScore, _cosmeticScore);
@@ -403,6 +432,7 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
         appraiserId: uid,
         appraiserBusinessName: businessName,
         appraiserLicense: licenseNo,
+        appraiserSpecialty: canonicalSpecialty,
         notes: _notesController.text.trim(),
         appraisedAt: DateTime.now(),
         isSerialVerified: _isSerialVerified,
@@ -484,16 +514,18 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
     }
   }
 
-  void _showAppraisalError(String msg) {
+  void _showAppraisalError(String msg, {String title = 'Meetup Required'}) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.handshake_outlined, color: Color(0xFF98259A), size: 24),
-            SizedBox(width: 8),
-            Text('Meetup Required', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Icon(Icons.handshake_outlined, color: Color(0xFF98259A), size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
           ],
         ),
         content: Text(msg, style: const TextStyle(fontSize: 13, height: 1.4)),
@@ -517,6 +549,13 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
     final ownerName = widget.itemData['ownerName'] ?? 'Lender';
     final currentPrice = (widget.itemData['price'] as num?)?.toDouble() ?? 0.0;
     final category = widget.itemData['category'] ?? 'General';
+    final appraiserSpecialty = _appraiserProfile?['specialization']?.toString();
+    final canAppraiseSpecialty = _appraiserProfile == null
+        ? true
+        : AppraisalModel.canAppraiseItem(
+            appraiserSpecialty: appraiserSpecialty,
+            itemCategory: category.toString(),
+          );
     final overallScore = AppraisalModel.calculateOverallScore(_functionScore, _cosmeticScore);
     final conditionColor = AppraisalModel.getConditionColor(_conditionGrade);
 
@@ -1385,20 +1424,56 @@ class _AppraisalFormDialogState extends State<AppraisalFormDialog> {
 
                 const SizedBox(height: 22),
 
+                if (!canAppraiseSpecialty) ...[
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.lock_outline, color: Colors.red.shade700, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            AppraisalModel.getSpecialtyMismatchMessage(
+                              appraiserSpecialty: appraiserSpecialty,
+                              itemCategory: category.toString(),
+                            ),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.red.shade800,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 // Submit Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _isSubmitting ? null : _submitAppraisal,
+                    onPressed: (_isSubmitting || !canAppraiseSpecialty) ? null : _submitAppraisal,
                     icon: _isSubmitting
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Icon(Icons.verified, color: Colors.white),
+                        : Icon(canAppraiseSpecialty ? Icons.verified : Icons.lock_outline, color: Colors.white),
                     label: Text(
-                      _isSubmitting ? 'Saving Appraisal...' : 'Sign & Certify Official Appraisal',
+                      !canAppraiseSpecialty
+                          ? 'Specialty Mismatch — Cannot Appraise'
+                          : (_isSubmitting ? 'Saving Appraisal...' : 'Sign & Certify Official Appraisal'),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF98259A),
+                      disabledBackgroundColor: Colors.grey.shade400,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),

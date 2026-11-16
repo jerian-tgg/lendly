@@ -14,6 +14,7 @@ import 'package:lendly/features/items/presentation/pages/electronic_contract_pag
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/pages/report_screen.dart';
 import 'package:lendly/features/profile/presentation/widgets/review_dialog.dart';
+import 'package:lendly/features/appraisal/domain/models/appraisal_model.dart';
 import 'package:lendly/features/appraisal/presentation/widgets/appraisal_form_dialog.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -731,6 +732,35 @@ class _ChatScreenState extends State<ChatScreen> {
     Map<String, dynamic> itemData,
     String itemId,
   ) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? widget.currentUserId;
+    if (currentUserId.isNotEmpty) {
+      try {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
+        final appraiserSpecialty = userDoc.data()?['specialization']?.toString();
+        final itemCategory = (itemData['category'] ?? '').toString();
+        if (!AppraisalModel.canAppraiseItem(
+          appraiserSpecialty: appraiserSpecialty,
+          itemCategory: itemCategory,
+        )) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppraisalModel.getSpecialtyMismatchMessage(
+                    appraiserSpecialty: appraiserSpecialty,
+                    itemCategory: itemCategory,
+                  ),
+                ),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
+          return;
+        }
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AppraisalFormDialog(

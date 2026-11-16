@@ -8,6 +8,7 @@ import 'package:lendly/core/utils/convo_utils.dart';
 import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/appraisal/presentation/pages/appraisal_dashboard.dart';
 import 'package:lendly/features/chat/presentation/pages/chat_screen.dart';
+import 'package:lendly/features/business/data/repositories/business_application_repository.dart';
 import 'package:lendly/features/business/presentation/pages/register_business_screen.dart';
 import 'package:lendly/features/items/presentation/pages/item_detail_screen.dart';
 import 'package:lendly/features/items/presentation/pages/report_screen.dart';
@@ -320,7 +321,25 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
-  void _openBusinessRegistration(BuildContext context, [Map<String, dynamic>? data]) async {
+  void _openBusinessRegistration(
+    BuildContext context, {
+    Map<String, dynamic>? data,
+    required bool isVerified,
+  }) async {
+    if (!BusinessApplicationRepository.canUserApplyAsAppraiser(
+      data,
+      localIsVerified: isVerified,
+    )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'You must become a verified user first before applying to become an appraiser.',
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -1077,7 +1096,11 @@ class _UserProfilePageState extends State<UserProfilePage>
                               SizedBox(
                                 width: double.infinity,
                                 child: OutlinedButton.icon(
-                                  onPressed: () => _openBusinessRegistration(context, userData),
+                                  onPressed: () => _openBusinessRegistration(
+                                    context,
+                                    data: userData,
+                                    isVerified: isVerified,
+                                  ),
                                   icon: const Icon(Icons.edit_document, size: 16),
                                   label: const Text('View / Update Submitted Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                                   style: OutlinedButton.styleFrom(
@@ -1144,7 +1167,11 @@ class _UserProfilePageState extends State<UserProfilePage>
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton.icon(
-                                  onPressed: () => _openBusinessRegistration(context, userData),
+                                  onPressed: () => _openBusinessRegistration(
+                                    context,
+                                    data: userData,
+                                    isVerified: isVerified,
+                                  ),
                                   icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
                                   label: const Text('Resubmit BIR Permits & Update Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
                                   style: ElevatedButton.styleFrom(
@@ -1159,67 +1186,105 @@ class _UserProfilePageState extends State<UserProfilePage>
                       ]
                       // 4. Not Registered Yet
                       else ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF98259A,
-                            ).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(
-                                0xFF98259A,
-                              ).withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF98259A).withValues(alpha: 0.12),
-                                  shape: BoxShape.circle,
+                        Builder(
+                          builder: (context) {
+                            final canApplyAsAppraiser =
+                                BusinessApplicationRepository.canUserApplyAsAppraiser(
+                              userData,
+                              localIsVerified: isVerified,
+                            );
+
+                            return Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: canApplyAsAppraiser
+                                    ? const Color(0xFF98259A).withValues(alpha: 0.08)
+                                    : Colors.grey.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: canApplyAsAppraiser
+                                      ? const Color(0xFF98259A).withValues(alpha: 0.3)
+                                      : Colors.grey.withValues(alpha: 0.3),
                                 ),
-                                child: const Icon(Icons.business_center, color: Color(0xFF98259A), size: 26),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Apply as an Appraiser',
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF98259A)),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: canApplyAsAppraiser
+                                          ? const Color(0xFF98259A).withValues(alpha: 0.12)
+                                          : Colors.grey.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Submit credentials & documents to become a verified appraiser',
-                                      style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                                    child: Icon(
+                                      canApplyAsAppraiser
+                                          ? Icons.business_center
+                                          : Icons.lock_outline,
+                                      color: canApplyAsAppraiser
+                                          ? const Color(0xFF98259A)
+                                          : Colors.grey[700],
+                                      size: 26,
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () => _openBusinessRegistration(context),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF98259A),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                ),
-                                child: const Text(
-                                  'Apply as an Appraiser',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Apply as an Appraiser',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                            color: canApplyAsAppraiser
+                                                ? const Color(0xFF98259A)
+                                                : Colors.grey[800],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          canApplyAsAppraiser
+                                              ? 'Submit credentials & documents to become a verified appraiser'
+                                              : 'Verify your identity first above to unlock the appraiser application',
+                                          style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: canApplyAsAppraiser
+                                        ? () => _openBusinessRegistration(
+                                              context,
+                                              data: userData,
+                                              isVerified: isVerified,
+                                            )
+                                        : null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF98259A),
+                                      foregroundColor: Colors.white,
+                                      disabledBackgroundColor: Colors.grey[300],
+                                      disabledForegroundColor: Colors.grey[600],
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      canApplyAsAppraiser
+                                          ? 'Apply as an Appraiser'
+                                          : 'Verify Identity First',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ],
                     ],

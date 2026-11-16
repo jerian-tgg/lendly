@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
+import 'package:lendly/features/admin/presentation/widgets/admin_ledger_transaction_card.dart';
 import 'package:lendly/features/wallet/data/repositories/wallet_repository.dart';
 
 class AdminWalletPage extends StatefulWidget {
@@ -14,8 +14,26 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
   static const String adminEmail = WalletRepository.adminEmail;
 
   final WalletRepository _walletRepository = WalletRepository();
+  final AdminLedgerDetailsLoader _detailsLoader = AdminLedgerDetailsLoader();
+  final Set<String> _expandedIds = {};
   String _selectedFilter = 'all'; // 'all', 'service_fee', 'escrow_hold', 'lender_payout', 'escrow_refund'
   bool _reconciling = false;
+
+  void _toggleExpanded(String entryId, Map<String, dynamic> data) {
+    final willExpand = !_expandedIds.contains(entryId);
+    setState(() {
+      if (willExpand) {
+        _expandedIds.add(entryId);
+      } else {
+        _expandedIds.remove(entryId);
+      }
+    });
+    if (willExpand) {
+      _detailsLoader.ensureLoaded(data, () {
+        if (mounted) setState(() {});
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -280,7 +298,10 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
                                   separatorBuilder: (_, _) =>
                                       const SizedBox(height: 10),
                                   itemBuilder: (context, index) {
-                                    return _buildLedgerTile(filtered[index]);
+                                    return _buildLedgerTile(
+                                      filtered[index],
+                                      index,
+                                    );
                                   },
                                 );
                               },
@@ -469,179 +490,23 @@ class _AdminWalletPageState extends State<AdminWalletPage> {
     );
   }
 
-  Widget _buildLedgerTile(Map<String, dynamic> data) {
+  Widget _buildLedgerTile(Map<String, dynamic> data, int index) {
     final String type = (data['type'] as String?) ?? 'service_fee';
-    final double amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-    final double gross = (data['grossAmount'] as num?)?.toDouble() ??
-        (type == 'service_fee' && amount > 0 ? amount * 10 : amount);
     final String rentalId =
-        (data['referenceId'] as String?) ?? (data['rentalId'] as String?) ?? 'N/A';
-    final String itemName = (data['itemName'] as String?) ?? 'Rental Item';
+        (data['referenceId'] as String?) ?? (data['rentalId'] as String?) ?? '';
+    final String entryId = (data['id'] as String?) ?? '${type}_${rentalId}_$index';
     final String lenderId = (data['lenderId'] as String?) ?? '';
     final String borrowerId = (data['borrowerId'] as String?) ?? '';
-    final String status = ((data['status'] as String?) ?? 'completed').toUpperCase();
 
-    final date = _extractDate(data);
-    final formattedDate = date != null
-        ? DateFormat('MMM d, yyyy • h:mm a').format(date)
-        : 'Recent';
-
-    IconData icon;
-    Color accentColor;
-    String title;
-    String badgeText;
-    String amountPrefix;
-
-    switch (type) {
-      case 'escrow_hold':
-        icon = Icons.lock_clock_outlined;
-        accentColor = const Color(0xFF98259A);
-        title = 'Escrow Hold ($itemName)';
-        badgeText = status == 'SETTLED' ? 'HOLD SETTLED' : 'ESCROW HOLD';
-        amountPrefix = '';
-        break;
-      case 'lender_payout':
-        icon = Icons.payments_outlined;
-        accentColor = const Color(0xFF98259A);
-        title = 'User Payout ($itemName)';
-        badgeText = '90% PAYOUT';
-        amountPrefix = '';
-        break;
-      case 'escrow_refund':
-        icon = Icons.undo_rounded;
-        accentColor = const Color(0xFFE67E22);
-        title = 'Escrow Refund ($itemName)';
-        badgeText = 'REFUNDED';
-        amountPrefix = '';
-        break;
-      case 'service_fee':
-      default:
-        icon = Icons.monetization_on_outlined;
-        accentColor = const Color(0xFF27AE60);
-        title = 'Commission Collected ($itemName)';
-        badgeText = '10% FEE';
-        amountPrefix = '+';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accentColor.withValues(alpha: 0.15)),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: accentColor, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13.5,
-                        color: Color(0xFF1A1A2E),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        badgeText,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: accentColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                if (data['description'] != null)
-                  Text(
-                    data['description'].toString(),
-                    style: const TextStyle(fontSize: 11, color: Colors.black87),
-                  ),
-                const SizedBox(height: 3),
-                Text(
-                  'Rental ID: $rentalId',
-                  style: const TextStyle(fontSize: 10.5, color: Colors.black54),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (lenderId.isNotEmpty || borrowerId.isNotEmpty)
-                  Text(
-                    'Lender: ${lenderId.length > 8 ? lenderId.substring(0, 8) : lenderId}...  •  Borrower: ${borrowerId.length > 8 ? borrowerId.substring(0, 8) : borrowerId}...',
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
-                  ),
-                const SizedBox(height: 2),
-                Text(
-                  formattedDate,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$amountPrefix${_formatCurrency(amount)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14.5,
-                  color: accentColor,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                'Gross: ${_formatCurrency(gross)}',
-                style: const TextStyle(fontSize: 10, color: Colors.grey),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F4F8),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  status,
-                  style: const TextStyle(
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black54,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return AdminLedgerTransactionCard(
+      key: ValueKey(entryId),
+      data: data,
+      isExpanded: _expandedIds.contains(entryId),
+      onTap: () => _toggleExpanded(entryId, data),
+      lenderInfo: _detailsLoader.getUser(lenderId),
+      borrowerInfo: _detailsLoader.getUser(borrowerId),
+      rentalInfo: _detailsLoader.getRental(rentalId),
+      isLoadingDetails: _detailsLoader.isLoadingFor(data),
     );
   }
 

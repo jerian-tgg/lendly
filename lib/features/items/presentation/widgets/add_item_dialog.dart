@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lendly/core/constants/item_categories.dart';
 import 'package:lendly/core/utils/location_helper.dart';
 import 'package:lendly/features/items/data/repositories/item_repository_impl.dart';
 import 'package:lendly/features/items/domain/entities/item.dart';
@@ -29,22 +30,14 @@ class _AddItemDialogState extends State<AddItemDialog> {
   final ImagePicker _picker = ImagePicker();
 
   String _condition = 'Pending Appraisal';
-  String _selectedCategory = 'Electronics';
+  String _selectedCategory = ItemCategories.defaultCategory;
   List<String> _imagePaths = [];
   bool _photoError = false;
   bool _isSubmitting = false;
   double? _itemLatitude;
   double? _itemLongitude;
 
-  final List<String> _categories = [
-    'Electronics',
-    'Appliances',
-    'Tools',
-    'Books',
-    'Furniture',
-    'Clothing',
-    'Other',
-  ];
+  final List<String> _categories = ItemCategories.listingCategories;
 
   @override
   void initState() {
@@ -55,7 +48,8 @@ class _AddItemDialogState extends State<AddItemDialog> {
     _priceController = TextEditingController(text: widget.initialData?['price']?.toString() ?? '');
     _quantityController = TextEditingController(text: widget.initialData?['quantity']?.toString() ?? '1');
     _condition = widget.initialData?['conditionGrade'] ?? widget.initialData?['condition'] ?? 'Pending Appraisal';
-    _selectedCategory = widget.initialData?['category'] ?? 'Electronics';
+    _selectedCategory = ItemCategories.normalizeCategory(widget.initialData?['category']?.toString()) ??
+        ItemCategories.defaultCategory;
 
     String initialAddress = widget.initialData?['address']?.toString() ?? '';
     String initialCity = widget.initialData?['city']?.toString() ?? '';

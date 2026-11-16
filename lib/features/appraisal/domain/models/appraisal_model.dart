@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lendly/core/constants/item_categories.dart';
 
 class DocumentedDefect {
   final String category;
@@ -54,6 +55,7 @@ class AppraisalModel {
   final String? appraiserId;
   final String? appraiserBusinessName;
   final String? appraiserLicense;
+  final String? appraiserSpecialty;
   final String? notes;
   final DateTime? appraisedAt;
   final bool isSerialVerified;
@@ -75,6 +77,7 @@ class AppraisalModel {
     this.appraiserId,
     this.appraiserBusinessName,
     this.appraiserLicense,
+    this.appraiserSpecialty,
     this.notes,
     this.appraisedAt,
     this.isSerialVerified = true,
@@ -86,6 +89,37 @@ class AppraisalModel {
     this.hasDefects = false,
     this.documentedDefects = const [],
   });
+
+  /// Enforces strict specialty-matching logic: an appraiser may ONLY appraise
+  /// items whose category matches their designated specialty.
+  static bool canAppraiseItem({
+    required String? appraiserSpecialty,
+    required String? itemCategory,
+  }) {
+    return ItemCategories.doesSpecialtyMatchCategory(
+      appraiserSpecialty: appraiserSpecialty,
+      itemCategory: itemCategory,
+    );
+  }
+
+  /// User-facing explanation when an appraiser attempts to appraise an item
+  /// outside of their designated specialty.
+  static String getSpecialtyMismatchMessage({
+    required String? appraiserSpecialty,
+    required String? itemCategory,
+  }) {
+    final canonicalSpec =
+        ItemCategories.normalizeCategory(appraiserSpecialty) ??
+            (appraiserSpecialty?.trim().isNotEmpty == true
+                ? appraiserSpecialty!.trim()
+                : 'Unspecified');
+    final canonicalCat =
+        ItemCategories.normalizeCategory(itemCategory) ??
+            (itemCategory?.trim().isNotEmpty == true
+                ? itemCategory!.trim()
+                : 'Unspecified');
+    return 'Specialty Mismatch: You are designated as a "$canonicalSpec" appraiser and may only appraise items in the "$canonicalSpec" category (this item is listed under "$canonicalCat").';
+  }
 
   /// Derive the certified condition grade from Function (1-10) and Cosmetic (1-10) scores.
   static String calculateConditionGrade(int function, int cosmetic) {
@@ -199,6 +233,8 @@ class AppraisalModel {
       'certifiedByAppraiserId': appraiserId,
       'certifiedByBusinessName': appraiserBusinessName,
       'certifiedByLicense': appraiserLicense,
+      if (appraiserSpecialty != null && appraiserSpecialty!.isNotEmpty)
+        'certifiedBySpecialty': appraiserSpecialty,
       'appraisalCertificateId': certificateId,
       'appraiserNotes': notes,
       'isSerialVerified': isSerialVerified,
