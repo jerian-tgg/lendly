@@ -31,20 +31,17 @@ class _TrustScoreCardState extends State<TrustScoreCard> {
     // User's raw ratings for fallback if stats not yet generated
     final actualRating = (widget.userData['rating'] as num?)?.toDouble() ?? 0.0;
     final totalRatings = (widget.userData['reviewCount'] as num?)?.toInt() ?? 0;
+    final penaltyPoints = (widget.userData['trustScorePenalty'] as num?)?.toInt() ??
+        (stats?['reportPenalty'] as num?)?.toInt() ??
+        0;
+    final violationCount =
+        (widget.userData['confirmedReportViolations'] as num?)?.toInt() ??
+            (stats?['confirmedReportViolations'] as num?)?.toInt() ??
+            0;
 
     // Retrieve or calculate fallback trust score
-    int displayScore;
-    if (widget.userData['trustScore'] is num) {
-      displayScore = (widget.userData['trustScore'] as num).toInt();
-    } else {
-      // Fallback dynamic calculation if not yet synchronized
-      displayScore = TrustScoreService.computeTrustScore(
-        totalRatings: totalRatings,
-        averageRating: actualRating,
-        completedTransactions: stats?['completedTransactions'] ?? 0,
-        eligibleTransactions: stats?['totalEligibleTransactions'] ?? 0,
-      );
-    }
+    final int displayScore =
+        TrustScoreService.resolveEffectiveTrustScore(widget.userData);
 
     final tier = _getScoreTier(displayScore);
 
@@ -319,6 +316,53 @@ class _TrustScoreCardState extends State<TrustScoreCard> {
                     icon: Icons.military_tech_rounded,
                     color: const Color(0xFF6366F1),
                   ),
+
+                  if (penaltyPoints > 0) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFECACA)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.gavel_rounded,
+                            size: 18,
+                            color: Color(0xFFDC2626),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Moderation Penalty: -$penaltyPoints pts',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF991B1B),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  violationCount > 0
+                                      ? '$violationCount confirmed ${violationCount == 1 ? 'report' : 'reports'} reviewed by admin.'
+                                      : 'Deducted due to confirmed policy violation.',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFFB91C1C),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 12),
 

@@ -36,7 +36,8 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialEmail != null) {
+    if (widget.initialEmail != null &&
+        !FirebaseAuthService.isAdminPortalEmail(widget.initialEmail)) {
       emailController.text = widget.initialEmail!;
     }
     if (widget.showVerificationMessage) {

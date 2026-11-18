@@ -10,12 +10,18 @@ class FirebaseAuthService {
 
   static const String defaultAdminEmail = 'admin@orchid.com';
   static const String legacyAdminEmail = 'admin@lendly.com';
+  static const String adminPortalEmail = 'admin-portal@lendly.internal';
   static const String defaultAdminPassword = 'AdminPassword123!';
 
   static bool isSystemAdminEmail(String? email) {
     if (email == null) return false;
     final lower = email.trim().toLowerCase();
     return lower == defaultAdminEmail || lower == legacyAdminEmail;
+  }
+
+  static bool isAdminPortalEmail(String? email) {
+    if (email == null) return false;
+    return email.trim().toLowerCase() == adminPortalEmail;
   }
 
   // Sign Up with Email and Password

@@ -627,10 +627,20 @@ async function computeTrustScore(userId) {
   // Experience score: min(completed / 20, 1) × 100
   const experienceScore = Math.min(completedTransactions / 20, 1) * 100;
 
-  // ── 3. Weighted final score ──
+  // ── 3. Read any admin moderation penalties from user document ──
+  const userDocSnap = await db.collection("users").doc(userId).get();
+  const userData = userDocSnap.exists ? (userDocSnap.data() || {}) : {};
+  const trustScorePenalty = typeof userData.trustScorePenalty === "number" ?
+    Math.max(0, userData.trustScorePenalty) : 0;
+  const confirmedReportViolations =
+    typeof userData.confirmedReportViolations === "number" ?
+      Math.max(0, userData.confirmedReportViolations) : 0;
+
+  // ── 4. Weighted final score ──
   const rawScore = (bayesianPct * 0.60) +
     (reliabilityPct * 0.30) +
-    (experienceScore * 0.10);
+    (experienceScore * 0.10) -
+    trustScorePenalty;
 
   const trustScore = Math.max(0, Math.min(100, Math.round(rawScore)));
 
@@ -646,10 +656,12 @@ async function computeTrustScore(userId) {
     eligibleAsBorrower,
     reliabilityPercentage: Math.round(reliabilityPct * 100) / 100,
     experienceScore: Math.round(experienceScore * 100) / 100,
+    reportPenalty: trustScorePenalty,
+    confirmedReportViolations,
     lastCalculatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
-  // ── 4. Write to Firestore ──
+  // ── 5. Write to Firestore ──
   await db.collection("users").doc(userId).set({
     trustScore,
     trustScoreStats: stats,

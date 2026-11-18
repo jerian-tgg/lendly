@@ -108,5 +108,136 @@ void main() {
         'older',
       ]);
     });
+
+    test('buildReportData includes targetOwnerId/reportedUserId for item and user reports', () {
+      final itemPayload = ReportService.buildReportData(
+        targetId: 'item_abc',
+        targetType: 'item',
+        targetName: 'Drill',
+        reporterId: 'reporter_1',
+        reporterName: 'Alex',
+        reporterEmail: 'alex@example.com',
+        reason: 'Counterfeit item',
+        explanation: 'This item appears counterfeit with mismatched labels.',
+        targetOwnerId: 'owner_99',
+        targetOwnerName: 'Bad Seller',
+      );
+
+      expect(itemPayload['targetOwnerId'], 'owner_99');
+      expect(itemPayload['reportedUserId'], 'owner_99');
+      expect(itemPayload['targetOwnerName'], 'Bad Seller');
+
+      final userPayload = ReportService.buildReportData(
+        targetId: 'user_77',
+        targetType: 'user',
+        targetName: 'John Doe',
+        reporterId: 'reporter_1',
+        reporterName: 'Alex',
+        reporterEmail: 'alex@example.com',
+        reason: 'Harassment or abuse',
+        explanation: 'Sent abusive messages during handoff.',
+      );
+
+      expect(userPayload['targetOwnerId'], 'user_77');
+      expect(userPayload['reportedUserId'], 'user_77');
+      expect(userPayload['targetOwnerName'], 'John Doe');
+    });
+
+    test('buildModerationActionSummary formats listing removal and trust score penalty cleanly', () {
+      expect(
+        ReportService.buildModerationActionSummary(
+          targetType: 'item',
+          listingRemoved: true,
+          trustScorePenalty: 15,
+        ),
+        'Listing removed • Trust score -15 pts',
+      );
+
+      expect(
+        ReportService.buildModerationActionSummary(
+          targetType: 'item',
+          listingRemoved: false,
+          trustScorePenalty: 15,
+        ),
+        'Trust score -15 pts',
+      );
+
+      expect(
+        ReportService.buildModerationActionSummary(
+          targetType: 'user',
+          listingRemoved: false,
+          trustScorePenalty: 15,
+        ),
+        'Trust score -15 pts',
+      );
+
+      expect(
+        ReportService.buildModerationActionSummary(
+          targetType: 'item',
+          listingRemoved: true,
+          trustScorePenalty: 25,
+          severityLabel: 'Critical',
+        ),
+        'Listing removed • Critical: Trust score -25 pts',
+      );
+
+      expect(
+        ReportService.buildModerationActionSummary(
+          targetType: 'item',
+          listingRemoved: false,
+          trustScorePenalty: 0,
+        ),
+        'Marked reviewed',
+      );
+    });
+
+    test('extractItemSnapshot and parseItemDetails preserve listing details and valid images', () {
+      final rawItem = {
+        'name': 'Sony A7 III',
+        'description': 'Full-frame mirrorless camera with 28-70mm lens.',
+        'category': 'Cameras',
+        'price': 1500,
+        'pricePer': 'day',
+        'conditionGrade': 'Mint',
+        'location': 'Makati City',
+        'ownerId': 'owner_1',
+        'ownerName': 'Maria Santos',
+        'imageUrls': [
+          'https://res.cloudinary.com/demo/image/upload/cam1.jpg',
+          'invalid-url',
+          'https://res.cloudinary.com/demo/image/upload/cam2.jpg',
+        ],
+        'imageUrl': 'https://res.cloudinary.com/demo/image/upload/cam1.jpg',
+      };
+
+      final snapshot = ReportService.extractItemSnapshot(rawItem);
+      expect(snapshot, isNotNull);
+      expect(snapshot!['title'], 'Sony A7 III');
+      expect(snapshot['category'], 'Cameras');
+      expect(snapshot['price'], 1500.0);
+      expect(snapshot['condition'], 'Mint');
+      expect(snapshot['imageUrls'], [
+        'https://res.cloudinary.com/demo/image/upload/cam1.jpg',
+        'https://res.cloudinary.com/demo/image/upload/cam2.jpg',
+      ]);
+
+      // Live item details
+      final liveParsed = ReportService.parseItemDetails(liveItemData: rawItem);
+      expect(liveParsed.exists, isTrue);
+      expect(liveParsed.title, 'Sony A7 III');
+      expect(liveParsed.description, 'Full-frame mirrorless camera with 28-70mm lens.');
+      expect(liveParsed.imageUrls, hasLength(2));
+
+      // Snapshot fallback when live listing was removed
+      final removedParsed = ReportService.parseItemDetails(
+        liveItemData: null,
+        snapshotData: snapshot,
+        fallbackTitle: 'Fallback',
+      );
+      expect(removedParsed.exists, isFalse);
+      expect(removedParsed.title, 'Sony A7 III');
+      expect(removedParsed.price, 1500.0);
+      expect(removedParsed.imageUrls, hasLength(2));
+    });
   });
 }

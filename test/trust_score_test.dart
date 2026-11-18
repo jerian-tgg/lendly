@@ -137,4 +137,92 @@ void main() {
       expect(TrustScoreService.scoreLabel(0), 'Developing');
     });
   });
+
+  group('Moderation Penalty & Effective Score Tests', () {
+    test('computeTrustScore subtracts penaltyPoints and clamps to [0, 100]', () {
+      final baseScore = TrustScoreService.computeTrustScore(
+        totalRatings: 0,
+        averageRating: 0.0,
+        completedTransactions: 0,
+        eligibleTransactions: 0,
+      );
+      expect(baseScore, 78);
+
+      final penalized = TrustScoreService.computeTrustScore(
+        totalRatings: 0,
+        averageRating: 0.0,
+        completedTransactions: 0,
+        eligibleTransactions: 0,
+        penaltyPoints: TrustScoreService.confirmedReportPenalty,
+      );
+      expect(penalized, 78 - TrustScoreService.confirmedReportPenalty);
+
+      final floored = TrustScoreService.computeTrustScore(
+        totalRatings: 0,
+        averageRating: 0.0,
+        completedTransactions: 0,
+        eligibleTransactions: 0,
+        penaltyPoints: 500,
+      );
+      expect(floored, 0);
+    });
+
+    test('resolveEffectiveTrustScore uses stored trustScore or computes fallback with penalty', () {
+      expect(TrustScoreService.resolveEffectiveTrustScore(null), 78);
+      expect(
+        TrustScoreService.resolveEffectiveTrustScore({'trustScore': 84}),
+        84,
+      );
+      expect(
+        TrustScoreService.resolveEffectiveTrustScore({
+          'trustScorePenalty': 15,
+        }),
+        63,
+      );
+    });
+
+    test('applyPenalty deducts penalty points and clamps at 0', () {
+      expect(TrustScoreService.applyPenalty(78), 63);
+      expect(TrustScoreService.applyPenalty(10), 0);
+      expect(TrustScoreService.applyPenalty(90, penaltyPoints: 20), 70);
+    });
+
+    test('severityForReason and penaltyForReason map report reasons to tiered deductions', () {
+      // Critical (-25)
+      expect(
+        TrustScoreService.severityForReason('Fraudulent listing'),
+        ReportSeverity.critical,
+      );
+      expect(TrustScoreService.penaltyForReason('Fraudulent listing'), 25);
+      expect(TrustScoreService.penaltyForReason('Counterfeit item'), 25);
+
+      // High (-20)
+      expect(
+        TrustScoreService.severityForReason('Harassment or abuse'),
+        ReportSeverity.high,
+      );
+      expect(TrustScoreService.penaltyForReason('Harassment or abuse'), 20);
+
+      // Moderate (-15)
+      expect(
+        TrustScoreService.severityForReason('Damaged/misrepresented item'),
+        ReportSeverity.moderate,
+      );
+      expect(TrustScoreService.penaltyForReason('Damaged/misrepresented item'), 15);
+      expect(TrustScoreService.penaltyForReason('No-show / failed transaction'), 15);
+
+      // Low (-10)
+      expect(
+        TrustScoreService.severityForReason('Inappropriate content'),
+        ReportSeverity.low,
+      );
+      expect(TrustScoreService.penaltyForReason('Inappropriate content'), 10);
+      expect(TrustScoreService.penaltyForReason('Other'), 10);
+
+      // Normalizes casing/whitespace and falls back to moderate (15) when unknown
+      expect(TrustScoreService.penaltyForReason('  FRAUDULENT LISTING  '), 25);
+      expect(TrustScoreService.severityForReason(null), ReportSeverity.moderate);
+      expect(TrustScoreService.penaltyForReason('Unrecognized reason'), 15);
+    });
+  });
 }
